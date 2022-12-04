@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/koalatea/authserver/ent"
+	"github.com/koalatea/authserver/server/ent"
 
 	_ "github.com/mattn/go-sqlite3"
 )
