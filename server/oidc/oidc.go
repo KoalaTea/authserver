@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ory/fosite"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/ory/fosite/compose"
@@ -16,15 +17,14 @@ import (
 
 func RegisterHandlers(router *http.ServeMux) {
 	// Set up oauth2 endpoints. You could also use gorilla/mux or any other router.
-	router.HandleFunc("/oidc/auth", authEndpoint)
-	router.HandleFunc("/oidc/token", tokenEndpoint)
+	router.Handle("/oidc/auth", otelhttp.NewHandler(http.HandlerFunc(authEndpoint), "/oidc/auth"))
+	router.Handle("/oidc/token", otelhttp.NewHandler(http.HandlerFunc(tokenEndpoint), "/oidc/token"))
 
 	// revoke tokens
-	router.HandleFunc("/oidc/revoke", revokeEndpoint)
-	router.HandleFunc("/oidc/introspect", introspectionEndpoint)
+	router.Handle("/oidc/revoke", otelhttp.NewHandler(http.HandlerFunc(revokeEndpoint), "/oidc/revoke"))
+	router.Handle("/oidc/introspect", otelhttp.NewHandler(http.HandlerFunc(introspectionEndpoint), "/oidc/introspect"))
 
-	router.HandleFunc("/", HomeHandler(clientConf))
-	router.HandleFunc("/callback", CallbackHandler(clientConf))
+	RegisterTestHandlers(router)
 }
 
 // fosite requires four parameters for the server to get up and running:
