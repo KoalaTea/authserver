@@ -1,1 +1,17 @@
 test.sql
+
+# DS_Store for MacOS Finder
+**.DS_Store
+
+# Build artifacts
+dist/**
+build/**
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# metrics output for testing
+traces.txt
