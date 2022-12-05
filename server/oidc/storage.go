@@ -37,10 +37,10 @@ func (o *OIDCStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeC
 	// &{Claims:0xc0004e0000 Headers:0xc000380688 ExpiresAt:map[authorize_code:2022-12-03 18:13:42.507164448 +0000 UTC] Username: Subject:}
 
 	// fmt.Printf("\n\nrequester\n%+v\nclient\n%+v\nsession\n%+v\n\n", requester, requester.GetClient(), requester.GetSession())
-	// _, err := o.client.OIDCAuthCode.Create().SetAuthorizationCode(authorizeCode).Save(ctx)
-	// if err != nil {
-	// 	fmt.Printf("%w\n", err)
-	// }
+	_, err := o.client.OIDCAuthCode.Create().SetAuthorizationCode(authorizeCode).Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+	}
 	// %!w(sqlite3.Error={1 1 0 near "RETURNING": syntax error})
 	// r.GetRequestForm().Encode()
 	return nil

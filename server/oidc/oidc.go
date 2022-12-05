@@ -1,8 +1,10 @@
 package oidc
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/koalatea/authserver/server/ent"
+	"github.com/koalatea/authserver/server/ent/migrate"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -25,6 +28,12 @@ func RegisterHandlers(router *http.ServeMux) {
 	router.Handle("/oidc/introspect", otelhttp.NewHandler(http.HandlerFunc(introspectionEndpoint), "/oidc/introspect"))
 
 	RegisterTestHandlers(router)
+	if err := graph.Schema.Create(
+		context.Background(),
+		migrate.WithGlobalUniqueID(true),
+	); err != nil {
+		fmt.Printf("failed to initialize graph schema: %w", err)
+	}
 }
 
 // fosite requires four parameters for the server to get up and running:
