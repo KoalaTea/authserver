@@ -1,7 +1,6 @@
 package oidc
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -10,8 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/koalatea/authserver/server/ent"
-	"github.com/koalatea/authserver/server/ent/migrate"
+	"github.com/koalatea/authserver/server/ent/enttest"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -25,9 +23,7 @@ type Response struct {
 
 func TestGettingIDToken(t *testing.T) {
 
-	// graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	graph, _ := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	graph.Schema.Create(context.Background(), migrate.WithGlobalUniqueID(true))
+	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 
 	provider := NewOIDCProvider(graph)
 	router := http.NewServeMux()
