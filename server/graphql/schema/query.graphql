@@ -58,6 +58,23 @@ input AccessRequestWhereInput {
   """active field predicates"""
   active: Boolean
   activeNEQ: Boolean
+<<<<<<< HEAD
+=======
+  """request_id field predicates"""
+  requestID: String
+  requestIDNEQ: String
+  requestIDIn: [String!]
+  requestIDNotIn: [String!]
+  requestIDGT: String
+  requestIDGTE: String
+  requestIDLT: String
+  requestIDLTE: String
+  requestIDContains: String
+  requestIDHasPrefix: String
+  requestIDHasSuffix: String
+  requestIDEqualFold: String
+  requestIDContainsFold: String
+>>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 }
 """
 Define a Relay Cursor type:
@@ -75,8 +92,11 @@ interface Node @goModel(model: "github.com/koalatea/authserver/server/ent.Noder"
 type OIDCAuthCode implements Node {
   id: ID!
   authorizationCode: String!
+<<<<<<< HEAD
   accessRequest: AccessRequest
   session: OIDCSession
+=======
+>>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 }
 """
 OIDCAuthCodeWhereInput is used for filtering OIDCAuthCode objects.
@@ -109,12 +129,15 @@ input OIDCAuthCodeWhereInput {
   authorizationCodeHasSuffix: String
   authorizationCodeEqualFold: String
   authorizationCodeContainsFold: String
+<<<<<<< HEAD
   """access_request edge predicates"""
   hasAccessRequest: Boolean
   hasAccessRequestWith: [AccessRequestWhereInput!]
   """session edge predicates"""
   hasSession: Boolean
   hasSessionWith: [OIDCSessionWhereInput!]
+=======
+>>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 }
 type OIDCClient implements Node {
   id: ID!
@@ -296,6 +319,11 @@ type Query {
     ids: [ID!]!
   ): [Node]!
 }
+<<<<<<< HEAD
+=======
+"""The builtin Time type"""
+scalar Time
+>>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 type User implements Node {
   id: ID!
   username: String!

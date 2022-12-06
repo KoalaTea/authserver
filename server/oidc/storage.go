@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/koalatea/authserver/server/ent"
+<<<<<<< HEAD
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
+=======
+>>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
