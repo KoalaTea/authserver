@@ -20,7 +20,6 @@ func (AccessRequest) Fields() []ent.Field {
 		field.String("request"),
 		field.String("form"),
 		field.Bool("active"),
-		field.String("request_id"),
 	}
 }
 

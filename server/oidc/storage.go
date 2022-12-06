@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/koalatea/authserver/server/ent"
+	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -27,22 +28,46 @@ type OIDCStorage struct {
 // CreateOpenIDConnectSession creates an open id connect session
 // for a given authorize code. This is relevant for explicit open id connect flow.
 func (o *OIDCStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
-	// authorizercode = requester
-
-	// requester
-	// &{ID:f2c52fe0-3039-4863-b6c3-d70ec25f87cd RequestedAt:2022-12-03 17:58:42.507047639 +0000 UTC Client:0xc000578180 RequestedScope:[photos openid offline] GrantedScope:[openid] Form:map[nonce:[some-random-nonce]] Session:0xc0004b2800 RequestedAudience:[] GrantedAudience:[] Lang:en}
-	// client
-	// &{ID:my-client Secret:[36 50 97 36 49 48 36 73 120 77 100 73 54 100 46 76 73 82 90 80 112 83 102 69 119 78 111 101 117 52 114 89 51 70 104 68 82 69 115 120 70 74 88 105 107 99 103 100 82 82 65 83 116 120 85 108 115 117 69 79] RotatedSecrets:[[36 50 121 36 49 48 36 88 53 49 103 76 120 85 81 74 46 104 71 119 49 101 112 103 72 84 69 53 117 48 98 116 54 52 120 77 48 67 79 85 55 75 57 105 65 112 46 79 70 103 56 112 50 112 85 100 46 49 122 67 32]] RedirectURIs:[http://localhost:3846/callback] GrantTypes:[implicit refresh_token authorization_code password client_credentials] ResponseTypes:[id_token code token id_token token code id_token code token code id_token token] Scopes:[fosite openid photos offline] Audience:[] Public:false}
-	// session
-	// &{Claims:0xc0004e0000 Headers:0xc000380688 ExpiresAt:map[authorize_code:2022-12-03 18:13:42.507164448 +0000 UTC] Username: Subject:}
-
-	// fmt.Printf("\n\nrequester\n%+v\nclient\n%+v\nsession\n%+v\n\n", requester, requester.GetClient(), requester.GetSession())
-	_, err := o.client.OIDCAuthCode.Create().SetAuthorizationCode(authorizeCode).Save(ctx)
+	accessRequest, err := o.client.AccessRequest.
+		Create().
+		SetRequestedScopes(requester.GetRequestedScopes()).
+		SetGrantedScopes(requester.GetGrantedScopes()).
+		SetRequestedAudiences(requester.GetRequestedAudience()).
+		SetGrantedAudiences(requester.GetGrantedAudience()).
+		SetRequest(requester.GetID()).
+		SetForm(requester.GetRequestForm().Encode()).
+		SetActive(true).
+		Save(ctx)
 	if err != nil {
 		fmt.Printf("%w\n", err)
+		return err
 	}
-	// %!w(sqlite3.Error={1 1 0 near "RETURNING": syntax error})
-	// r.GetRequestForm().Encode()
+
+	session := requester.GetSession().(*openid.DefaultSession)
+	oidcSession, err := o.client.OIDCSession.
+		Create().
+		SetIssuer(session.Claims.Issuer).
+		SetSubject(session.Claims.Subject).
+		SetAudiences(session.Claims.Audience).
+		SetExpiresAt(session.Claims.ExpiresAt).
+		SetIssuedAt(session.Claims.IssuedAt).
+		SetRequestedAt(session.Claims.RequestedAt).
+		SetAuthTime(session.Claims.AuthTime).
+		Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+		return err
+	}
+
+	_, err = o.client.OIDCAuthCode.Create().
+		SetAuthorizationCode(authorizeCode).
+		SetAccessRequest(accessRequest).
+		SetSession(oidcSession).
+		Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+		return err
+	}
 	return nil
 }
 
@@ -51,14 +76,28 @@ func (o *OIDCStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeC
 // - ErrNoSessionFound if no session was found
 // - or an arbitrary error if an error occurred.
 func (o *OIDCStorage) GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
-	// return user from authorizeCode
-	// _, err := o.client.OIDCAuthCode.Query().Where(oidcauthcode.AuthorizationCode(authorizeCode)).Only(ctx)
-	// if err == nil {
-	// 	return nil, err
-	// }
 	fmt.Println("\n\nDOES THIS RUN?\n\n")
+	sess, err := o.client.OIDCAuthCode.Query().Where(oidcauthcode.AuthorizationCode(authorizeCode)).QuerySession().Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	session := &openid.DefaultSession{
+		Claims: &jwt.IDTokenClaims{
+			Issuer:      sess.Issuer,
+			Subject:     sess.Subject,
+			Audience:    sess.Audiences,
+			ExpiresAt:   sess.ExpiresAt,
+			IssuedAt:    sess.IssuedAt,
+			RequestedAt: sess.RequestedAt, // Extra
+			AuthTime:    sess.AuthTime,    // Extra
+		},
+		Headers: &jwt.Headers{
+			Extra: make(map[string]interface{}),
+		},
+	}
 	temp, _ := o.GetClient(ctx, "my-client")
-	req := fosite.NewAccessRequest(&openid.DefaultSession{})
+	req := fosite.NewAuthorizeRequest()
+	req.SetSession(session)
 	req.Merge(requester)
 	req.Client = temp
 	_ = req.GetRequestForm().Get("code")
@@ -81,6 +120,8 @@ func (o *OIDCStorage) DeleteOpenIDConnectSession(ctx context.Context, authorizeC
 }
 
 func (o *OIDCStorage) GetClient(_ context.Context, id string) (fosite.Client, error) {
+	// I don't want to actually store clients yet so I will be using a hardcoded one
+	// TODO: fix this lol
 	return &fosite.DefaultClient{
 		ID:             id,
 		Secret:         []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`),            // = "foobar"
@@ -107,55 +148,79 @@ func (o *OIDCStorage) SetClientAssertionJWT(_ context.Context, jti string, exp t
 	return nil
 }
 
-func (o *OIDCStorage) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
-	fmt.Println("\n\nDOES THIS RUN6?\n\n") // yes 6 9 on the initla call 7 7 after
-	// return &OAuth2RequestSQL{
-	// 	Request:           r.GetID(),
-	// 	ConsentChallenge:  challenge,
-	// 	ID:                p.hashSignature(ctx, rawSignature, table),
-	// 	RequestedAt:       r.GetRequestedAt(),
-	// 	Client:            r.GetClient().GetID(),
-	// 	Scopes:            strings.Join(r.GetRequestedScopes(), "|"),
-	// 	GrantedScope:      strings.Join(r.GetGrantedScopes(), "|"),
-	// 	GrantedAudience:   strings.Join(r.GetGrantedAudience(), "|"),
-	// 	RequestedAudience: strings.Join(r.GetRequestedAudience(), "|"),
-	// 	Form:              r.GetRequestForm().Encode(),
-	// 	Session:           session,
-	// 	Subject:           subject,
-	// 	Active:            true,
-	// 	Table:             table,
-	// }, nil
+func (o *OIDCStorage) CreateAuthorizeCodeSession(ctx context.Context, code string, req fosite.Requester) error {
+	fmt.Println("\n\nDOES THIS RUN6?\n\n")
+	accessRequest, err := o.client.AccessRequest.
+		Create().
+		SetRequestedScopes(req.GetRequestedScopes()).
+		SetGrantedScopes(req.GetGrantedScopes()).
+		SetRequestedAudiences(req.GetRequestedAudience()).
+		SetGrantedAudiences(req.GetGrantedAudience()).
+		SetRequest(req.GetID()).
+		SetForm(req.GetRequestForm().Encode()).
+		SetActive(true).
+		Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+		return err
+	}
+
+	session := req.GetSession().(*openid.DefaultSession)
+	oidcSession, err := o.client.OIDCSession.
+		Create().
+		SetIssuer(session.Claims.Issuer).
+		SetSubject(session.Claims.Subject).
+		SetAudiences(session.Claims.Audience).
+		SetExpiresAt(session.Claims.ExpiresAt).
+		SetIssuedAt(session.Claims.IssuedAt).
+		SetRequestedAt(session.Claims.RequestedAt).
+		SetAuthTime(session.Claims.AuthTime).
+		Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+		return err
+	}
+
+	_, err = o.client.OIDCAuthCode.Create().
+		SetAuthorizationCode(code).
+		SetAccessRequest(accessRequest).
+		SetSession(oidcSession).
+		Save(ctx)
+	if err != nil {
+		fmt.Printf("%w\n", err)
+		return err
+	}
 	return nil
 }
 
-func (o *OIDCStorage) GetAuthorizeCodeSession(_ context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
+func (o *OIDCStorage) GetAuthorizeCodeSession(ctx context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
 	// url.ParseQuery(r.Form)
-	fmt.Println("\n\nDOES THIS RUN7?\n\n") // yes
-	req := fosite.NewAuthorizeRequest()
-	req.Client = &fosite.DefaultClient{
-		ID:             "my-client",
-		Secret:         []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`),            // = "foobar"
-		RotatedSecrets: [][]byte{[]byte(`$2y$10$X51gLxUQJ.hGw1epgHTE5u0bt64xM0COU7K9iAp.OFg8p2pUd.1zC `)}, // = "foobaz",
-		RedirectURIs:   []string{"http://localhost:8080/callback"},
-		ResponseTypes:  []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
-		GrantTypes:     []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
-		Scopes:         []string{"fosite", "openid", "photos", "offline"},
+	// fmt.Printf("\n\nAUTHCODE %s\n\n", code)
+	// fmt.Println("\n\nDOES THIS RUN7?\n\n") // yes
+	sess, err := o.client.OIDCAuthCode.Query().Where(oidcauthcode.AuthorizationCode(code)).QuerySession().Only(ctx)
+	if err != nil {
+		fmt.Printf("%w", err)
+		return nil, err
 	}
-	req.GrantScope("openid")
-	req.SetSession(&openid.DefaultSession{
+	session := &openid.DefaultSession{
 		Claims: &jwt.IDTokenClaims{
-			Issuer:      "https://fosite.my-application.com",
-			Subject:     "peter",
-			Audience:    []string{"https://my-client.my-application.com"},
-			ExpiresAt:   time.Now().Add(time.Hour * 6),
-			IssuedAt:    time.Now(),
-			RequestedAt: time.Now(), // Extra
-			AuthTime:    time.Now(), // Extra
+			Issuer:      sess.Issuer,
+			Subject:     sess.Subject,
+			Audience:    sess.Audiences,
+			ExpiresAt:   sess.ExpiresAt,
+			IssuedAt:    sess.IssuedAt,
+			RequestedAt: sess.RequestedAt, // Extra
+			AuthTime:    sess.AuthTime,    // Extra
 		},
 		Headers: &jwt.Headers{
 			Extra: make(map[string]interface{}),
 		},
-	})
+	}
+	req := fosite.NewAuthorizeRequest()
+	temp, _ := o.GetClient(ctx, "my-client")
+	req.Client = temp
+	req.SetSession(session)
+	req.GrantScope("openid")
 	return req, nil
 }
 
@@ -172,15 +237,8 @@ func (o *OIDCStorage) CreatePKCERequestSession(_ context.Context, code string, r
 func (o *OIDCStorage) GetPKCERequestSession(_ context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
 	fmt.Println("\n\nDOES THIS RUN10?\n\n")
 	req := fosite.NewAuthorizeRequest()
-	req.Client = &fosite.DefaultClient{
-		ID:             "my-client",
-		Secret:         []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`),            // = "foobar"
-		RotatedSecrets: [][]byte{[]byte(`$2y$10$X51gLxUQJ.hGw1epgHTE5u0bt64xM0COU7K9iAp.OFg8p2pUd.1zC `)}, // = "foobaz",
-		RedirectURIs:   []string{"http://localhost:8080/callback"},
-		ResponseTypes:  []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
-		GrantTypes:     []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
-		Scopes:         []string{"fosite", "openid", "photos", "offline"},
-	}
+	temp, _ := o.GetClient(context.Background(), "my-client")
+	req.Client = temp
 	req.GrantScope("openid")
 	req.SetSession(&openid.DefaultSession{
 		Claims: &jwt.IDTokenClaims{
