@@ -5,11 +5,7 @@ go 1.18
 require (
 	entgo.io/contrib v0.3.4
 	entgo.io/ent v0.11.5-0.20221031135557-521f9b57bc3d
-<<<<<<< HEAD
 	github.com/99designs/gqlgen v0.17.21
-=======
-	github.com/99designs/gqlgen v0.17.20
->>>>>>> ff9bb31c5c4e40c25f470da291de5dcb423512a1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/ory/fosite v0.43.0
