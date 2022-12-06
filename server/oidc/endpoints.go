@@ -6,26 +6,21 @@ import (
 	"net/http"
 )
 
-func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
-	// This context will be passed to all methods.
+func (o *OIDCProvider) tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	// Create an empty session object which will be passed to the request handlers
 	mySessionData := newSession("")
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
-	accessRequest, err := oauth2.NewAccessRequest(ctx, req, mySessionData)
-
-	// Catch any errors, e.g.:
-	// * unknown client
-	// * invalid redirect
-	// * ...
+	accessRequest, err := o.oauth2.NewAccessRequest(ctx, req, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %+v", err)
-		oauth2.WriteAccessError(ctx, rw, accessRequest, err)
+		o.oauth2.WriteAccessError(ctx, rw, accessRequest, err)
 		return
 	}
 
+	// TODO ... Why?
 	// If this is a client_credentials grant, grant all requested scopes
 	// NewAccessRequest validated that all requested scopes the client is allowed to perform
 	// based on configured scope matching strategy.
@@ -37,29 +32,26 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
 	// and aggregate the result in response.
-	response, err := oauth2.NewAccessResponse(ctx, accessRequest)
+	response, err := o.oauth2.NewAccessResponse(ctx, accessRequest)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessResponse: %+v", err)
-		oauth2.WriteAccessError(ctx, rw, accessRequest, err)
+		o.oauth2.WriteAccessError(ctx, rw, accessRequest, err)
 		return
 	}
 
 	// All done, send the response.
-	oauth2.WriteAccessResponse(ctx, rw, accessRequest, response)
-
-	// The client now has a valid access token
+	o.oauth2.WriteAccessResponse(ctx, rw, accessRequest, response)
 }
 
-func authEndpoint(rw http.ResponseWriter, req *http.Request) {
-	// This context will be passed to all methods.
+func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	// Let's create an AuthorizeRequest object!
 	// It will analyze the request and extract important information like scopes, response type and others.
-	ar, err := oauth2.NewAuthorizeRequest(ctx, req)
+	ar, err := o.oauth2.NewAuthorizeRequest(ctx, req)
 	if err != nil {
 		log.Printf("Error occurred in NewAuthorizeRequest: %+v", err)
-		oauth2.WriteAuthorizeError(ctx, rw, ar, err)
+		o.oauth2.WriteAuthorizeError(ctx, rw, ar, err)
 		return
 	}
 	// You have now access to authorizeRequest, Code ResponseTypes, Scopes ...
@@ -97,15 +89,6 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Now that the user is authorized, we set up a session:
 	mySessionData := newSession("peter")
 
-	// When using the HMACSHA strategy you must use something that implements the HMACSessionContainer.
-	// It brings you the power of overriding the default values.
-	//
-	// mySessionData.HMACSession = &strategy.HMACSession{
-	//	AccessTokenExpiry: time.Now().Add(time.Day),
-	//	AuthorizeCodeExpiry: time.Now().Add(time.Day),
-	// }
-	//
-
 	// If you're using the JWT strategy, there's currently no distinction between access token and authorize code claims.
 	// Therefore, you both access token and authorize code will have the same "exp" claim. If this is something you
 	// need let us know on github.
@@ -121,42 +104,34 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
 	// to support open id connect.
-	response, err := oauth2.NewAuthorizeResponse(ctx, ar, mySessionData)
-
-	// Catch any errors, e.g.:
-	// * unknown client
-	// * invalid redirect
-	// * ...
+	response, err := o.oauth2.NewAuthorizeResponse(ctx, ar, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewAuthorizeResponse: %+v", err)
-		oauth2.WriteAuthorizeError(ctx, rw, ar, err)
+		o.oauth2.WriteAuthorizeError(ctx, rw, ar, err)
 		return
 	}
 
-	// Last but not least, send the response!
-	oauth2.WriteAuthorizeResponse(ctx, rw, ar, response)
+	o.oauth2.WriteAuthorizeResponse(ctx, rw, ar, response)
 }
 
-func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
+func (o *OIDCProvider) introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	mySessionData := newSession("")
-	ir, err := oauth2.NewIntrospectionRequest(ctx, req, mySessionData)
+	ir, err := o.oauth2.NewIntrospectionRequest(ctx, req, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewIntrospectionRequest: %+v", err)
-		oauth2.WriteIntrospectionError(ctx, rw, err)
+		o.oauth2.WriteIntrospectionError(ctx, rw, err)
 		return
 	}
 
-	oauth2.WriteIntrospectionResponse(ctx, rw, ir)
+	o.oauth2.WriteIntrospectionResponse(ctx, rw, ir)
 }
 
-func revokeEndpoint(rw http.ResponseWriter, req *http.Request) {
-	// This context will be passed to all methods.
+func (o *OIDCProvider) revokeEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	// This will accept the token revocation request and validate various parameters.
-	err := oauth2.NewRevocationRequest(ctx, req)
+	err := o.oauth2.NewRevocationRequest(ctx, req)
 
-	// All done, send the response.
-	oauth2.WriteRevocationResponse(ctx, rw, err)
+	o.oauth2.WriteRevocationResponse(ctx, rw, err)
 }

@@ -1,5 +1,8 @@
 package oidc
 
+// This entire file is ignorable its all helper functions for testing changes I make, I should write tests instead
+// but during the frustrating beginning this seems more worth it since I can try many different things
+
 import (
 	"bytes"
 	"context"
@@ -15,12 +18,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	goauth "golang.org/x/oauth2"
+	"golang.org/x/oauth2"
 )
 
-func RegisterTestHandlers(router *http.ServeMux) {
-	router.Handle("/", otelhttp.NewHandler(http.HandlerFunc(HomeHandler(clientConf)), "/"))
-	router.Handle("/callback", otelhttp.NewHandler(http.HandlerFunc(CallbackHandler(clientConf)), "/callback"))
+func (o *OIDCProvider) RegisterTestHandlers(router *http.ServeMux) {
+	router.Handle("/", otelhttp.NewHandler(http.HandlerFunc(o.HomeHandler(clientConf)), "/"))
+	router.Handle("/callback", otelhttp.NewHandler(http.HandlerFunc(o.CallbackHandler(clientConf)), "/callback"))
 }
 
 // newBasicClient returns a client which always sends along basic auth
@@ -93,7 +96,7 @@ func isPKCE(r *http.Request) bool {
 	return cookie.Value == "true"
 }
 
-func CallbackHandler(c goauth.Config) func(rw http.ResponseWriter, req *http.Request) {
+func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWriter, req *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		codeVerifier := resetPKCE(rw)
 		rw.Write([]byte(`<h1>Callback site</h1><a href="/">Go back</a>`))
@@ -165,9 +168,9 @@ func CallbackHandler(c goauth.Config) func(rw http.ResponseWriter, req *http.Req
 		)))
 
 		// We'll check whether we sent a code+PKCE request, and if so, send the code_verifier along when requesting the access token.
-		var opts []goauth.AuthCodeOption
+		var opts []oauth2.AuthCodeOption
 		if isPKCE(req) {
-			opts = append(opts, goauth.SetAuthURLParam("code_verifier", codeVerifier))
+			opts = append(opts, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 		}
 
 		token, err := c.Exchange(context.Background(), req.URL.Query().Get("code"), opts...)
@@ -202,12 +205,12 @@ func CallbackHandler(c goauth.Config) func(rw http.ResponseWriter, req *http.Req
 }
 
 // A valid oauth2 client (check the store) that additionally requests an OpenID Connect id token
-var clientConf = goauth.Config{
+var clientConf = oauth2.Config{
 	ClientID:     "my-client",
 	ClientSecret: "foobar",
 	RedirectURL:  "http://localhost:8080/callback",
 	Scopes:       []string{"photos", "openid", "offline"},
-	Endpoint: goauth.Endpoint{
+	Endpoint: oauth2.Endpoint{
 		TokenURL: "http://localhost:8080/oidc/token",
 		AuthURL:  "http://localhost:8080/oidc/auth",
 	},
@@ -261,7 +264,7 @@ func generateCodeChallenge(codeVerifier string) string {
 	return base64.RawURLEncoding.EncodeToString(s256.Sum(nil))
 }
 
-func HomeHandler(c goauth.Config) func(rw http.ResponseWriter, req *http.Request) {
+func (o *OIDCProvider) HomeHandler(c oauth2.Config) func(rw http.ResponseWriter, req *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			// The "/" pattern matches everything, so we need to check that

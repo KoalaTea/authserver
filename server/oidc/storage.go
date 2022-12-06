@@ -21,6 +21,7 @@ import (
 // https://github.com/ory/fosite-example/blob/99739a5bc1c676d08549207156fb365b2616e2e0/authorizationserver/oauth2.go#L16
 
 // OIDCStorage struct to satisfy the interface for fosite
+
 type OIDCStorage struct {
 	client *ent.Client
 }
@@ -28,6 +29,7 @@ type OIDCStorage struct {
 // CreateOpenIDConnectSession creates an open id connect session
 // for a given authorize code. This is relevant for explicit open id connect flow.
 func (o *OIDCStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
+	fmt.Println("\n\nDOES CreateOpenIDConnectSession RUN?\n\n")
 	accessRequest, err := o.client.AccessRequest.
 		Create().
 		SetRequestedScopes(requester.GetRequestedScopes()).
@@ -76,7 +78,7 @@ func (o *OIDCStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeC
 // - ErrNoSessionFound if no session was found
 // - or an arbitrary error if an error occurred.
 func (o *OIDCStorage) GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
-	fmt.Println("\n\nDOES THIS RUN?\n\n")
+	fmt.Println("\n\nDOES GetOpenIDConnectSessio RUN?\n\n")
 	sess, err := o.client.OIDCAuthCode.Query().Where(oidcauthcode.AuthorizationCode(authorizeCode)).QuerySession().Only(ctx)
 	if err != nil {
 		return nil, err
@@ -98,7 +100,8 @@ func (o *OIDCStorage) GetOpenIDConnectSession(ctx context.Context, authorizeCode
 	temp, _ := o.GetClient(ctx, "my-client")
 	req := fosite.NewAuthorizeRequest()
 	req.SetSession(session)
-	req.Merge(requester)
+	req.GrantScope("openid") // Should def be granted scopes stored in db, later problem though
+	// req.Merge(requester)
 	req.Client = temp
 	_ = req.GetRequestForm().Get("code")
 	return req, nil
