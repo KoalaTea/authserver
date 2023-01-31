@@ -15,10 +15,3 @@ build/**
 
 # metrics output for testing
 traces.txt
-
-server/ent/
-server/graphql
-!server/ent/entc.go
-!server/ent/schema
-!server/graphql/schema
-!server/graphql/gqlgen.yml
