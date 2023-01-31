@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+
+	"github.com/koalatea/authserver/server/ent"
 )
 
 // ErrInvalidViewer occurs when an invalid type of viewer is retrieved from the context.
@@ -15,9 +17,6 @@ var (
 // Viewer describes the query/mutation viewer-context.
 type Viewer interface{}
 
-// User viewers of the GraphAPI
-type User struct{}
-
 type ctxKey struct{}
 
 // FromContext returns the Viewer stored in a context.
@@ -28,15 +27,15 @@ func FromContext(ctx context.Context) Viewer {
 
 // UserFromContext returns an User viewer from a context.
 // If the viewer was not a user, returns an error.
-func UserFromContext(ctx context.Context) (User, error) {
+func UserFromContext(ctx context.Context) (*ent.User, error) {
 	v := FromContext(ctx)
 	if v == nil {
-		return User{}, ErrNoViewer
+		return &ent.User{}, ErrNoViewer
 	}
 
-	user, ok := v.(User)
+	user, ok := v.(*ent.User)
 	if !ok {
-		return User{}, ErrInvalidViewer
+		return &ent.User{}, ErrInvalidViewer
 	}
 	return user, nil
 }
