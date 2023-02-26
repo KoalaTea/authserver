@@ -12,16 +12,26 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
-	// AccessRequest is the client for interacting with the AccessRequest builders.
-	AccessRequest *AccessRequestClient
+	// AuthCode is the client for interacting with the AuthCode builders.
+	AuthCode *AuthCodeClient
 	// Cert is the client for interacting with the Cert builders.
 	Cert *CertClient
+	// DenyListedJTI is the client for interacting with the DenyListedJTI builders.
+	DenyListedJTI *DenyListedJTIClient
+	// OAuthAccessToken is the client for interacting with the OAuthAccessToken builders.
+	OAuthAccessToken *OAuthAccessTokenClient
+	// OAuthClient is the client for interacting with the OAuthClient builders.
+	OAuthClient *OAuthClientClient
+	// OAuthPARRequest is the client for interacting with the OAuthPARRequest builders.
+	OAuthPARRequest *OAuthPARRequestClient
+	// OAuthRefreshToken is the client for interacting with the OAuthRefreshToken builders.
+	OAuthRefreshToken *OAuthRefreshTokenClient
+	// OAuthSession is the client for interacting with the OAuthSession builders.
+	OAuthSession *OAuthSessionClient
 	// OIDCAuthCode is the client for interacting with the OIDCAuthCode builders.
 	OIDCAuthCode *OIDCAuthCodeClient
-	// OIDCClient is the client for interacting with the OIDCClient builders.
-	OIDCClient *OIDCClientClient
-	// OIDCSession is the client for interacting with the OIDCSession builders.
-	OIDCSession *OIDCSessionClient
+	// PKCE is the client for interacting with the PKCE builders.
+	PKCE *PKCEClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -155,11 +165,16 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
-	tx.AccessRequest = NewAccessRequestClient(tx.config)
+	tx.AuthCode = NewAuthCodeClient(tx.config)
 	tx.Cert = NewCertClient(tx.config)
+	tx.DenyListedJTI = NewDenyListedJTIClient(tx.config)
+	tx.OAuthAccessToken = NewOAuthAccessTokenClient(tx.config)
+	tx.OAuthClient = NewOAuthClientClient(tx.config)
+	tx.OAuthPARRequest = NewOAuthPARRequestClient(tx.config)
+	tx.OAuthRefreshToken = NewOAuthRefreshTokenClient(tx.config)
+	tx.OAuthSession = NewOAuthSessionClient(tx.config)
 	tx.OIDCAuthCode = NewOIDCAuthCodeClient(tx.config)
-	tx.OIDCClient = NewOIDCClientClient(tx.config)
-	tx.OIDCSession = NewOIDCSessionClient(tx.config)
+	tx.PKCE = NewPKCEClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 
@@ -170,7 +185,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: AccessRequest.QueryXXX(), the query will be executed
+// applies a query, for example: AuthCode.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

@@ -15,11 +15,16 @@ import (
 	"entgo.io/ent/dialect/sql/schema"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/hashicorp/go-multierror"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/cert"
+	"github.com/koalatea/authserver/server/ent/denylistedjti"
+	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
+	"github.com/koalatea/authserver/server/ent/oauthclient"
+	"github.com/koalatea/authserver/server/ent/oauthparrequest"
+	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcclient"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
+	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/user"
 	"golang.org/x/sync/semaphore"
 )
@@ -51,69 +56,39 @@ type Edge struct {
 	IDs  []int  `json:"ids,omitempty"`  // node ids (where this edge point to).
 }
 
-func (ar *AccessRequest) Node(ctx context.Context) (node *Node, err error) {
+func (ac *AuthCode) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
-		ID:     ar.ID,
-		Type:   "AccessRequest",
-		Fields: make([]*Field, 7),
-		Edges:  make([]*Edge, 0),
+		ID:     ac.ID,
+		Type:   "AuthCode",
+		Fields: make([]*Field, 2),
+		Edges:  make([]*Edge, 1),
 	}
 	var buf []byte
-	if buf, err = json.Marshal(ar.RequestedScopes); err != nil {
+	if buf, err = json.Marshal(ac.Code); err != nil {
 		return nil, err
 	}
 	node.Fields[0] = &Field{
-		Type:  "[]string",
-		Name:  "requested_scopes",
+		Type:  "string",
+		Name:  "code",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(ar.GrantedScopes); err != nil {
+	if buf, err = json.Marshal(ac.Active); err != nil {
 		return nil, err
 	}
 	node.Fields[1] = &Field{
-		Type:  "[]string",
-		Name:  "granted_scopes",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ar.RequestedAudiences); err != nil {
-		return nil, err
-	}
-	node.Fields[2] = &Field{
-		Type:  "[]string",
-		Name:  "requested_audiences",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ar.GrantedAudiences); err != nil {
-		return nil, err
-	}
-	node.Fields[3] = &Field{
-		Type:  "[]string",
-		Name:  "granted_audiences",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ar.Request); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "string",
-		Name:  "request",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ar.Form); err != nil {
-		return nil, err
-	}
-	node.Fields[5] = &Field{
-		Type:  "string",
-		Name:  "form",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ar.Active); err != nil {
-		return nil, err
-	}
-	node.Fields[6] = &Field{
 		Type:  "bool",
 		Name:  "active",
 		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "OAuthSession",
+		Name: "session",
+	}
+	err = ac.QuerySession().
+		Select(oauthsession.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
 	}
 	return node, nil
 }
@@ -128,49 +103,66 @@ func (c *Cert) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
-func (oac *OIDCAuthCode) Node(ctx context.Context) (node *Node, err error) {
+func (dlj *DenyListedJTI) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
-		ID:     oac.ID,
-		Type:   "OIDCAuthCode",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 2),
+		ID:     dlj.ID,
+		Type:   "DenyListedJTI",
+		Fields: make([]*Field, 2),
+		Edges:  make([]*Edge, 0),
 	}
 	var buf []byte
-	if buf, err = json.Marshal(oac.AuthorizationCode); err != nil {
+	if buf, err = json.Marshal(dlj.Jti); err != nil {
 		return nil, err
 	}
 	node.Fields[0] = &Field{
 		Type:  "string",
-		Name:  "authorization_code",
+		Name:  "jti",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(dlj.Expiration); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "time.Time",
+		Name:  "expiration",
+		Value: string(buf),
+	}
+	return node, nil
+}
+
+func (oat *OAuthAccessToken) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     oat.ID,
+		Type:   "OAuthAccessToken",
+		Fields: make([]*Field, 1),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(oat.Signature); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "signature",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
-		Type: "AccessRequest",
-		Name: "access_request",
-	}
-	err = oac.QueryAccessRequest().
-		Select(accessrequest.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	node.Edges[1] = &Edge{
-		Type: "OIDCSession",
+		Type: "OAuthSession",
 		Name: "session",
 	}
-	err = oac.QuerySession().
-		Select(oidcsession.FieldID).
-		Scan(ctx, &node.Edges[1].IDs)
+	err = oat.QuerySession().
+		Select(oauthsession.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
 	if err != nil {
 		return nil, err
 	}
 	return node, nil
 }
 
-func (oc *OIDCClient) Node(ctx context.Context) (node *Node, err error) {
+func (oc *OAuthClient) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     oc.ID,
-		Type:   "OIDCClient",
+		Type:   "OAuthClient",
 		Fields: make([]*Field, 6),
 		Edges:  make([]*Edge, 0),
 	}
@@ -226,11 +218,59 @@ func (oc *OIDCClient) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
-func (os *OIDCSession) Node(ctx context.Context) (node *Node, err error) {
+func (opr *OAuthPARRequest) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     opr.ID,
+		Type:   "OAuthPARRequest",
+		Fields: make([]*Field, 1),
+		Edges:  make([]*Edge, 0),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(opr.Request); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "request",
+		Value: string(buf),
+	}
+	return node, nil
+}
+
+func (ort *OAuthRefreshToken) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     ort.ID,
+		Type:   "OAuthRefreshToken",
+		Fields: make([]*Field, 1),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(ort.Signature); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "signature",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "OAuthSession",
+		Name: "session",
+	}
+	err = ort.QuerySession().
+		Select(oauthsession.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (os *OAuthSession) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     os.ID,
-		Type:   "OIDCSession",
-		Fields: make([]*Field, 7),
+		Type:   "OAuthSession",
+		Fields: make([]*Field, 13),
 		Edges:  make([]*Edge, 0),
 	}
 	var buf []byte
@@ -289,6 +329,112 @@ func (os *OIDCSession) Node(ctx context.Context) (node *Node, err error) {
 		Type:  "time.Time",
 		Name:  "auth_time",
 		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.RequestedScopes); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "[]string",
+		Name:  "requested_scopes",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.GrantedScopes); err != nil {
+		return nil, err
+	}
+	node.Fields[8] = &Field{
+		Type:  "[]string",
+		Name:  "granted_scopes",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.RequestedAudiences); err != nil {
+		return nil, err
+	}
+	node.Fields[9] = &Field{
+		Type:  "[]string",
+		Name:  "requested_audiences",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.GrantedAudiences); err != nil {
+		return nil, err
+	}
+	node.Fields[10] = &Field{
+		Type:  "[]string",
+		Name:  "granted_audiences",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.Request); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "string",
+		Name:  "request",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(os.Form); err != nil {
+		return nil, err
+	}
+	node.Fields[12] = &Field{
+		Type:  "string",
+		Name:  "form",
+		Value: string(buf),
+	}
+	return node, nil
+}
+
+func (oac *OIDCAuthCode) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     oac.ID,
+		Type:   "OIDCAuthCode",
+		Fields: make([]*Field, 1),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(oac.AuthorizationCode); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "authorization_code",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "OAuthSession",
+		Name: "session",
+	}
+	err = oac.QuerySession().
+		Select(oauthsession.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (pk *PKCE) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     pk.ID,
+		Type:   "PKCE",
+		Fields: make([]*Field, 1),
+		Edges:  make([]*Edge, 1),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(pk.Code); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "code",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "OAuthSession",
+		Name: "session",
+	}
+	err = pk.QuerySession().
+		Select(oauthsession.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
 	}
 	return node, nil
 }
@@ -394,10 +540,10 @@ func (c *Client) Noder(ctx context.Context, id int, opts ...NodeOption) (_ Noder
 
 func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error) {
 	switch table {
-	case accessrequest.Table:
-		query := c.AccessRequest.Query().
-			Where(accessrequest.ID(id))
-		query, err := query.CollectFields(ctx, "AccessRequest")
+	case authcode.Table:
+		query := c.AuthCode.Query().
+			Where(authcode.ID(id))
+		query, err := query.CollectFields(ctx, "AuthCode")
 		if err != nil {
 			return nil, err
 		}
@@ -418,6 +564,78 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 			return nil, err
 		}
 		return n, nil
+	case denylistedjti.Table:
+		query := c.DenyListedJTI.Query().
+			Where(denylistedjti.ID(id))
+		query, err := query.CollectFields(ctx, "DenyListedJTI")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case oauthaccesstoken.Table:
+		query := c.OAuthAccessToken.Query().
+			Where(oauthaccesstoken.ID(id))
+		query, err := query.CollectFields(ctx, "OAuthAccessToken")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case oauthclient.Table:
+		query := c.OAuthClient.Query().
+			Where(oauthclient.ID(id))
+		query, err := query.CollectFields(ctx, "OAuthClient")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case oauthparrequest.Table:
+		query := c.OAuthPARRequest.Query().
+			Where(oauthparrequest.ID(id))
+		query, err := query.CollectFields(ctx, "OAuthPARRequest")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case oauthrefreshtoken.Table:
+		query := c.OAuthRefreshToken.Query().
+			Where(oauthrefreshtoken.ID(id))
+		query, err := query.CollectFields(ctx, "OAuthRefreshToken")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case oauthsession.Table:
+		query := c.OAuthSession.Query().
+			Where(oauthsession.ID(id))
+		query, err := query.CollectFields(ctx, "OAuthSession")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
 	case oidcauthcode.Table:
 		query := c.OIDCAuthCode.Query().
 			Where(oidcauthcode.ID(id))
@@ -430,22 +648,10 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 			return nil, err
 		}
 		return n, nil
-	case oidcclient.Table:
-		query := c.OIDCClient.Query().
-			Where(oidcclient.ID(id))
-		query, err := query.CollectFields(ctx, "OIDCClient")
-		if err != nil {
-			return nil, err
-		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	case oidcsession.Table:
-		query := c.OIDCSession.Query().
-			Where(oidcsession.ID(id))
-		query, err := query.CollectFields(ctx, "OIDCSession")
+	case pkce.Table:
+		query := c.PKCE.Query().
+			Where(pkce.ID(id))
+		query, err := query.CollectFields(ctx, "PKCE")
 		if err != nil {
 			return nil, err
 		}
@@ -539,10 +745,10 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 		idmap[id] = append(idmap[id], &noders[i])
 	}
 	switch table {
-	case accessrequest.Table:
-		query := c.AccessRequest.Query().
-			Where(accessrequest.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "AccessRequest")
+	case authcode.Table:
+		query := c.AuthCode.Query().
+			Where(authcode.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "AuthCode")
 		if err != nil {
 			return nil, err
 		}
@@ -571,6 +777,102 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 				*noder = node
 			}
 		}
+	case denylistedjti.Table:
+		query := c.DenyListedJTI.Query().
+			Where(denylistedjti.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "DenyListedJTI")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case oauthaccesstoken.Table:
+		query := c.OAuthAccessToken.Query().
+			Where(oauthaccesstoken.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "OAuthAccessToken")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case oauthclient.Table:
+		query := c.OAuthClient.Query().
+			Where(oauthclient.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "OAuthClient")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case oauthparrequest.Table:
+		query := c.OAuthPARRequest.Query().
+			Where(oauthparrequest.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "OAuthPARRequest")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case oauthrefreshtoken.Table:
+		query := c.OAuthRefreshToken.Query().
+			Where(oauthrefreshtoken.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "OAuthRefreshToken")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case oauthsession.Table:
+		query := c.OAuthSession.Query().
+			Where(oauthsession.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "OAuthSession")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
 	case oidcauthcode.Table:
 		query := c.OIDCAuthCode.Query().
 			Where(oidcauthcode.IDIn(ids...))
@@ -587,26 +889,10 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 				*noder = node
 			}
 		}
-	case oidcclient.Table:
-		query := c.OIDCClient.Query().
-			Where(oidcclient.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OIDCClient")
-		if err != nil {
-			return nil, err
-		}
-		nodes, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, node := range nodes {
-			for _, noder := range idmap[node.ID] {
-				*noder = node
-			}
-		}
-	case oidcsession.Table:
-		query := c.OIDCSession.Query().
-			Where(oidcsession.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OIDCSession")
+	case pkce.Table:
+		query := c.PKCE.Query().
+			Where(pkce.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "PKCE")
 		if err != nil {
 			return nil, err
 		}

@@ -14,12 +14,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
-	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 )
 
-var tracer trace.Tracer
+var tracer = otel.Tracer("authserver")
 
 func newExporter(w io.Writer) (sdktrace.SpanExporter, error) {
 	return stdouttrace.New(
@@ -68,7 +67,7 @@ func main() {
 	tp := newTraceProvider(exp)
 	defer func() { _ = tp.Shutdown(ctx) }()
 	otel.SetTracerProvider(tp)
-	tracer = tp.Tracer("authserver")
+	// tracer = tp.Tracer("authserver")
 
 	server := newServer(ctx)
 	fmt.Println("starting server")

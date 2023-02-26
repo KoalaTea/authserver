@@ -7,21 +7,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/cert"
+	"github.com/koalatea/authserver/server/ent/denylistedjti"
+	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
+	"github.com/koalatea/authserver/server/ent/oauthclient"
+	"github.com/koalatea/authserver/server/ent/oauthparrequest"
+	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcclient"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
+	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/predicate"
 	"github.com/koalatea/authserver/server/ent/user"
 )
 
-// AccessRequestWhereInput represents a where input for filtering AccessRequest queries.
-type AccessRequestWhereInput struct {
-	Predicates []predicate.AccessRequest  `json:"-"`
-	Not        *AccessRequestWhereInput   `json:"not,omitempty"`
-	Or         []*AccessRequestWhereInput `json:"or,omitempty"`
-	And        []*AccessRequestWhereInput `json:"and,omitempty"`
+// AuthCodeWhereInput represents a where input for filtering AuthCode queries.
+type AuthCodeWhereInput struct {
+	Predicates []predicate.AuthCode  `json:"-"`
+	Not        *AuthCodeWhereInput   `json:"not,omitempty"`
+	Or         []*AuthCodeWhereInput `json:"or,omitempty"`
+	And        []*AuthCodeWhereInput `json:"and,omitempty"`
 
 	// "id" field predicates.
 	ID      *int  `json:"id,omitempty"`
@@ -33,54 +38,43 @@ type AccessRequestWhereInput struct {
 	IDLT    *int  `json:"idLT,omitempty"`
 	IDLTE   *int  `json:"idLTE,omitempty"`
 
-	// "request" field predicates.
-	Request             *string  `json:"request,omitempty"`
-	RequestNEQ          *string  `json:"requestNEQ,omitempty"`
-	RequestIn           []string `json:"requestIn,omitempty"`
-	RequestNotIn        []string `json:"requestNotIn,omitempty"`
-	RequestGT           *string  `json:"requestGT,omitempty"`
-	RequestGTE          *string  `json:"requestGTE,omitempty"`
-	RequestLT           *string  `json:"requestLT,omitempty"`
-	RequestLTE          *string  `json:"requestLTE,omitempty"`
-	RequestContains     *string  `json:"requestContains,omitempty"`
-	RequestHasPrefix    *string  `json:"requestHasPrefix,omitempty"`
-	RequestHasSuffix    *string  `json:"requestHasSuffix,omitempty"`
-	RequestEqualFold    *string  `json:"requestEqualFold,omitempty"`
-	RequestContainsFold *string  `json:"requestContainsFold,omitempty"`
-
-	// "form" field predicates.
-	Form             *string  `json:"form,omitempty"`
-	FormNEQ          *string  `json:"formNEQ,omitempty"`
-	FormIn           []string `json:"formIn,omitempty"`
-	FormNotIn        []string `json:"formNotIn,omitempty"`
-	FormGT           *string  `json:"formGT,omitempty"`
-	FormGTE          *string  `json:"formGTE,omitempty"`
-	FormLT           *string  `json:"formLT,omitempty"`
-	FormLTE          *string  `json:"formLTE,omitempty"`
-	FormContains     *string  `json:"formContains,omitempty"`
-	FormHasPrefix    *string  `json:"formHasPrefix,omitempty"`
-	FormHasSuffix    *string  `json:"formHasSuffix,omitempty"`
-	FormEqualFold    *string  `json:"formEqualFold,omitempty"`
-	FormContainsFold *string  `json:"formContainsFold,omitempty"`
+	// "code" field predicates.
+	Code             *string  `json:"code,omitempty"`
+	CodeNEQ          *string  `json:"codeNEQ,omitempty"`
+	CodeIn           []string `json:"codeIn,omitempty"`
+	CodeNotIn        []string `json:"codeNotIn,omitempty"`
+	CodeGT           *string  `json:"codeGT,omitempty"`
+	CodeGTE          *string  `json:"codeGTE,omitempty"`
+	CodeLT           *string  `json:"codeLT,omitempty"`
+	CodeLTE          *string  `json:"codeLTE,omitempty"`
+	CodeContains     *string  `json:"codeContains,omitempty"`
+	CodeHasPrefix    *string  `json:"codeHasPrefix,omitempty"`
+	CodeHasSuffix    *string  `json:"codeHasSuffix,omitempty"`
+	CodeEqualFold    *string  `json:"codeEqualFold,omitempty"`
+	CodeContainsFold *string  `json:"codeContainsFold,omitempty"`
 
 	// "active" field predicates.
 	Active    *bool `json:"active,omitempty"`
 	ActiveNEQ *bool `json:"activeNEQ,omitempty"`
+
+	// "session" edge predicates.
+	HasSession     *bool                     `json:"hasSession,omitempty"`
+	HasSessionWith []*OAuthSessionWhereInput `json:"hasSessionWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
-func (i *AccessRequestWhereInput) AddPredicates(predicates ...predicate.AccessRequest) {
+func (i *AuthCodeWhereInput) AddPredicates(predicates ...predicate.AuthCode) {
 	i.Predicates = append(i.Predicates, predicates...)
 }
 
-// Filter applies the AccessRequestWhereInput filter on the AccessRequestQuery builder.
-func (i *AccessRequestWhereInput) Filter(q *AccessRequestQuery) (*AccessRequestQuery, error) {
+// Filter applies the AuthCodeWhereInput filter on the AuthCodeQuery builder.
+func (i *AuthCodeWhereInput) Filter(q *AuthCodeQuery) (*AuthCodeQuery, error) {
 	if i == nil {
 		return q, nil
 	}
 	p, err := i.P()
 	if err != nil {
-		if err == ErrEmptyAccessRequestWhereInput {
+		if err == ErrEmptyAuthCodeWhereInput {
 			return q, nil
 		}
 		return nil, err
@@ -88,19 +82,19 @@ func (i *AccessRequestWhereInput) Filter(q *AccessRequestQuery) (*AccessRequestQ
 	return q.Where(p), nil
 }
 
-// ErrEmptyAccessRequestWhereInput is returned in case the AccessRequestWhereInput is empty.
-var ErrEmptyAccessRequestWhereInput = errors.New("ent: empty predicate AccessRequestWhereInput")
+// ErrEmptyAuthCodeWhereInput is returned in case the AuthCodeWhereInput is empty.
+var ErrEmptyAuthCodeWhereInput = errors.New("ent: empty predicate AuthCodeWhereInput")
 
-// P returns a predicate for filtering accessrequests.
+// P returns a predicate for filtering authcodes.
 // An error is returned if the input is empty or invalid.
-func (i *AccessRequestWhereInput) P() (predicate.AccessRequest, error) {
-	var predicates []predicate.AccessRequest
+func (i *AuthCodeWhereInput) P() (predicate.AuthCode, error) {
+	var predicates []predicate.AuthCode
 	if i.Not != nil {
 		p, err := i.Not.P()
 		if err != nil {
 			return nil, fmt.Errorf("%w: field 'not'", err)
 		}
-		predicates = append(predicates, accessrequest.Not(p))
+		predicates = append(predicates, authcode.Not(p))
 	}
 	switch n := len(i.Or); {
 	case n == 1:
@@ -110,7 +104,7 @@ func (i *AccessRequestWhereInput) P() (predicate.AccessRequest, error) {
 		}
 		predicates = append(predicates, p)
 	case n > 1:
-		or := make([]predicate.AccessRequest, 0, n)
+		or := make([]predicate.AuthCode, 0, n)
 		for _, w := range i.Or {
 			p, err := w.P()
 			if err != nil {
@@ -118,7 +112,7 @@ func (i *AccessRequestWhereInput) P() (predicate.AccessRequest, error) {
 			}
 			or = append(or, p)
 		}
-		predicates = append(predicates, accessrequest.Or(or...))
+		predicates = append(predicates, authcode.Or(or...))
 	}
 	switch n := len(i.And); {
 	case n == 1:
@@ -128,7 +122,7 @@ func (i *AccessRequestWhereInput) P() (predicate.AccessRequest, error) {
 		}
 		predicates = append(predicates, p)
 	case n > 1:
-		and := make([]predicate.AccessRequest, 0, n)
+		and := make([]predicate.AuthCode, 0, n)
 		for _, w := range i.And {
 			p, err := w.P()
 			if err != nil {
@@ -136,125 +130,104 @@ func (i *AccessRequestWhereInput) P() (predicate.AccessRequest, error) {
 			}
 			and = append(and, p)
 		}
-		predicates = append(predicates, accessrequest.And(and...))
+		predicates = append(predicates, authcode.And(and...))
 	}
 	predicates = append(predicates, i.Predicates...)
 	if i.ID != nil {
-		predicates = append(predicates, accessrequest.IDEQ(*i.ID))
+		predicates = append(predicates, authcode.IDEQ(*i.ID))
 	}
 	if i.IDNEQ != nil {
-		predicates = append(predicates, accessrequest.IDNEQ(*i.IDNEQ))
+		predicates = append(predicates, authcode.IDNEQ(*i.IDNEQ))
 	}
 	if len(i.IDIn) > 0 {
-		predicates = append(predicates, accessrequest.IDIn(i.IDIn...))
+		predicates = append(predicates, authcode.IDIn(i.IDIn...))
 	}
 	if len(i.IDNotIn) > 0 {
-		predicates = append(predicates, accessrequest.IDNotIn(i.IDNotIn...))
+		predicates = append(predicates, authcode.IDNotIn(i.IDNotIn...))
 	}
 	if i.IDGT != nil {
-		predicates = append(predicates, accessrequest.IDGT(*i.IDGT))
+		predicates = append(predicates, authcode.IDGT(*i.IDGT))
 	}
 	if i.IDGTE != nil {
-		predicates = append(predicates, accessrequest.IDGTE(*i.IDGTE))
+		predicates = append(predicates, authcode.IDGTE(*i.IDGTE))
 	}
 	if i.IDLT != nil {
-		predicates = append(predicates, accessrequest.IDLT(*i.IDLT))
+		predicates = append(predicates, authcode.IDLT(*i.IDLT))
 	}
 	if i.IDLTE != nil {
-		predicates = append(predicates, accessrequest.IDLTE(*i.IDLTE))
+		predicates = append(predicates, authcode.IDLTE(*i.IDLTE))
 	}
-	if i.Request != nil {
-		predicates = append(predicates, accessrequest.RequestEQ(*i.Request))
+	if i.Code != nil {
+		predicates = append(predicates, authcode.CodeEQ(*i.Code))
 	}
-	if i.RequestNEQ != nil {
-		predicates = append(predicates, accessrequest.RequestNEQ(*i.RequestNEQ))
+	if i.CodeNEQ != nil {
+		predicates = append(predicates, authcode.CodeNEQ(*i.CodeNEQ))
 	}
-	if len(i.RequestIn) > 0 {
-		predicates = append(predicates, accessrequest.RequestIn(i.RequestIn...))
+	if len(i.CodeIn) > 0 {
+		predicates = append(predicates, authcode.CodeIn(i.CodeIn...))
 	}
-	if len(i.RequestNotIn) > 0 {
-		predicates = append(predicates, accessrequest.RequestNotIn(i.RequestNotIn...))
+	if len(i.CodeNotIn) > 0 {
+		predicates = append(predicates, authcode.CodeNotIn(i.CodeNotIn...))
 	}
-	if i.RequestGT != nil {
-		predicates = append(predicates, accessrequest.RequestGT(*i.RequestGT))
+	if i.CodeGT != nil {
+		predicates = append(predicates, authcode.CodeGT(*i.CodeGT))
 	}
-	if i.RequestGTE != nil {
-		predicates = append(predicates, accessrequest.RequestGTE(*i.RequestGTE))
+	if i.CodeGTE != nil {
+		predicates = append(predicates, authcode.CodeGTE(*i.CodeGTE))
 	}
-	if i.RequestLT != nil {
-		predicates = append(predicates, accessrequest.RequestLT(*i.RequestLT))
+	if i.CodeLT != nil {
+		predicates = append(predicates, authcode.CodeLT(*i.CodeLT))
 	}
-	if i.RequestLTE != nil {
-		predicates = append(predicates, accessrequest.RequestLTE(*i.RequestLTE))
+	if i.CodeLTE != nil {
+		predicates = append(predicates, authcode.CodeLTE(*i.CodeLTE))
 	}
-	if i.RequestContains != nil {
-		predicates = append(predicates, accessrequest.RequestContains(*i.RequestContains))
+	if i.CodeContains != nil {
+		predicates = append(predicates, authcode.CodeContains(*i.CodeContains))
 	}
-	if i.RequestHasPrefix != nil {
-		predicates = append(predicates, accessrequest.RequestHasPrefix(*i.RequestHasPrefix))
+	if i.CodeHasPrefix != nil {
+		predicates = append(predicates, authcode.CodeHasPrefix(*i.CodeHasPrefix))
 	}
-	if i.RequestHasSuffix != nil {
-		predicates = append(predicates, accessrequest.RequestHasSuffix(*i.RequestHasSuffix))
+	if i.CodeHasSuffix != nil {
+		predicates = append(predicates, authcode.CodeHasSuffix(*i.CodeHasSuffix))
 	}
-	if i.RequestEqualFold != nil {
-		predicates = append(predicates, accessrequest.RequestEqualFold(*i.RequestEqualFold))
+	if i.CodeEqualFold != nil {
+		predicates = append(predicates, authcode.CodeEqualFold(*i.CodeEqualFold))
 	}
-	if i.RequestContainsFold != nil {
-		predicates = append(predicates, accessrequest.RequestContainsFold(*i.RequestContainsFold))
-	}
-	if i.Form != nil {
-		predicates = append(predicates, accessrequest.FormEQ(*i.Form))
-	}
-	if i.FormNEQ != nil {
-		predicates = append(predicates, accessrequest.FormNEQ(*i.FormNEQ))
-	}
-	if len(i.FormIn) > 0 {
-		predicates = append(predicates, accessrequest.FormIn(i.FormIn...))
-	}
-	if len(i.FormNotIn) > 0 {
-		predicates = append(predicates, accessrequest.FormNotIn(i.FormNotIn...))
-	}
-	if i.FormGT != nil {
-		predicates = append(predicates, accessrequest.FormGT(*i.FormGT))
-	}
-	if i.FormGTE != nil {
-		predicates = append(predicates, accessrequest.FormGTE(*i.FormGTE))
-	}
-	if i.FormLT != nil {
-		predicates = append(predicates, accessrequest.FormLT(*i.FormLT))
-	}
-	if i.FormLTE != nil {
-		predicates = append(predicates, accessrequest.FormLTE(*i.FormLTE))
-	}
-	if i.FormContains != nil {
-		predicates = append(predicates, accessrequest.FormContains(*i.FormContains))
-	}
-	if i.FormHasPrefix != nil {
-		predicates = append(predicates, accessrequest.FormHasPrefix(*i.FormHasPrefix))
-	}
-	if i.FormHasSuffix != nil {
-		predicates = append(predicates, accessrequest.FormHasSuffix(*i.FormHasSuffix))
-	}
-	if i.FormEqualFold != nil {
-		predicates = append(predicates, accessrequest.FormEqualFold(*i.FormEqualFold))
-	}
-	if i.FormContainsFold != nil {
-		predicates = append(predicates, accessrequest.FormContainsFold(*i.FormContainsFold))
+	if i.CodeContainsFold != nil {
+		predicates = append(predicates, authcode.CodeContainsFold(*i.CodeContainsFold))
 	}
 	if i.Active != nil {
-		predicates = append(predicates, accessrequest.ActiveEQ(*i.Active))
+		predicates = append(predicates, authcode.ActiveEQ(*i.Active))
 	}
 	if i.ActiveNEQ != nil {
-		predicates = append(predicates, accessrequest.ActiveNEQ(*i.ActiveNEQ))
+		predicates = append(predicates, authcode.ActiveNEQ(*i.ActiveNEQ))
 	}
 
+	if i.HasSession != nil {
+		p := authcode.HasSession()
+		if !*i.HasSession {
+			p = authcode.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasSessionWith) > 0 {
+		with := make([]predicate.OAuthSession, 0, len(i.HasSessionWith))
+		for _, w := range i.HasSessionWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasSessionWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, authcode.HasSessionWith(with...))
+	}
 	switch len(predicates) {
 	case 0:
-		return nil, ErrEmptyAccessRequestWhereInput
+		return nil, ErrEmptyAuthCodeWhereInput
 	case 1:
 		return predicates[0], nil
 	default:
-		return accessrequest.And(predicates...), nil
+		return authcode.And(predicates...), nil
 	}
 }
 
@@ -382,6 +355,1504 @@ func (i *CertWhereInput) P() (predicate.Cert, error) {
 	}
 }
 
+// DenyListedJTIWhereInput represents a where input for filtering DenyListedJTI queries.
+type DenyListedJTIWhereInput struct {
+	Predicates []predicate.DenyListedJTI  `json:"-"`
+	Not        *DenyListedJTIWhereInput   `json:"not,omitempty"`
+	Or         []*DenyListedJTIWhereInput `json:"or,omitempty"`
+	And        []*DenyListedJTIWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "jti" field predicates.
+	Jti             *string  `json:"jti,omitempty"`
+	JtiNEQ          *string  `json:"jtiNEQ,omitempty"`
+	JtiIn           []string `json:"jtiIn,omitempty"`
+	JtiNotIn        []string `json:"jtiNotIn,omitempty"`
+	JtiGT           *string  `json:"jtiGT,omitempty"`
+	JtiGTE          *string  `json:"jtiGTE,omitempty"`
+	JtiLT           *string  `json:"jtiLT,omitempty"`
+	JtiLTE          *string  `json:"jtiLTE,omitempty"`
+	JtiContains     *string  `json:"jtiContains,omitempty"`
+	JtiHasPrefix    *string  `json:"jtiHasPrefix,omitempty"`
+	JtiHasSuffix    *string  `json:"jtiHasSuffix,omitempty"`
+	JtiEqualFold    *string  `json:"jtiEqualFold,omitempty"`
+	JtiContainsFold *string  `json:"jtiContainsFold,omitempty"`
+
+	// "expiration" field predicates.
+	Expiration      *time.Time  `json:"expiration,omitempty"`
+	ExpirationNEQ   *time.Time  `json:"expirationNEQ,omitempty"`
+	ExpirationIn    []time.Time `json:"expirationIn,omitempty"`
+	ExpirationNotIn []time.Time `json:"expirationNotIn,omitempty"`
+	ExpirationGT    *time.Time  `json:"expirationGT,omitempty"`
+	ExpirationGTE   *time.Time  `json:"expirationGTE,omitempty"`
+	ExpirationLT    *time.Time  `json:"expirationLT,omitempty"`
+	ExpirationLTE   *time.Time  `json:"expirationLTE,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *DenyListedJTIWhereInput) AddPredicates(predicates ...predicate.DenyListedJTI) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the DenyListedJTIWhereInput filter on the DenyListedJTIQuery builder.
+func (i *DenyListedJTIWhereInput) Filter(q *DenyListedJTIQuery) (*DenyListedJTIQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyDenyListedJTIWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyDenyListedJTIWhereInput is returned in case the DenyListedJTIWhereInput is empty.
+var ErrEmptyDenyListedJTIWhereInput = errors.New("ent: empty predicate DenyListedJTIWhereInput")
+
+// P returns a predicate for filtering denylistedjtis.
+// An error is returned if the input is empty or invalid.
+func (i *DenyListedJTIWhereInput) P() (predicate.DenyListedJTI, error) {
+	var predicates []predicate.DenyListedJTI
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, denylistedjti.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.DenyListedJTI, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, denylistedjti.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.DenyListedJTI, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, denylistedjti.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, denylistedjti.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, denylistedjti.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, denylistedjti.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, denylistedjti.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, denylistedjti.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, denylistedjti.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, denylistedjti.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, denylistedjti.IDLTE(*i.IDLTE))
+	}
+	if i.Jti != nil {
+		predicates = append(predicates, denylistedjti.JtiEQ(*i.Jti))
+	}
+	if i.JtiNEQ != nil {
+		predicates = append(predicates, denylistedjti.JtiNEQ(*i.JtiNEQ))
+	}
+	if len(i.JtiIn) > 0 {
+		predicates = append(predicates, denylistedjti.JtiIn(i.JtiIn...))
+	}
+	if len(i.JtiNotIn) > 0 {
+		predicates = append(predicates, denylistedjti.JtiNotIn(i.JtiNotIn...))
+	}
+	if i.JtiGT != nil {
+		predicates = append(predicates, denylistedjti.JtiGT(*i.JtiGT))
+	}
+	if i.JtiGTE != nil {
+		predicates = append(predicates, denylistedjti.JtiGTE(*i.JtiGTE))
+	}
+	if i.JtiLT != nil {
+		predicates = append(predicates, denylistedjti.JtiLT(*i.JtiLT))
+	}
+	if i.JtiLTE != nil {
+		predicates = append(predicates, denylistedjti.JtiLTE(*i.JtiLTE))
+	}
+	if i.JtiContains != nil {
+		predicates = append(predicates, denylistedjti.JtiContains(*i.JtiContains))
+	}
+	if i.JtiHasPrefix != nil {
+		predicates = append(predicates, denylistedjti.JtiHasPrefix(*i.JtiHasPrefix))
+	}
+	if i.JtiHasSuffix != nil {
+		predicates = append(predicates, denylistedjti.JtiHasSuffix(*i.JtiHasSuffix))
+	}
+	if i.JtiEqualFold != nil {
+		predicates = append(predicates, denylistedjti.JtiEqualFold(*i.JtiEqualFold))
+	}
+	if i.JtiContainsFold != nil {
+		predicates = append(predicates, denylistedjti.JtiContainsFold(*i.JtiContainsFold))
+	}
+	if i.Expiration != nil {
+		predicates = append(predicates, denylistedjti.ExpirationEQ(*i.Expiration))
+	}
+	if i.ExpirationNEQ != nil {
+		predicates = append(predicates, denylistedjti.ExpirationNEQ(*i.ExpirationNEQ))
+	}
+	if len(i.ExpirationIn) > 0 {
+		predicates = append(predicates, denylistedjti.ExpirationIn(i.ExpirationIn...))
+	}
+	if len(i.ExpirationNotIn) > 0 {
+		predicates = append(predicates, denylistedjti.ExpirationNotIn(i.ExpirationNotIn...))
+	}
+	if i.ExpirationGT != nil {
+		predicates = append(predicates, denylistedjti.ExpirationGT(*i.ExpirationGT))
+	}
+	if i.ExpirationGTE != nil {
+		predicates = append(predicates, denylistedjti.ExpirationGTE(*i.ExpirationGTE))
+	}
+	if i.ExpirationLT != nil {
+		predicates = append(predicates, denylistedjti.ExpirationLT(*i.ExpirationLT))
+	}
+	if i.ExpirationLTE != nil {
+		predicates = append(predicates, denylistedjti.ExpirationLTE(*i.ExpirationLTE))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyDenyListedJTIWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return denylistedjti.And(predicates...), nil
+	}
+}
+
+// OAuthAccessTokenWhereInput represents a where input for filtering OAuthAccessToken queries.
+type OAuthAccessTokenWhereInput struct {
+	Predicates []predicate.OAuthAccessToken  `json:"-"`
+	Not        *OAuthAccessTokenWhereInput   `json:"not,omitempty"`
+	Or         []*OAuthAccessTokenWhereInput `json:"or,omitempty"`
+	And        []*OAuthAccessTokenWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "signature" field predicates.
+	Signature             *string  `json:"signature,omitempty"`
+	SignatureNEQ          *string  `json:"signatureNEQ,omitempty"`
+	SignatureIn           []string `json:"signatureIn,omitempty"`
+	SignatureNotIn        []string `json:"signatureNotIn,omitempty"`
+	SignatureGT           *string  `json:"signatureGT,omitempty"`
+	SignatureGTE          *string  `json:"signatureGTE,omitempty"`
+	SignatureLT           *string  `json:"signatureLT,omitempty"`
+	SignatureLTE          *string  `json:"signatureLTE,omitempty"`
+	SignatureContains     *string  `json:"signatureContains,omitempty"`
+	SignatureHasPrefix    *string  `json:"signatureHasPrefix,omitempty"`
+	SignatureHasSuffix    *string  `json:"signatureHasSuffix,omitempty"`
+	SignatureEqualFold    *string  `json:"signatureEqualFold,omitempty"`
+	SignatureContainsFold *string  `json:"signatureContainsFold,omitempty"`
+
+	// "session" edge predicates.
+	HasSession     *bool                     `json:"hasSession,omitempty"`
+	HasSessionWith []*OAuthSessionWhereInput `json:"hasSessionWith,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *OAuthAccessTokenWhereInput) AddPredicates(predicates ...predicate.OAuthAccessToken) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the OAuthAccessTokenWhereInput filter on the OAuthAccessTokenQuery builder.
+func (i *OAuthAccessTokenWhereInput) Filter(q *OAuthAccessTokenQuery) (*OAuthAccessTokenQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyOAuthAccessTokenWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyOAuthAccessTokenWhereInput is returned in case the OAuthAccessTokenWhereInput is empty.
+var ErrEmptyOAuthAccessTokenWhereInput = errors.New("ent: empty predicate OAuthAccessTokenWhereInput")
+
+// P returns a predicate for filtering oauthaccesstokens.
+// An error is returned if the input is empty or invalid.
+func (i *OAuthAccessTokenWhereInput) P() (predicate.OAuthAccessToken, error) {
+	var predicates []predicate.OAuthAccessToken
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, oauthaccesstoken.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.OAuthAccessToken, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, oauthaccesstoken.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.OAuthAccessToken, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, oauthaccesstoken.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, oauthaccesstoken.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, oauthaccesstoken.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, oauthaccesstoken.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, oauthaccesstoken.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, oauthaccesstoken.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, oauthaccesstoken.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, oauthaccesstoken.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, oauthaccesstoken.IDLTE(*i.IDLTE))
+	}
+	if i.Signature != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureEQ(*i.Signature))
+	}
+	if i.SignatureNEQ != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureNEQ(*i.SignatureNEQ))
+	}
+	if len(i.SignatureIn) > 0 {
+		predicates = append(predicates, oauthaccesstoken.SignatureIn(i.SignatureIn...))
+	}
+	if len(i.SignatureNotIn) > 0 {
+		predicates = append(predicates, oauthaccesstoken.SignatureNotIn(i.SignatureNotIn...))
+	}
+	if i.SignatureGT != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureGT(*i.SignatureGT))
+	}
+	if i.SignatureGTE != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureGTE(*i.SignatureGTE))
+	}
+	if i.SignatureLT != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureLT(*i.SignatureLT))
+	}
+	if i.SignatureLTE != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureLTE(*i.SignatureLTE))
+	}
+	if i.SignatureContains != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureContains(*i.SignatureContains))
+	}
+	if i.SignatureHasPrefix != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureHasPrefix(*i.SignatureHasPrefix))
+	}
+	if i.SignatureHasSuffix != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureHasSuffix(*i.SignatureHasSuffix))
+	}
+	if i.SignatureEqualFold != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureEqualFold(*i.SignatureEqualFold))
+	}
+	if i.SignatureContainsFold != nil {
+		predicates = append(predicates, oauthaccesstoken.SignatureContainsFold(*i.SignatureContainsFold))
+	}
+
+	if i.HasSession != nil {
+		p := oauthaccesstoken.HasSession()
+		if !*i.HasSession {
+			p = oauthaccesstoken.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasSessionWith) > 0 {
+		with := make([]predicate.OAuthSession, 0, len(i.HasSessionWith))
+		for _, w := range i.HasSessionWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasSessionWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, oauthaccesstoken.HasSessionWith(with...))
+	}
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyOAuthAccessTokenWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return oauthaccesstoken.And(predicates...), nil
+	}
+}
+
+// OAuthClientWhereInput represents a where input for filtering OAuthClient queries.
+type OAuthClientWhereInput struct {
+	Predicates []predicate.OAuthClient  `json:"-"`
+	Not        *OAuthClientWhereInput   `json:"not,omitempty"`
+	Or         []*OAuthClientWhereInput `json:"or,omitempty"`
+	And        []*OAuthClientWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "client_id" field predicates.
+	ClientID             *string  `json:"clientID,omitempty"`
+	ClientIDNEQ          *string  `json:"clientIDNEQ,omitempty"`
+	ClientIDIn           []string `json:"clientIDIn,omitempty"`
+	ClientIDNotIn        []string `json:"clientIDNotIn,omitempty"`
+	ClientIDGT           *string  `json:"clientIDGT,omitempty"`
+	ClientIDGTE          *string  `json:"clientIDGTE,omitempty"`
+	ClientIDLT           *string  `json:"clientIDLT,omitempty"`
+	ClientIDLTE          *string  `json:"clientIDLTE,omitempty"`
+	ClientIDContains     *string  `json:"clientIDContains,omitempty"`
+	ClientIDHasPrefix    *string  `json:"clientIDHasPrefix,omitempty"`
+	ClientIDHasSuffix    *string  `json:"clientIDHasSuffix,omitempty"`
+	ClientIDEqualFold    *string  `json:"clientIDEqualFold,omitempty"`
+	ClientIDContainsFold *string  `json:"clientIDContainsFold,omitempty"`
+
+	// "secret" field predicates.
+	Secret             *string  `json:"secret,omitempty"`
+	SecretNEQ          *string  `json:"secretNEQ,omitempty"`
+	SecretIn           []string `json:"secretIn,omitempty"`
+	SecretNotIn        []string `json:"secretNotIn,omitempty"`
+	SecretGT           *string  `json:"secretGT,omitempty"`
+	SecretGTE          *string  `json:"secretGTE,omitempty"`
+	SecretLT           *string  `json:"secretLT,omitempty"`
+	SecretLTE          *string  `json:"secretLTE,omitempty"`
+	SecretContains     *string  `json:"secretContains,omitempty"`
+	SecretHasPrefix    *string  `json:"secretHasPrefix,omitempty"`
+	SecretHasSuffix    *string  `json:"secretHasSuffix,omitempty"`
+	SecretEqualFold    *string  `json:"secretEqualFold,omitempty"`
+	SecretContainsFold *string  `json:"secretContainsFold,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *OAuthClientWhereInput) AddPredicates(predicates ...predicate.OAuthClient) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the OAuthClientWhereInput filter on the OAuthClientQuery builder.
+func (i *OAuthClientWhereInput) Filter(q *OAuthClientQuery) (*OAuthClientQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyOAuthClientWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyOAuthClientWhereInput is returned in case the OAuthClientWhereInput is empty.
+var ErrEmptyOAuthClientWhereInput = errors.New("ent: empty predicate OAuthClientWhereInput")
+
+// P returns a predicate for filtering oauthclients.
+// An error is returned if the input is empty or invalid.
+func (i *OAuthClientWhereInput) P() (predicate.OAuthClient, error) {
+	var predicates []predicate.OAuthClient
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, oauthclient.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.OAuthClient, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, oauthclient.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.OAuthClient, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, oauthclient.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, oauthclient.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, oauthclient.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, oauthclient.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, oauthclient.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, oauthclient.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, oauthclient.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, oauthclient.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, oauthclient.IDLTE(*i.IDLTE))
+	}
+	if i.ClientID != nil {
+		predicates = append(predicates, oauthclient.ClientIDEQ(*i.ClientID))
+	}
+	if i.ClientIDNEQ != nil {
+		predicates = append(predicates, oauthclient.ClientIDNEQ(*i.ClientIDNEQ))
+	}
+	if len(i.ClientIDIn) > 0 {
+		predicates = append(predicates, oauthclient.ClientIDIn(i.ClientIDIn...))
+	}
+	if len(i.ClientIDNotIn) > 0 {
+		predicates = append(predicates, oauthclient.ClientIDNotIn(i.ClientIDNotIn...))
+	}
+	if i.ClientIDGT != nil {
+		predicates = append(predicates, oauthclient.ClientIDGT(*i.ClientIDGT))
+	}
+	if i.ClientIDGTE != nil {
+		predicates = append(predicates, oauthclient.ClientIDGTE(*i.ClientIDGTE))
+	}
+	if i.ClientIDLT != nil {
+		predicates = append(predicates, oauthclient.ClientIDLT(*i.ClientIDLT))
+	}
+	if i.ClientIDLTE != nil {
+		predicates = append(predicates, oauthclient.ClientIDLTE(*i.ClientIDLTE))
+	}
+	if i.ClientIDContains != nil {
+		predicates = append(predicates, oauthclient.ClientIDContains(*i.ClientIDContains))
+	}
+	if i.ClientIDHasPrefix != nil {
+		predicates = append(predicates, oauthclient.ClientIDHasPrefix(*i.ClientIDHasPrefix))
+	}
+	if i.ClientIDHasSuffix != nil {
+		predicates = append(predicates, oauthclient.ClientIDHasSuffix(*i.ClientIDHasSuffix))
+	}
+	if i.ClientIDEqualFold != nil {
+		predicates = append(predicates, oauthclient.ClientIDEqualFold(*i.ClientIDEqualFold))
+	}
+	if i.ClientIDContainsFold != nil {
+		predicates = append(predicates, oauthclient.ClientIDContainsFold(*i.ClientIDContainsFold))
+	}
+	if i.Secret != nil {
+		predicates = append(predicates, oauthclient.SecretEQ(*i.Secret))
+	}
+	if i.SecretNEQ != nil {
+		predicates = append(predicates, oauthclient.SecretNEQ(*i.SecretNEQ))
+	}
+	if len(i.SecretIn) > 0 {
+		predicates = append(predicates, oauthclient.SecretIn(i.SecretIn...))
+	}
+	if len(i.SecretNotIn) > 0 {
+		predicates = append(predicates, oauthclient.SecretNotIn(i.SecretNotIn...))
+	}
+	if i.SecretGT != nil {
+		predicates = append(predicates, oauthclient.SecretGT(*i.SecretGT))
+	}
+	if i.SecretGTE != nil {
+		predicates = append(predicates, oauthclient.SecretGTE(*i.SecretGTE))
+	}
+	if i.SecretLT != nil {
+		predicates = append(predicates, oauthclient.SecretLT(*i.SecretLT))
+	}
+	if i.SecretLTE != nil {
+		predicates = append(predicates, oauthclient.SecretLTE(*i.SecretLTE))
+	}
+	if i.SecretContains != nil {
+		predicates = append(predicates, oauthclient.SecretContains(*i.SecretContains))
+	}
+	if i.SecretHasPrefix != nil {
+		predicates = append(predicates, oauthclient.SecretHasPrefix(*i.SecretHasPrefix))
+	}
+	if i.SecretHasSuffix != nil {
+		predicates = append(predicates, oauthclient.SecretHasSuffix(*i.SecretHasSuffix))
+	}
+	if i.SecretEqualFold != nil {
+		predicates = append(predicates, oauthclient.SecretEqualFold(*i.SecretEqualFold))
+	}
+	if i.SecretContainsFold != nil {
+		predicates = append(predicates, oauthclient.SecretContainsFold(*i.SecretContainsFold))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyOAuthClientWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return oauthclient.And(predicates...), nil
+	}
+}
+
+// OAuthPARRequestWhereInput represents a where input for filtering OAuthPARRequest queries.
+type OAuthPARRequestWhereInput struct {
+	Predicates []predicate.OAuthPARRequest  `json:"-"`
+	Not        *OAuthPARRequestWhereInput   `json:"not,omitempty"`
+	Or         []*OAuthPARRequestWhereInput `json:"or,omitempty"`
+	And        []*OAuthPARRequestWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "request" field predicates.
+	Request             *string  `json:"request,omitempty"`
+	RequestNEQ          *string  `json:"requestNEQ,omitempty"`
+	RequestIn           []string `json:"requestIn,omitempty"`
+	RequestNotIn        []string `json:"requestNotIn,omitempty"`
+	RequestGT           *string  `json:"requestGT,omitempty"`
+	RequestGTE          *string  `json:"requestGTE,omitempty"`
+	RequestLT           *string  `json:"requestLT,omitempty"`
+	RequestLTE          *string  `json:"requestLTE,omitempty"`
+	RequestContains     *string  `json:"requestContains,omitempty"`
+	RequestHasPrefix    *string  `json:"requestHasPrefix,omitempty"`
+	RequestHasSuffix    *string  `json:"requestHasSuffix,omitempty"`
+	RequestEqualFold    *string  `json:"requestEqualFold,omitempty"`
+	RequestContainsFold *string  `json:"requestContainsFold,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *OAuthPARRequestWhereInput) AddPredicates(predicates ...predicate.OAuthPARRequest) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the OAuthPARRequestWhereInput filter on the OAuthPARRequestQuery builder.
+func (i *OAuthPARRequestWhereInput) Filter(q *OAuthPARRequestQuery) (*OAuthPARRequestQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyOAuthPARRequestWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyOAuthPARRequestWhereInput is returned in case the OAuthPARRequestWhereInput is empty.
+var ErrEmptyOAuthPARRequestWhereInput = errors.New("ent: empty predicate OAuthPARRequestWhereInput")
+
+// P returns a predicate for filtering oauthparrequests.
+// An error is returned if the input is empty or invalid.
+func (i *OAuthPARRequestWhereInput) P() (predicate.OAuthPARRequest, error) {
+	var predicates []predicate.OAuthPARRequest
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, oauthparrequest.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.OAuthPARRequest, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, oauthparrequest.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.OAuthPARRequest, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, oauthparrequest.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, oauthparrequest.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, oauthparrequest.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, oauthparrequest.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, oauthparrequest.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, oauthparrequest.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, oauthparrequest.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, oauthparrequest.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, oauthparrequest.IDLTE(*i.IDLTE))
+	}
+	if i.Request != nil {
+		predicates = append(predicates, oauthparrequest.RequestEQ(*i.Request))
+	}
+	if i.RequestNEQ != nil {
+		predicates = append(predicates, oauthparrequest.RequestNEQ(*i.RequestNEQ))
+	}
+	if len(i.RequestIn) > 0 {
+		predicates = append(predicates, oauthparrequest.RequestIn(i.RequestIn...))
+	}
+	if len(i.RequestNotIn) > 0 {
+		predicates = append(predicates, oauthparrequest.RequestNotIn(i.RequestNotIn...))
+	}
+	if i.RequestGT != nil {
+		predicates = append(predicates, oauthparrequest.RequestGT(*i.RequestGT))
+	}
+	if i.RequestGTE != nil {
+		predicates = append(predicates, oauthparrequest.RequestGTE(*i.RequestGTE))
+	}
+	if i.RequestLT != nil {
+		predicates = append(predicates, oauthparrequest.RequestLT(*i.RequestLT))
+	}
+	if i.RequestLTE != nil {
+		predicates = append(predicates, oauthparrequest.RequestLTE(*i.RequestLTE))
+	}
+	if i.RequestContains != nil {
+		predicates = append(predicates, oauthparrequest.RequestContains(*i.RequestContains))
+	}
+	if i.RequestHasPrefix != nil {
+		predicates = append(predicates, oauthparrequest.RequestHasPrefix(*i.RequestHasPrefix))
+	}
+	if i.RequestHasSuffix != nil {
+		predicates = append(predicates, oauthparrequest.RequestHasSuffix(*i.RequestHasSuffix))
+	}
+	if i.RequestEqualFold != nil {
+		predicates = append(predicates, oauthparrequest.RequestEqualFold(*i.RequestEqualFold))
+	}
+	if i.RequestContainsFold != nil {
+		predicates = append(predicates, oauthparrequest.RequestContainsFold(*i.RequestContainsFold))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyOAuthPARRequestWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return oauthparrequest.And(predicates...), nil
+	}
+}
+
+// OAuthRefreshTokenWhereInput represents a where input for filtering OAuthRefreshToken queries.
+type OAuthRefreshTokenWhereInput struct {
+	Predicates []predicate.OAuthRefreshToken  `json:"-"`
+	Not        *OAuthRefreshTokenWhereInput   `json:"not,omitempty"`
+	Or         []*OAuthRefreshTokenWhereInput `json:"or,omitempty"`
+	And        []*OAuthRefreshTokenWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "signature" field predicates.
+	Signature             *string  `json:"signature,omitempty"`
+	SignatureNEQ          *string  `json:"signatureNEQ,omitempty"`
+	SignatureIn           []string `json:"signatureIn,omitempty"`
+	SignatureNotIn        []string `json:"signatureNotIn,omitempty"`
+	SignatureGT           *string  `json:"signatureGT,omitempty"`
+	SignatureGTE          *string  `json:"signatureGTE,omitempty"`
+	SignatureLT           *string  `json:"signatureLT,omitempty"`
+	SignatureLTE          *string  `json:"signatureLTE,omitempty"`
+	SignatureContains     *string  `json:"signatureContains,omitempty"`
+	SignatureHasPrefix    *string  `json:"signatureHasPrefix,omitempty"`
+	SignatureHasSuffix    *string  `json:"signatureHasSuffix,omitempty"`
+	SignatureEqualFold    *string  `json:"signatureEqualFold,omitempty"`
+	SignatureContainsFold *string  `json:"signatureContainsFold,omitempty"`
+
+	// "session" edge predicates.
+	HasSession     *bool                     `json:"hasSession,omitempty"`
+	HasSessionWith []*OAuthSessionWhereInput `json:"hasSessionWith,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *OAuthRefreshTokenWhereInput) AddPredicates(predicates ...predicate.OAuthRefreshToken) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the OAuthRefreshTokenWhereInput filter on the OAuthRefreshTokenQuery builder.
+func (i *OAuthRefreshTokenWhereInput) Filter(q *OAuthRefreshTokenQuery) (*OAuthRefreshTokenQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyOAuthRefreshTokenWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyOAuthRefreshTokenWhereInput is returned in case the OAuthRefreshTokenWhereInput is empty.
+var ErrEmptyOAuthRefreshTokenWhereInput = errors.New("ent: empty predicate OAuthRefreshTokenWhereInput")
+
+// P returns a predicate for filtering oauthrefreshtokens.
+// An error is returned if the input is empty or invalid.
+func (i *OAuthRefreshTokenWhereInput) P() (predicate.OAuthRefreshToken, error) {
+	var predicates []predicate.OAuthRefreshToken
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, oauthrefreshtoken.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.OAuthRefreshToken, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, oauthrefreshtoken.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.OAuthRefreshToken, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, oauthrefreshtoken.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, oauthrefreshtoken.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, oauthrefreshtoken.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, oauthrefreshtoken.IDLTE(*i.IDLTE))
+	}
+	if i.Signature != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureEQ(*i.Signature))
+	}
+	if i.SignatureNEQ != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureNEQ(*i.SignatureNEQ))
+	}
+	if len(i.SignatureIn) > 0 {
+		predicates = append(predicates, oauthrefreshtoken.SignatureIn(i.SignatureIn...))
+	}
+	if len(i.SignatureNotIn) > 0 {
+		predicates = append(predicates, oauthrefreshtoken.SignatureNotIn(i.SignatureNotIn...))
+	}
+	if i.SignatureGT != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureGT(*i.SignatureGT))
+	}
+	if i.SignatureGTE != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureGTE(*i.SignatureGTE))
+	}
+	if i.SignatureLT != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureLT(*i.SignatureLT))
+	}
+	if i.SignatureLTE != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureLTE(*i.SignatureLTE))
+	}
+	if i.SignatureContains != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureContains(*i.SignatureContains))
+	}
+	if i.SignatureHasPrefix != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureHasPrefix(*i.SignatureHasPrefix))
+	}
+	if i.SignatureHasSuffix != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureHasSuffix(*i.SignatureHasSuffix))
+	}
+	if i.SignatureEqualFold != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureEqualFold(*i.SignatureEqualFold))
+	}
+	if i.SignatureContainsFold != nil {
+		predicates = append(predicates, oauthrefreshtoken.SignatureContainsFold(*i.SignatureContainsFold))
+	}
+
+	if i.HasSession != nil {
+		p := oauthrefreshtoken.HasSession()
+		if !*i.HasSession {
+			p = oauthrefreshtoken.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasSessionWith) > 0 {
+		with := make([]predicate.OAuthSession, 0, len(i.HasSessionWith))
+		for _, w := range i.HasSessionWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasSessionWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, oauthrefreshtoken.HasSessionWith(with...))
+	}
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyOAuthRefreshTokenWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return oauthrefreshtoken.And(predicates...), nil
+	}
+}
+
+// OAuthSessionWhereInput represents a where input for filtering OAuthSession queries.
+type OAuthSessionWhereInput struct {
+	Predicates []predicate.OAuthSession  `json:"-"`
+	Not        *OAuthSessionWhereInput   `json:"not,omitempty"`
+	Or         []*OAuthSessionWhereInput `json:"or,omitempty"`
+	And        []*OAuthSessionWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "issuer" field predicates.
+	Issuer             *string  `json:"issuer,omitempty"`
+	IssuerNEQ          *string  `json:"issuerNEQ,omitempty"`
+	IssuerIn           []string `json:"issuerIn,omitempty"`
+	IssuerNotIn        []string `json:"issuerNotIn,omitempty"`
+	IssuerGT           *string  `json:"issuerGT,omitempty"`
+	IssuerGTE          *string  `json:"issuerGTE,omitempty"`
+	IssuerLT           *string  `json:"issuerLT,omitempty"`
+	IssuerLTE          *string  `json:"issuerLTE,omitempty"`
+	IssuerContains     *string  `json:"issuerContains,omitempty"`
+	IssuerHasPrefix    *string  `json:"issuerHasPrefix,omitempty"`
+	IssuerHasSuffix    *string  `json:"issuerHasSuffix,omitempty"`
+	IssuerEqualFold    *string  `json:"issuerEqualFold,omitempty"`
+	IssuerContainsFold *string  `json:"issuerContainsFold,omitempty"`
+
+	// "subject" field predicates.
+	Subject             *string  `json:"subject,omitempty"`
+	SubjectNEQ          *string  `json:"subjectNEQ,omitempty"`
+	SubjectIn           []string `json:"subjectIn,omitempty"`
+	SubjectNotIn        []string `json:"subjectNotIn,omitempty"`
+	SubjectGT           *string  `json:"subjectGT,omitempty"`
+	SubjectGTE          *string  `json:"subjectGTE,omitempty"`
+	SubjectLT           *string  `json:"subjectLT,omitempty"`
+	SubjectLTE          *string  `json:"subjectLTE,omitempty"`
+	SubjectContains     *string  `json:"subjectContains,omitempty"`
+	SubjectHasPrefix    *string  `json:"subjectHasPrefix,omitempty"`
+	SubjectHasSuffix    *string  `json:"subjectHasSuffix,omitempty"`
+	SubjectEqualFold    *string  `json:"subjectEqualFold,omitempty"`
+	SubjectContainsFold *string  `json:"subjectContainsFold,omitempty"`
+
+	// "expires_at" field predicates.
+	ExpiresAt      *time.Time  `json:"expiresAt,omitempty"`
+	ExpiresAtNEQ   *time.Time  `json:"expiresAtNEQ,omitempty"`
+	ExpiresAtIn    []time.Time `json:"expiresAtIn,omitempty"`
+	ExpiresAtNotIn []time.Time `json:"expiresAtNotIn,omitempty"`
+	ExpiresAtGT    *time.Time  `json:"expiresAtGT,omitempty"`
+	ExpiresAtGTE   *time.Time  `json:"expiresAtGTE,omitempty"`
+	ExpiresAtLT    *time.Time  `json:"expiresAtLT,omitempty"`
+	ExpiresAtLTE   *time.Time  `json:"expiresAtLTE,omitempty"`
+
+	// "issued_at" field predicates.
+	IssuedAt      *time.Time  `json:"issuedAt,omitempty"`
+	IssuedAtNEQ   *time.Time  `json:"issuedAtNEQ,omitempty"`
+	IssuedAtIn    []time.Time `json:"issuedAtIn,omitempty"`
+	IssuedAtNotIn []time.Time `json:"issuedAtNotIn,omitempty"`
+	IssuedAtGT    *time.Time  `json:"issuedAtGT,omitempty"`
+	IssuedAtGTE   *time.Time  `json:"issuedAtGTE,omitempty"`
+	IssuedAtLT    *time.Time  `json:"issuedAtLT,omitempty"`
+	IssuedAtLTE   *time.Time  `json:"issuedAtLTE,omitempty"`
+
+	// "requested_at" field predicates.
+	RequestedAt      *time.Time  `json:"requestedAt,omitempty"`
+	RequestedAtNEQ   *time.Time  `json:"requestedAtNEQ,omitempty"`
+	RequestedAtIn    []time.Time `json:"requestedAtIn,omitempty"`
+	RequestedAtNotIn []time.Time `json:"requestedAtNotIn,omitempty"`
+	RequestedAtGT    *time.Time  `json:"requestedAtGT,omitempty"`
+	RequestedAtGTE   *time.Time  `json:"requestedAtGTE,omitempty"`
+	RequestedAtLT    *time.Time  `json:"requestedAtLT,omitempty"`
+	RequestedAtLTE   *time.Time  `json:"requestedAtLTE,omitempty"`
+
+	// "auth_time" field predicates.
+	AuthTime      *time.Time  `json:"authTime,omitempty"`
+	AuthTimeNEQ   *time.Time  `json:"authTimeNEQ,omitempty"`
+	AuthTimeIn    []time.Time `json:"authTimeIn,omitempty"`
+	AuthTimeNotIn []time.Time `json:"authTimeNotIn,omitempty"`
+	AuthTimeGT    *time.Time  `json:"authTimeGT,omitempty"`
+	AuthTimeGTE   *time.Time  `json:"authTimeGTE,omitempty"`
+	AuthTimeLT    *time.Time  `json:"authTimeLT,omitempty"`
+	AuthTimeLTE   *time.Time  `json:"authTimeLTE,omitempty"`
+
+	// "request" field predicates.
+	Request             *string  `json:"request,omitempty"`
+	RequestNEQ          *string  `json:"requestNEQ,omitempty"`
+	RequestIn           []string `json:"requestIn,omitempty"`
+	RequestNotIn        []string `json:"requestNotIn,omitempty"`
+	RequestGT           *string  `json:"requestGT,omitempty"`
+	RequestGTE          *string  `json:"requestGTE,omitempty"`
+	RequestLT           *string  `json:"requestLT,omitempty"`
+	RequestLTE          *string  `json:"requestLTE,omitempty"`
+	RequestContains     *string  `json:"requestContains,omitempty"`
+	RequestHasPrefix    *string  `json:"requestHasPrefix,omitempty"`
+	RequestHasSuffix    *string  `json:"requestHasSuffix,omitempty"`
+	RequestEqualFold    *string  `json:"requestEqualFold,omitempty"`
+	RequestContainsFold *string  `json:"requestContainsFold,omitempty"`
+
+	// "form" field predicates.
+	Form             *string  `json:"form,omitempty"`
+	FormNEQ          *string  `json:"formNEQ,omitempty"`
+	FormIn           []string `json:"formIn,omitempty"`
+	FormNotIn        []string `json:"formNotIn,omitempty"`
+	FormGT           *string  `json:"formGT,omitempty"`
+	FormGTE          *string  `json:"formGTE,omitempty"`
+	FormLT           *string  `json:"formLT,omitempty"`
+	FormLTE          *string  `json:"formLTE,omitempty"`
+	FormContains     *string  `json:"formContains,omitempty"`
+	FormHasPrefix    *string  `json:"formHasPrefix,omitempty"`
+	FormHasSuffix    *string  `json:"formHasSuffix,omitempty"`
+	FormEqualFold    *string  `json:"formEqualFold,omitempty"`
+	FormContainsFold *string  `json:"formContainsFold,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *OAuthSessionWhereInput) AddPredicates(predicates ...predicate.OAuthSession) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the OAuthSessionWhereInput filter on the OAuthSessionQuery builder.
+func (i *OAuthSessionWhereInput) Filter(q *OAuthSessionQuery) (*OAuthSessionQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyOAuthSessionWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyOAuthSessionWhereInput is returned in case the OAuthSessionWhereInput is empty.
+var ErrEmptyOAuthSessionWhereInput = errors.New("ent: empty predicate OAuthSessionWhereInput")
+
+// P returns a predicate for filtering oauthsessions.
+// An error is returned if the input is empty or invalid.
+func (i *OAuthSessionWhereInput) P() (predicate.OAuthSession, error) {
+	var predicates []predicate.OAuthSession
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, oauthsession.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.OAuthSession, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, oauthsession.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.OAuthSession, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, oauthsession.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, oauthsession.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, oauthsession.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, oauthsession.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, oauthsession.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, oauthsession.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, oauthsession.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, oauthsession.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, oauthsession.IDLTE(*i.IDLTE))
+	}
+	if i.Issuer != nil {
+		predicates = append(predicates, oauthsession.IssuerEQ(*i.Issuer))
+	}
+	if i.IssuerNEQ != nil {
+		predicates = append(predicates, oauthsession.IssuerNEQ(*i.IssuerNEQ))
+	}
+	if len(i.IssuerIn) > 0 {
+		predicates = append(predicates, oauthsession.IssuerIn(i.IssuerIn...))
+	}
+	if len(i.IssuerNotIn) > 0 {
+		predicates = append(predicates, oauthsession.IssuerNotIn(i.IssuerNotIn...))
+	}
+	if i.IssuerGT != nil {
+		predicates = append(predicates, oauthsession.IssuerGT(*i.IssuerGT))
+	}
+	if i.IssuerGTE != nil {
+		predicates = append(predicates, oauthsession.IssuerGTE(*i.IssuerGTE))
+	}
+	if i.IssuerLT != nil {
+		predicates = append(predicates, oauthsession.IssuerLT(*i.IssuerLT))
+	}
+	if i.IssuerLTE != nil {
+		predicates = append(predicates, oauthsession.IssuerLTE(*i.IssuerLTE))
+	}
+	if i.IssuerContains != nil {
+		predicates = append(predicates, oauthsession.IssuerContains(*i.IssuerContains))
+	}
+	if i.IssuerHasPrefix != nil {
+		predicates = append(predicates, oauthsession.IssuerHasPrefix(*i.IssuerHasPrefix))
+	}
+	if i.IssuerHasSuffix != nil {
+		predicates = append(predicates, oauthsession.IssuerHasSuffix(*i.IssuerHasSuffix))
+	}
+	if i.IssuerEqualFold != nil {
+		predicates = append(predicates, oauthsession.IssuerEqualFold(*i.IssuerEqualFold))
+	}
+	if i.IssuerContainsFold != nil {
+		predicates = append(predicates, oauthsession.IssuerContainsFold(*i.IssuerContainsFold))
+	}
+	if i.Subject != nil {
+		predicates = append(predicates, oauthsession.SubjectEQ(*i.Subject))
+	}
+	if i.SubjectNEQ != nil {
+		predicates = append(predicates, oauthsession.SubjectNEQ(*i.SubjectNEQ))
+	}
+	if len(i.SubjectIn) > 0 {
+		predicates = append(predicates, oauthsession.SubjectIn(i.SubjectIn...))
+	}
+	if len(i.SubjectNotIn) > 0 {
+		predicates = append(predicates, oauthsession.SubjectNotIn(i.SubjectNotIn...))
+	}
+	if i.SubjectGT != nil {
+		predicates = append(predicates, oauthsession.SubjectGT(*i.SubjectGT))
+	}
+	if i.SubjectGTE != nil {
+		predicates = append(predicates, oauthsession.SubjectGTE(*i.SubjectGTE))
+	}
+	if i.SubjectLT != nil {
+		predicates = append(predicates, oauthsession.SubjectLT(*i.SubjectLT))
+	}
+	if i.SubjectLTE != nil {
+		predicates = append(predicates, oauthsession.SubjectLTE(*i.SubjectLTE))
+	}
+	if i.SubjectContains != nil {
+		predicates = append(predicates, oauthsession.SubjectContains(*i.SubjectContains))
+	}
+	if i.SubjectHasPrefix != nil {
+		predicates = append(predicates, oauthsession.SubjectHasPrefix(*i.SubjectHasPrefix))
+	}
+	if i.SubjectHasSuffix != nil {
+		predicates = append(predicates, oauthsession.SubjectHasSuffix(*i.SubjectHasSuffix))
+	}
+	if i.SubjectEqualFold != nil {
+		predicates = append(predicates, oauthsession.SubjectEqualFold(*i.SubjectEqualFold))
+	}
+	if i.SubjectContainsFold != nil {
+		predicates = append(predicates, oauthsession.SubjectContainsFold(*i.SubjectContainsFold))
+	}
+	if i.ExpiresAt != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtEQ(*i.ExpiresAt))
+	}
+	if i.ExpiresAtNEQ != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtNEQ(*i.ExpiresAtNEQ))
+	}
+	if len(i.ExpiresAtIn) > 0 {
+		predicates = append(predicates, oauthsession.ExpiresAtIn(i.ExpiresAtIn...))
+	}
+	if len(i.ExpiresAtNotIn) > 0 {
+		predicates = append(predicates, oauthsession.ExpiresAtNotIn(i.ExpiresAtNotIn...))
+	}
+	if i.ExpiresAtGT != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtGT(*i.ExpiresAtGT))
+	}
+	if i.ExpiresAtGTE != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtGTE(*i.ExpiresAtGTE))
+	}
+	if i.ExpiresAtLT != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtLT(*i.ExpiresAtLT))
+	}
+	if i.ExpiresAtLTE != nil {
+		predicates = append(predicates, oauthsession.ExpiresAtLTE(*i.ExpiresAtLTE))
+	}
+	if i.IssuedAt != nil {
+		predicates = append(predicates, oauthsession.IssuedAtEQ(*i.IssuedAt))
+	}
+	if i.IssuedAtNEQ != nil {
+		predicates = append(predicates, oauthsession.IssuedAtNEQ(*i.IssuedAtNEQ))
+	}
+	if len(i.IssuedAtIn) > 0 {
+		predicates = append(predicates, oauthsession.IssuedAtIn(i.IssuedAtIn...))
+	}
+	if len(i.IssuedAtNotIn) > 0 {
+		predicates = append(predicates, oauthsession.IssuedAtNotIn(i.IssuedAtNotIn...))
+	}
+	if i.IssuedAtGT != nil {
+		predicates = append(predicates, oauthsession.IssuedAtGT(*i.IssuedAtGT))
+	}
+	if i.IssuedAtGTE != nil {
+		predicates = append(predicates, oauthsession.IssuedAtGTE(*i.IssuedAtGTE))
+	}
+	if i.IssuedAtLT != nil {
+		predicates = append(predicates, oauthsession.IssuedAtLT(*i.IssuedAtLT))
+	}
+	if i.IssuedAtLTE != nil {
+		predicates = append(predicates, oauthsession.IssuedAtLTE(*i.IssuedAtLTE))
+	}
+	if i.RequestedAt != nil {
+		predicates = append(predicates, oauthsession.RequestedAtEQ(*i.RequestedAt))
+	}
+	if i.RequestedAtNEQ != nil {
+		predicates = append(predicates, oauthsession.RequestedAtNEQ(*i.RequestedAtNEQ))
+	}
+	if len(i.RequestedAtIn) > 0 {
+		predicates = append(predicates, oauthsession.RequestedAtIn(i.RequestedAtIn...))
+	}
+	if len(i.RequestedAtNotIn) > 0 {
+		predicates = append(predicates, oauthsession.RequestedAtNotIn(i.RequestedAtNotIn...))
+	}
+	if i.RequestedAtGT != nil {
+		predicates = append(predicates, oauthsession.RequestedAtGT(*i.RequestedAtGT))
+	}
+	if i.RequestedAtGTE != nil {
+		predicates = append(predicates, oauthsession.RequestedAtGTE(*i.RequestedAtGTE))
+	}
+	if i.RequestedAtLT != nil {
+		predicates = append(predicates, oauthsession.RequestedAtLT(*i.RequestedAtLT))
+	}
+	if i.RequestedAtLTE != nil {
+		predicates = append(predicates, oauthsession.RequestedAtLTE(*i.RequestedAtLTE))
+	}
+	if i.AuthTime != nil {
+		predicates = append(predicates, oauthsession.AuthTimeEQ(*i.AuthTime))
+	}
+	if i.AuthTimeNEQ != nil {
+		predicates = append(predicates, oauthsession.AuthTimeNEQ(*i.AuthTimeNEQ))
+	}
+	if len(i.AuthTimeIn) > 0 {
+		predicates = append(predicates, oauthsession.AuthTimeIn(i.AuthTimeIn...))
+	}
+	if len(i.AuthTimeNotIn) > 0 {
+		predicates = append(predicates, oauthsession.AuthTimeNotIn(i.AuthTimeNotIn...))
+	}
+	if i.AuthTimeGT != nil {
+		predicates = append(predicates, oauthsession.AuthTimeGT(*i.AuthTimeGT))
+	}
+	if i.AuthTimeGTE != nil {
+		predicates = append(predicates, oauthsession.AuthTimeGTE(*i.AuthTimeGTE))
+	}
+	if i.AuthTimeLT != nil {
+		predicates = append(predicates, oauthsession.AuthTimeLT(*i.AuthTimeLT))
+	}
+	if i.AuthTimeLTE != nil {
+		predicates = append(predicates, oauthsession.AuthTimeLTE(*i.AuthTimeLTE))
+	}
+	if i.Request != nil {
+		predicates = append(predicates, oauthsession.RequestEQ(*i.Request))
+	}
+	if i.RequestNEQ != nil {
+		predicates = append(predicates, oauthsession.RequestNEQ(*i.RequestNEQ))
+	}
+	if len(i.RequestIn) > 0 {
+		predicates = append(predicates, oauthsession.RequestIn(i.RequestIn...))
+	}
+	if len(i.RequestNotIn) > 0 {
+		predicates = append(predicates, oauthsession.RequestNotIn(i.RequestNotIn...))
+	}
+	if i.RequestGT != nil {
+		predicates = append(predicates, oauthsession.RequestGT(*i.RequestGT))
+	}
+	if i.RequestGTE != nil {
+		predicates = append(predicates, oauthsession.RequestGTE(*i.RequestGTE))
+	}
+	if i.RequestLT != nil {
+		predicates = append(predicates, oauthsession.RequestLT(*i.RequestLT))
+	}
+	if i.RequestLTE != nil {
+		predicates = append(predicates, oauthsession.RequestLTE(*i.RequestLTE))
+	}
+	if i.RequestContains != nil {
+		predicates = append(predicates, oauthsession.RequestContains(*i.RequestContains))
+	}
+	if i.RequestHasPrefix != nil {
+		predicates = append(predicates, oauthsession.RequestHasPrefix(*i.RequestHasPrefix))
+	}
+	if i.RequestHasSuffix != nil {
+		predicates = append(predicates, oauthsession.RequestHasSuffix(*i.RequestHasSuffix))
+	}
+	if i.RequestEqualFold != nil {
+		predicates = append(predicates, oauthsession.RequestEqualFold(*i.RequestEqualFold))
+	}
+	if i.RequestContainsFold != nil {
+		predicates = append(predicates, oauthsession.RequestContainsFold(*i.RequestContainsFold))
+	}
+	if i.Form != nil {
+		predicates = append(predicates, oauthsession.FormEQ(*i.Form))
+	}
+	if i.FormNEQ != nil {
+		predicates = append(predicates, oauthsession.FormNEQ(*i.FormNEQ))
+	}
+	if len(i.FormIn) > 0 {
+		predicates = append(predicates, oauthsession.FormIn(i.FormIn...))
+	}
+	if len(i.FormNotIn) > 0 {
+		predicates = append(predicates, oauthsession.FormNotIn(i.FormNotIn...))
+	}
+	if i.FormGT != nil {
+		predicates = append(predicates, oauthsession.FormGT(*i.FormGT))
+	}
+	if i.FormGTE != nil {
+		predicates = append(predicates, oauthsession.FormGTE(*i.FormGTE))
+	}
+	if i.FormLT != nil {
+		predicates = append(predicates, oauthsession.FormLT(*i.FormLT))
+	}
+	if i.FormLTE != nil {
+		predicates = append(predicates, oauthsession.FormLTE(*i.FormLTE))
+	}
+	if i.FormContains != nil {
+		predicates = append(predicates, oauthsession.FormContains(*i.FormContains))
+	}
+	if i.FormHasPrefix != nil {
+		predicates = append(predicates, oauthsession.FormHasPrefix(*i.FormHasPrefix))
+	}
+	if i.FormHasSuffix != nil {
+		predicates = append(predicates, oauthsession.FormHasSuffix(*i.FormHasSuffix))
+	}
+	if i.FormEqualFold != nil {
+		predicates = append(predicates, oauthsession.FormEqualFold(*i.FormEqualFold))
+	}
+	if i.FormContainsFold != nil {
+		predicates = append(predicates, oauthsession.FormContainsFold(*i.FormContainsFold))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyOAuthSessionWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return oauthsession.And(predicates...), nil
+	}
+}
+
 // OIDCAuthCodeWhereInput represents a where input for filtering OIDCAuthCode queries.
 type OIDCAuthCodeWhereInput struct {
 	Predicates []predicate.OIDCAuthCode  `json:"-"`
@@ -414,13 +1885,9 @@ type OIDCAuthCodeWhereInput struct {
 	AuthorizationCodeEqualFold    *string  `json:"authorizationCodeEqualFold,omitempty"`
 	AuthorizationCodeContainsFold *string  `json:"authorizationCodeContainsFold,omitempty"`
 
-	// "access_request" edge predicates.
-	HasAccessRequest     *bool                      `json:"hasAccessRequest,omitempty"`
-	HasAccessRequestWith []*AccessRequestWhereInput `json:"hasAccessRequestWith,omitempty"`
-
 	// "session" edge predicates.
-	HasSession     *bool                    `json:"hasSession,omitempty"`
-	HasSessionWith []*OIDCSessionWhereInput `json:"hasSessionWith,omitempty"`
+	HasSession     *bool                     `json:"hasSession,omitempty"`
+	HasSessionWith []*OAuthSessionWhereInput `json:"hasSessionWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -558,24 +2025,6 @@ func (i *OIDCAuthCodeWhereInput) P() (predicate.OIDCAuthCode, error) {
 		predicates = append(predicates, oidcauthcode.AuthorizationCodeContainsFold(*i.AuthorizationCodeContainsFold))
 	}
 
-	if i.HasAccessRequest != nil {
-		p := oidcauthcode.HasAccessRequest()
-		if !*i.HasAccessRequest {
-			p = oidcauthcode.Not(p)
-		}
-		predicates = append(predicates, p)
-	}
-	if len(i.HasAccessRequestWith) > 0 {
-		with := make([]predicate.AccessRequest, 0, len(i.HasAccessRequestWith))
-		for _, w := range i.HasAccessRequestWith {
-			p, err := w.P()
-			if err != nil {
-				return nil, fmt.Errorf("%w: field 'HasAccessRequestWith'", err)
-			}
-			with = append(with, p)
-		}
-		predicates = append(predicates, oidcauthcode.HasAccessRequestWith(with...))
-	}
 	if i.HasSession != nil {
 		p := oidcauthcode.HasSession()
 		if !*i.HasSession {
@@ -584,7 +2033,7 @@ func (i *OIDCAuthCodeWhereInput) P() (predicate.OIDCAuthCode, error) {
 		predicates = append(predicates, p)
 	}
 	if len(i.HasSessionWith) > 0 {
-		with := make([]predicate.OIDCSession, 0, len(i.HasSessionWith))
+		with := make([]predicate.OAuthSession, 0, len(i.HasSessionWith))
 		for _, w := range i.HasSessionWith {
 			p, err := w.P()
 			if err != nil {
@@ -604,12 +2053,12 @@ func (i *OIDCAuthCodeWhereInput) P() (predicate.OIDCAuthCode, error) {
 	}
 }
 
-// OIDCClientWhereInput represents a where input for filtering OIDCClient queries.
-type OIDCClientWhereInput struct {
-	Predicates []predicate.OIDCClient  `json:"-"`
-	Not        *OIDCClientWhereInput   `json:"not,omitempty"`
-	Or         []*OIDCClientWhereInput `json:"or,omitempty"`
-	And        []*OIDCClientWhereInput `json:"and,omitempty"`
+// PKCEWhereInput represents a where input for filtering PKCE queries.
+type PKCEWhereInput struct {
+	Predicates []predicate.PKCE  `json:"-"`
+	Not        *PKCEWhereInput   `json:"not,omitempty"`
+	Or         []*PKCEWhereInput `json:"or,omitempty"`
+	And        []*PKCEWhereInput `json:"and,omitempty"`
 
 	// "id" field predicates.
 	ID      *int  `json:"id,omitempty"`
@@ -621,50 +2070,39 @@ type OIDCClientWhereInput struct {
 	IDLT    *int  `json:"idLT,omitempty"`
 	IDLTE   *int  `json:"idLTE,omitempty"`
 
-	// "client_id" field predicates.
-	ClientID             *string  `json:"clientID,omitempty"`
-	ClientIDNEQ          *string  `json:"clientIDNEQ,omitempty"`
-	ClientIDIn           []string `json:"clientIDIn,omitempty"`
-	ClientIDNotIn        []string `json:"clientIDNotIn,omitempty"`
-	ClientIDGT           *string  `json:"clientIDGT,omitempty"`
-	ClientIDGTE          *string  `json:"clientIDGTE,omitempty"`
-	ClientIDLT           *string  `json:"clientIDLT,omitempty"`
-	ClientIDLTE          *string  `json:"clientIDLTE,omitempty"`
-	ClientIDContains     *string  `json:"clientIDContains,omitempty"`
-	ClientIDHasPrefix    *string  `json:"clientIDHasPrefix,omitempty"`
-	ClientIDHasSuffix    *string  `json:"clientIDHasSuffix,omitempty"`
-	ClientIDEqualFold    *string  `json:"clientIDEqualFold,omitempty"`
-	ClientIDContainsFold *string  `json:"clientIDContainsFold,omitempty"`
+	// "code" field predicates.
+	Code             *string  `json:"code,omitempty"`
+	CodeNEQ          *string  `json:"codeNEQ,omitempty"`
+	CodeIn           []string `json:"codeIn,omitempty"`
+	CodeNotIn        []string `json:"codeNotIn,omitempty"`
+	CodeGT           *string  `json:"codeGT,omitempty"`
+	CodeGTE          *string  `json:"codeGTE,omitempty"`
+	CodeLT           *string  `json:"codeLT,omitempty"`
+	CodeLTE          *string  `json:"codeLTE,omitempty"`
+	CodeContains     *string  `json:"codeContains,omitempty"`
+	CodeHasPrefix    *string  `json:"codeHasPrefix,omitempty"`
+	CodeHasSuffix    *string  `json:"codeHasSuffix,omitempty"`
+	CodeEqualFold    *string  `json:"codeEqualFold,omitempty"`
+	CodeContainsFold *string  `json:"codeContainsFold,omitempty"`
 
-	// "secret" field predicates.
-	Secret             *string  `json:"secret,omitempty"`
-	SecretNEQ          *string  `json:"secretNEQ,omitempty"`
-	SecretIn           []string `json:"secretIn,omitempty"`
-	SecretNotIn        []string `json:"secretNotIn,omitempty"`
-	SecretGT           *string  `json:"secretGT,omitempty"`
-	SecretGTE          *string  `json:"secretGTE,omitempty"`
-	SecretLT           *string  `json:"secretLT,omitempty"`
-	SecretLTE          *string  `json:"secretLTE,omitempty"`
-	SecretContains     *string  `json:"secretContains,omitempty"`
-	SecretHasPrefix    *string  `json:"secretHasPrefix,omitempty"`
-	SecretHasSuffix    *string  `json:"secretHasSuffix,omitempty"`
-	SecretEqualFold    *string  `json:"secretEqualFold,omitempty"`
-	SecretContainsFold *string  `json:"secretContainsFold,omitempty"`
+	// "session" edge predicates.
+	HasSession     *bool                     `json:"hasSession,omitempty"`
+	HasSessionWith []*OAuthSessionWhereInput `json:"hasSessionWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
-func (i *OIDCClientWhereInput) AddPredicates(predicates ...predicate.OIDCClient) {
+func (i *PKCEWhereInput) AddPredicates(predicates ...predicate.PKCE) {
 	i.Predicates = append(i.Predicates, predicates...)
 }
 
-// Filter applies the OIDCClientWhereInput filter on the OIDCClientQuery builder.
-func (i *OIDCClientWhereInput) Filter(q *OIDCClientQuery) (*OIDCClientQuery, error) {
+// Filter applies the PKCEWhereInput filter on the PKCEQuery builder.
+func (i *PKCEWhereInput) Filter(q *PKCEQuery) (*PKCEQuery, error) {
 	if i == nil {
 		return q, nil
 	}
 	p, err := i.P()
 	if err != nil {
-		if err == ErrEmptyOIDCClientWhereInput {
+		if err == ErrEmptyPKCEWhereInput {
 			return q, nil
 		}
 		return nil, err
@@ -672,19 +2110,19 @@ func (i *OIDCClientWhereInput) Filter(q *OIDCClientQuery) (*OIDCClientQuery, err
 	return q.Where(p), nil
 }
 
-// ErrEmptyOIDCClientWhereInput is returned in case the OIDCClientWhereInput is empty.
-var ErrEmptyOIDCClientWhereInput = errors.New("ent: empty predicate OIDCClientWhereInput")
+// ErrEmptyPKCEWhereInput is returned in case the PKCEWhereInput is empty.
+var ErrEmptyPKCEWhereInput = errors.New("ent: empty predicate PKCEWhereInput")
 
-// P returns a predicate for filtering oidcclients.
+// P returns a predicate for filtering pkces.
 // An error is returned if the input is empty or invalid.
-func (i *OIDCClientWhereInput) P() (predicate.OIDCClient, error) {
-	var predicates []predicate.OIDCClient
+func (i *PKCEWhereInput) P() (predicate.PKCE, error) {
+	var predicates []predicate.PKCE
 	if i.Not != nil {
 		p, err := i.Not.P()
 		if err != nil {
 			return nil, fmt.Errorf("%w: field 'not'", err)
 		}
-		predicates = append(predicates, oidcclient.Not(p))
+		predicates = append(predicates, pkce.Not(p))
 	}
 	switch n := len(i.Or); {
 	case n == 1:
@@ -694,7 +2132,7 @@ func (i *OIDCClientWhereInput) P() (predicate.OIDCClient, error) {
 		}
 		predicates = append(predicates, p)
 	case n > 1:
-		or := make([]predicate.OIDCClient, 0, n)
+		or := make([]predicate.PKCE, 0, n)
 		for _, w := range i.Or {
 			p, err := w.P()
 			if err != nil {
@@ -702,7 +2140,7 @@ func (i *OIDCClientWhereInput) P() (predicate.OIDCClient, error) {
 			}
 			or = append(or, p)
 		}
-		predicates = append(predicates, oidcclient.Or(or...))
+		predicates = append(predicates, pkce.Or(or...))
 	}
 	switch n := len(i.And); {
 	case n == 1:
@@ -712,7 +2150,7 @@ func (i *OIDCClientWhereInput) P() (predicate.OIDCClient, error) {
 		}
 		predicates = append(predicates, p)
 	case n > 1:
-		and := make([]predicate.OIDCClient, 0, n)
+		and := make([]predicate.PKCE, 0, n)
 		for _, w := range i.And {
 			p, err := w.P()
 			if err != nil {
@@ -720,487 +2158,98 @@ func (i *OIDCClientWhereInput) P() (predicate.OIDCClient, error) {
 			}
 			and = append(and, p)
 		}
-		predicates = append(predicates, oidcclient.And(and...))
+		predicates = append(predicates, pkce.And(and...))
 	}
 	predicates = append(predicates, i.Predicates...)
 	if i.ID != nil {
-		predicates = append(predicates, oidcclient.IDEQ(*i.ID))
+		predicates = append(predicates, pkce.IDEQ(*i.ID))
 	}
 	if i.IDNEQ != nil {
-		predicates = append(predicates, oidcclient.IDNEQ(*i.IDNEQ))
+		predicates = append(predicates, pkce.IDNEQ(*i.IDNEQ))
 	}
 	if len(i.IDIn) > 0 {
-		predicates = append(predicates, oidcclient.IDIn(i.IDIn...))
+		predicates = append(predicates, pkce.IDIn(i.IDIn...))
 	}
 	if len(i.IDNotIn) > 0 {
-		predicates = append(predicates, oidcclient.IDNotIn(i.IDNotIn...))
+		predicates = append(predicates, pkce.IDNotIn(i.IDNotIn...))
 	}
 	if i.IDGT != nil {
-		predicates = append(predicates, oidcclient.IDGT(*i.IDGT))
+		predicates = append(predicates, pkce.IDGT(*i.IDGT))
 	}
 	if i.IDGTE != nil {
-		predicates = append(predicates, oidcclient.IDGTE(*i.IDGTE))
+		predicates = append(predicates, pkce.IDGTE(*i.IDGTE))
 	}
 	if i.IDLT != nil {
-		predicates = append(predicates, oidcclient.IDLT(*i.IDLT))
+		predicates = append(predicates, pkce.IDLT(*i.IDLT))
 	}
 	if i.IDLTE != nil {
-		predicates = append(predicates, oidcclient.IDLTE(*i.IDLTE))
+		predicates = append(predicates, pkce.IDLTE(*i.IDLTE))
 	}
-	if i.ClientID != nil {
-		predicates = append(predicates, oidcclient.ClientIDEQ(*i.ClientID))
+	if i.Code != nil {
+		predicates = append(predicates, pkce.CodeEQ(*i.Code))
 	}
-	if i.ClientIDNEQ != nil {
-		predicates = append(predicates, oidcclient.ClientIDNEQ(*i.ClientIDNEQ))
+	if i.CodeNEQ != nil {
+		predicates = append(predicates, pkce.CodeNEQ(*i.CodeNEQ))
 	}
-	if len(i.ClientIDIn) > 0 {
-		predicates = append(predicates, oidcclient.ClientIDIn(i.ClientIDIn...))
+	if len(i.CodeIn) > 0 {
+		predicates = append(predicates, pkce.CodeIn(i.CodeIn...))
 	}
-	if len(i.ClientIDNotIn) > 0 {
-		predicates = append(predicates, oidcclient.ClientIDNotIn(i.ClientIDNotIn...))
+	if len(i.CodeNotIn) > 0 {
+		predicates = append(predicates, pkce.CodeNotIn(i.CodeNotIn...))
 	}
-	if i.ClientIDGT != nil {
-		predicates = append(predicates, oidcclient.ClientIDGT(*i.ClientIDGT))
+	if i.CodeGT != nil {
+		predicates = append(predicates, pkce.CodeGT(*i.CodeGT))
 	}
-	if i.ClientIDGTE != nil {
-		predicates = append(predicates, oidcclient.ClientIDGTE(*i.ClientIDGTE))
+	if i.CodeGTE != nil {
+		predicates = append(predicates, pkce.CodeGTE(*i.CodeGTE))
 	}
-	if i.ClientIDLT != nil {
-		predicates = append(predicates, oidcclient.ClientIDLT(*i.ClientIDLT))
+	if i.CodeLT != nil {
+		predicates = append(predicates, pkce.CodeLT(*i.CodeLT))
 	}
-	if i.ClientIDLTE != nil {
-		predicates = append(predicates, oidcclient.ClientIDLTE(*i.ClientIDLTE))
+	if i.CodeLTE != nil {
+		predicates = append(predicates, pkce.CodeLTE(*i.CodeLTE))
 	}
-	if i.ClientIDContains != nil {
-		predicates = append(predicates, oidcclient.ClientIDContains(*i.ClientIDContains))
+	if i.CodeContains != nil {
+		predicates = append(predicates, pkce.CodeContains(*i.CodeContains))
 	}
-	if i.ClientIDHasPrefix != nil {
-		predicates = append(predicates, oidcclient.ClientIDHasPrefix(*i.ClientIDHasPrefix))
+	if i.CodeHasPrefix != nil {
+		predicates = append(predicates, pkce.CodeHasPrefix(*i.CodeHasPrefix))
 	}
-	if i.ClientIDHasSuffix != nil {
-		predicates = append(predicates, oidcclient.ClientIDHasSuffix(*i.ClientIDHasSuffix))
+	if i.CodeHasSuffix != nil {
+		predicates = append(predicates, pkce.CodeHasSuffix(*i.CodeHasSuffix))
 	}
-	if i.ClientIDEqualFold != nil {
-		predicates = append(predicates, oidcclient.ClientIDEqualFold(*i.ClientIDEqualFold))
+	if i.CodeEqualFold != nil {
+		predicates = append(predicates, pkce.CodeEqualFold(*i.CodeEqualFold))
 	}
-	if i.ClientIDContainsFold != nil {
-		predicates = append(predicates, oidcclient.ClientIDContainsFold(*i.ClientIDContainsFold))
-	}
-	if i.Secret != nil {
-		predicates = append(predicates, oidcclient.SecretEQ(*i.Secret))
-	}
-	if i.SecretNEQ != nil {
-		predicates = append(predicates, oidcclient.SecretNEQ(*i.SecretNEQ))
-	}
-	if len(i.SecretIn) > 0 {
-		predicates = append(predicates, oidcclient.SecretIn(i.SecretIn...))
-	}
-	if len(i.SecretNotIn) > 0 {
-		predicates = append(predicates, oidcclient.SecretNotIn(i.SecretNotIn...))
-	}
-	if i.SecretGT != nil {
-		predicates = append(predicates, oidcclient.SecretGT(*i.SecretGT))
-	}
-	if i.SecretGTE != nil {
-		predicates = append(predicates, oidcclient.SecretGTE(*i.SecretGTE))
-	}
-	if i.SecretLT != nil {
-		predicates = append(predicates, oidcclient.SecretLT(*i.SecretLT))
-	}
-	if i.SecretLTE != nil {
-		predicates = append(predicates, oidcclient.SecretLTE(*i.SecretLTE))
-	}
-	if i.SecretContains != nil {
-		predicates = append(predicates, oidcclient.SecretContains(*i.SecretContains))
-	}
-	if i.SecretHasPrefix != nil {
-		predicates = append(predicates, oidcclient.SecretHasPrefix(*i.SecretHasPrefix))
-	}
-	if i.SecretHasSuffix != nil {
-		predicates = append(predicates, oidcclient.SecretHasSuffix(*i.SecretHasSuffix))
-	}
-	if i.SecretEqualFold != nil {
-		predicates = append(predicates, oidcclient.SecretEqualFold(*i.SecretEqualFold))
-	}
-	if i.SecretContainsFold != nil {
-		predicates = append(predicates, oidcclient.SecretContainsFold(*i.SecretContainsFold))
+	if i.CodeContainsFold != nil {
+		predicates = append(predicates, pkce.CodeContainsFold(*i.CodeContainsFold))
 	}
 
+	if i.HasSession != nil {
+		p := pkce.HasSession()
+		if !*i.HasSession {
+			p = pkce.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasSessionWith) > 0 {
+		with := make([]predicate.OAuthSession, 0, len(i.HasSessionWith))
+		for _, w := range i.HasSessionWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasSessionWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, pkce.HasSessionWith(with...))
+	}
 	switch len(predicates) {
 	case 0:
-		return nil, ErrEmptyOIDCClientWhereInput
+		return nil, ErrEmptyPKCEWhereInput
 	case 1:
 		return predicates[0], nil
 	default:
-		return oidcclient.And(predicates...), nil
-	}
-}
-
-// OIDCSessionWhereInput represents a where input for filtering OIDCSession queries.
-type OIDCSessionWhereInput struct {
-	Predicates []predicate.OIDCSession  `json:"-"`
-	Not        *OIDCSessionWhereInput   `json:"not,omitempty"`
-	Or         []*OIDCSessionWhereInput `json:"or,omitempty"`
-	And        []*OIDCSessionWhereInput `json:"and,omitempty"`
-
-	// "id" field predicates.
-	ID      *int  `json:"id,omitempty"`
-	IDNEQ   *int  `json:"idNEQ,omitempty"`
-	IDIn    []int `json:"idIn,omitempty"`
-	IDNotIn []int `json:"idNotIn,omitempty"`
-	IDGT    *int  `json:"idGT,omitempty"`
-	IDGTE   *int  `json:"idGTE,omitempty"`
-	IDLT    *int  `json:"idLT,omitempty"`
-	IDLTE   *int  `json:"idLTE,omitempty"`
-
-	// "issuer" field predicates.
-	Issuer             *string  `json:"issuer,omitempty"`
-	IssuerNEQ          *string  `json:"issuerNEQ,omitempty"`
-	IssuerIn           []string `json:"issuerIn,omitempty"`
-	IssuerNotIn        []string `json:"issuerNotIn,omitempty"`
-	IssuerGT           *string  `json:"issuerGT,omitempty"`
-	IssuerGTE          *string  `json:"issuerGTE,omitempty"`
-	IssuerLT           *string  `json:"issuerLT,omitempty"`
-	IssuerLTE          *string  `json:"issuerLTE,omitempty"`
-	IssuerContains     *string  `json:"issuerContains,omitempty"`
-	IssuerHasPrefix    *string  `json:"issuerHasPrefix,omitempty"`
-	IssuerHasSuffix    *string  `json:"issuerHasSuffix,omitempty"`
-	IssuerEqualFold    *string  `json:"issuerEqualFold,omitempty"`
-	IssuerContainsFold *string  `json:"issuerContainsFold,omitempty"`
-
-	// "subject" field predicates.
-	Subject             *string  `json:"subject,omitempty"`
-	SubjectNEQ          *string  `json:"subjectNEQ,omitempty"`
-	SubjectIn           []string `json:"subjectIn,omitempty"`
-	SubjectNotIn        []string `json:"subjectNotIn,omitempty"`
-	SubjectGT           *string  `json:"subjectGT,omitempty"`
-	SubjectGTE          *string  `json:"subjectGTE,omitempty"`
-	SubjectLT           *string  `json:"subjectLT,omitempty"`
-	SubjectLTE          *string  `json:"subjectLTE,omitempty"`
-	SubjectContains     *string  `json:"subjectContains,omitempty"`
-	SubjectHasPrefix    *string  `json:"subjectHasPrefix,omitempty"`
-	SubjectHasSuffix    *string  `json:"subjectHasSuffix,omitempty"`
-	SubjectEqualFold    *string  `json:"subjectEqualFold,omitempty"`
-	SubjectContainsFold *string  `json:"subjectContainsFold,omitempty"`
-
-	// "expires_at" field predicates.
-	ExpiresAt      *time.Time  `json:"expiresAt,omitempty"`
-	ExpiresAtNEQ   *time.Time  `json:"expiresAtNEQ,omitempty"`
-	ExpiresAtIn    []time.Time `json:"expiresAtIn,omitempty"`
-	ExpiresAtNotIn []time.Time `json:"expiresAtNotIn,omitempty"`
-	ExpiresAtGT    *time.Time  `json:"expiresAtGT,omitempty"`
-	ExpiresAtGTE   *time.Time  `json:"expiresAtGTE,omitempty"`
-	ExpiresAtLT    *time.Time  `json:"expiresAtLT,omitempty"`
-	ExpiresAtLTE   *time.Time  `json:"expiresAtLTE,omitempty"`
-
-	// "issued_at" field predicates.
-	IssuedAt      *time.Time  `json:"issuedAt,omitempty"`
-	IssuedAtNEQ   *time.Time  `json:"issuedAtNEQ,omitempty"`
-	IssuedAtIn    []time.Time `json:"issuedAtIn,omitempty"`
-	IssuedAtNotIn []time.Time `json:"issuedAtNotIn,omitempty"`
-	IssuedAtGT    *time.Time  `json:"issuedAtGT,omitempty"`
-	IssuedAtGTE   *time.Time  `json:"issuedAtGTE,omitempty"`
-	IssuedAtLT    *time.Time  `json:"issuedAtLT,omitempty"`
-	IssuedAtLTE   *time.Time  `json:"issuedAtLTE,omitempty"`
-
-	// "requested_at" field predicates.
-	RequestedAt      *time.Time  `json:"requestedAt,omitempty"`
-	RequestedAtNEQ   *time.Time  `json:"requestedAtNEQ,omitempty"`
-	RequestedAtIn    []time.Time `json:"requestedAtIn,omitempty"`
-	RequestedAtNotIn []time.Time `json:"requestedAtNotIn,omitempty"`
-	RequestedAtGT    *time.Time  `json:"requestedAtGT,omitempty"`
-	RequestedAtGTE   *time.Time  `json:"requestedAtGTE,omitempty"`
-	RequestedAtLT    *time.Time  `json:"requestedAtLT,omitempty"`
-	RequestedAtLTE   *time.Time  `json:"requestedAtLTE,omitempty"`
-
-	// "auth_time" field predicates.
-	AuthTime      *time.Time  `json:"authTime,omitempty"`
-	AuthTimeNEQ   *time.Time  `json:"authTimeNEQ,omitempty"`
-	AuthTimeIn    []time.Time `json:"authTimeIn,omitempty"`
-	AuthTimeNotIn []time.Time `json:"authTimeNotIn,omitempty"`
-	AuthTimeGT    *time.Time  `json:"authTimeGT,omitempty"`
-	AuthTimeGTE   *time.Time  `json:"authTimeGTE,omitempty"`
-	AuthTimeLT    *time.Time  `json:"authTimeLT,omitempty"`
-	AuthTimeLTE   *time.Time  `json:"authTimeLTE,omitempty"`
-}
-
-// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
-func (i *OIDCSessionWhereInput) AddPredicates(predicates ...predicate.OIDCSession) {
-	i.Predicates = append(i.Predicates, predicates...)
-}
-
-// Filter applies the OIDCSessionWhereInput filter on the OIDCSessionQuery builder.
-func (i *OIDCSessionWhereInput) Filter(q *OIDCSessionQuery) (*OIDCSessionQuery, error) {
-	if i == nil {
-		return q, nil
-	}
-	p, err := i.P()
-	if err != nil {
-		if err == ErrEmptyOIDCSessionWhereInput {
-			return q, nil
-		}
-		return nil, err
-	}
-	return q.Where(p), nil
-}
-
-// ErrEmptyOIDCSessionWhereInput is returned in case the OIDCSessionWhereInput is empty.
-var ErrEmptyOIDCSessionWhereInput = errors.New("ent: empty predicate OIDCSessionWhereInput")
-
-// P returns a predicate for filtering oidcsessions.
-// An error is returned if the input is empty or invalid.
-func (i *OIDCSessionWhereInput) P() (predicate.OIDCSession, error) {
-	var predicates []predicate.OIDCSession
-	if i.Not != nil {
-		p, err := i.Not.P()
-		if err != nil {
-			return nil, fmt.Errorf("%w: field 'not'", err)
-		}
-		predicates = append(predicates, oidcsession.Not(p))
-	}
-	switch n := len(i.Or); {
-	case n == 1:
-		p, err := i.Or[0].P()
-		if err != nil {
-			return nil, fmt.Errorf("%w: field 'or'", err)
-		}
-		predicates = append(predicates, p)
-	case n > 1:
-		or := make([]predicate.OIDCSession, 0, n)
-		for _, w := range i.Or {
-			p, err := w.P()
-			if err != nil {
-				return nil, fmt.Errorf("%w: field 'or'", err)
-			}
-			or = append(or, p)
-		}
-		predicates = append(predicates, oidcsession.Or(or...))
-	}
-	switch n := len(i.And); {
-	case n == 1:
-		p, err := i.And[0].P()
-		if err != nil {
-			return nil, fmt.Errorf("%w: field 'and'", err)
-		}
-		predicates = append(predicates, p)
-	case n > 1:
-		and := make([]predicate.OIDCSession, 0, n)
-		for _, w := range i.And {
-			p, err := w.P()
-			if err != nil {
-				return nil, fmt.Errorf("%w: field 'and'", err)
-			}
-			and = append(and, p)
-		}
-		predicates = append(predicates, oidcsession.And(and...))
-	}
-	predicates = append(predicates, i.Predicates...)
-	if i.ID != nil {
-		predicates = append(predicates, oidcsession.IDEQ(*i.ID))
-	}
-	if i.IDNEQ != nil {
-		predicates = append(predicates, oidcsession.IDNEQ(*i.IDNEQ))
-	}
-	if len(i.IDIn) > 0 {
-		predicates = append(predicates, oidcsession.IDIn(i.IDIn...))
-	}
-	if len(i.IDNotIn) > 0 {
-		predicates = append(predicates, oidcsession.IDNotIn(i.IDNotIn...))
-	}
-	if i.IDGT != nil {
-		predicates = append(predicates, oidcsession.IDGT(*i.IDGT))
-	}
-	if i.IDGTE != nil {
-		predicates = append(predicates, oidcsession.IDGTE(*i.IDGTE))
-	}
-	if i.IDLT != nil {
-		predicates = append(predicates, oidcsession.IDLT(*i.IDLT))
-	}
-	if i.IDLTE != nil {
-		predicates = append(predicates, oidcsession.IDLTE(*i.IDLTE))
-	}
-	if i.Issuer != nil {
-		predicates = append(predicates, oidcsession.IssuerEQ(*i.Issuer))
-	}
-	if i.IssuerNEQ != nil {
-		predicates = append(predicates, oidcsession.IssuerNEQ(*i.IssuerNEQ))
-	}
-	if len(i.IssuerIn) > 0 {
-		predicates = append(predicates, oidcsession.IssuerIn(i.IssuerIn...))
-	}
-	if len(i.IssuerNotIn) > 0 {
-		predicates = append(predicates, oidcsession.IssuerNotIn(i.IssuerNotIn...))
-	}
-	if i.IssuerGT != nil {
-		predicates = append(predicates, oidcsession.IssuerGT(*i.IssuerGT))
-	}
-	if i.IssuerGTE != nil {
-		predicates = append(predicates, oidcsession.IssuerGTE(*i.IssuerGTE))
-	}
-	if i.IssuerLT != nil {
-		predicates = append(predicates, oidcsession.IssuerLT(*i.IssuerLT))
-	}
-	if i.IssuerLTE != nil {
-		predicates = append(predicates, oidcsession.IssuerLTE(*i.IssuerLTE))
-	}
-	if i.IssuerContains != nil {
-		predicates = append(predicates, oidcsession.IssuerContains(*i.IssuerContains))
-	}
-	if i.IssuerHasPrefix != nil {
-		predicates = append(predicates, oidcsession.IssuerHasPrefix(*i.IssuerHasPrefix))
-	}
-	if i.IssuerHasSuffix != nil {
-		predicates = append(predicates, oidcsession.IssuerHasSuffix(*i.IssuerHasSuffix))
-	}
-	if i.IssuerEqualFold != nil {
-		predicates = append(predicates, oidcsession.IssuerEqualFold(*i.IssuerEqualFold))
-	}
-	if i.IssuerContainsFold != nil {
-		predicates = append(predicates, oidcsession.IssuerContainsFold(*i.IssuerContainsFold))
-	}
-	if i.Subject != nil {
-		predicates = append(predicates, oidcsession.SubjectEQ(*i.Subject))
-	}
-	if i.SubjectNEQ != nil {
-		predicates = append(predicates, oidcsession.SubjectNEQ(*i.SubjectNEQ))
-	}
-	if len(i.SubjectIn) > 0 {
-		predicates = append(predicates, oidcsession.SubjectIn(i.SubjectIn...))
-	}
-	if len(i.SubjectNotIn) > 0 {
-		predicates = append(predicates, oidcsession.SubjectNotIn(i.SubjectNotIn...))
-	}
-	if i.SubjectGT != nil {
-		predicates = append(predicates, oidcsession.SubjectGT(*i.SubjectGT))
-	}
-	if i.SubjectGTE != nil {
-		predicates = append(predicates, oidcsession.SubjectGTE(*i.SubjectGTE))
-	}
-	if i.SubjectLT != nil {
-		predicates = append(predicates, oidcsession.SubjectLT(*i.SubjectLT))
-	}
-	if i.SubjectLTE != nil {
-		predicates = append(predicates, oidcsession.SubjectLTE(*i.SubjectLTE))
-	}
-	if i.SubjectContains != nil {
-		predicates = append(predicates, oidcsession.SubjectContains(*i.SubjectContains))
-	}
-	if i.SubjectHasPrefix != nil {
-		predicates = append(predicates, oidcsession.SubjectHasPrefix(*i.SubjectHasPrefix))
-	}
-	if i.SubjectHasSuffix != nil {
-		predicates = append(predicates, oidcsession.SubjectHasSuffix(*i.SubjectHasSuffix))
-	}
-	if i.SubjectEqualFold != nil {
-		predicates = append(predicates, oidcsession.SubjectEqualFold(*i.SubjectEqualFold))
-	}
-	if i.SubjectContainsFold != nil {
-		predicates = append(predicates, oidcsession.SubjectContainsFold(*i.SubjectContainsFold))
-	}
-	if i.ExpiresAt != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtEQ(*i.ExpiresAt))
-	}
-	if i.ExpiresAtNEQ != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtNEQ(*i.ExpiresAtNEQ))
-	}
-	if len(i.ExpiresAtIn) > 0 {
-		predicates = append(predicates, oidcsession.ExpiresAtIn(i.ExpiresAtIn...))
-	}
-	if len(i.ExpiresAtNotIn) > 0 {
-		predicates = append(predicates, oidcsession.ExpiresAtNotIn(i.ExpiresAtNotIn...))
-	}
-	if i.ExpiresAtGT != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtGT(*i.ExpiresAtGT))
-	}
-	if i.ExpiresAtGTE != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtGTE(*i.ExpiresAtGTE))
-	}
-	if i.ExpiresAtLT != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtLT(*i.ExpiresAtLT))
-	}
-	if i.ExpiresAtLTE != nil {
-		predicates = append(predicates, oidcsession.ExpiresAtLTE(*i.ExpiresAtLTE))
-	}
-	if i.IssuedAt != nil {
-		predicates = append(predicates, oidcsession.IssuedAtEQ(*i.IssuedAt))
-	}
-	if i.IssuedAtNEQ != nil {
-		predicates = append(predicates, oidcsession.IssuedAtNEQ(*i.IssuedAtNEQ))
-	}
-	if len(i.IssuedAtIn) > 0 {
-		predicates = append(predicates, oidcsession.IssuedAtIn(i.IssuedAtIn...))
-	}
-	if len(i.IssuedAtNotIn) > 0 {
-		predicates = append(predicates, oidcsession.IssuedAtNotIn(i.IssuedAtNotIn...))
-	}
-	if i.IssuedAtGT != nil {
-		predicates = append(predicates, oidcsession.IssuedAtGT(*i.IssuedAtGT))
-	}
-	if i.IssuedAtGTE != nil {
-		predicates = append(predicates, oidcsession.IssuedAtGTE(*i.IssuedAtGTE))
-	}
-	if i.IssuedAtLT != nil {
-		predicates = append(predicates, oidcsession.IssuedAtLT(*i.IssuedAtLT))
-	}
-	if i.IssuedAtLTE != nil {
-		predicates = append(predicates, oidcsession.IssuedAtLTE(*i.IssuedAtLTE))
-	}
-	if i.RequestedAt != nil {
-		predicates = append(predicates, oidcsession.RequestedAtEQ(*i.RequestedAt))
-	}
-	if i.RequestedAtNEQ != nil {
-		predicates = append(predicates, oidcsession.RequestedAtNEQ(*i.RequestedAtNEQ))
-	}
-	if len(i.RequestedAtIn) > 0 {
-		predicates = append(predicates, oidcsession.RequestedAtIn(i.RequestedAtIn...))
-	}
-	if len(i.RequestedAtNotIn) > 0 {
-		predicates = append(predicates, oidcsession.RequestedAtNotIn(i.RequestedAtNotIn...))
-	}
-	if i.RequestedAtGT != nil {
-		predicates = append(predicates, oidcsession.RequestedAtGT(*i.RequestedAtGT))
-	}
-	if i.RequestedAtGTE != nil {
-		predicates = append(predicates, oidcsession.RequestedAtGTE(*i.RequestedAtGTE))
-	}
-	if i.RequestedAtLT != nil {
-		predicates = append(predicates, oidcsession.RequestedAtLT(*i.RequestedAtLT))
-	}
-	if i.RequestedAtLTE != nil {
-		predicates = append(predicates, oidcsession.RequestedAtLTE(*i.RequestedAtLTE))
-	}
-	if i.AuthTime != nil {
-		predicates = append(predicates, oidcsession.AuthTimeEQ(*i.AuthTime))
-	}
-	if i.AuthTimeNEQ != nil {
-		predicates = append(predicates, oidcsession.AuthTimeNEQ(*i.AuthTimeNEQ))
-	}
-	if len(i.AuthTimeIn) > 0 {
-		predicates = append(predicates, oidcsession.AuthTimeIn(i.AuthTimeIn...))
-	}
-	if len(i.AuthTimeNotIn) > 0 {
-		predicates = append(predicates, oidcsession.AuthTimeNotIn(i.AuthTimeNotIn...))
-	}
-	if i.AuthTimeGT != nil {
-		predicates = append(predicates, oidcsession.AuthTimeGT(*i.AuthTimeGT))
-	}
-	if i.AuthTimeGTE != nil {
-		predicates = append(predicates, oidcsession.AuthTimeGTE(*i.AuthTimeGTE))
-	}
-	if i.AuthTimeLT != nil {
-		predicates = append(predicates, oidcsession.AuthTimeLT(*i.AuthTimeLT))
-	}
-	if i.AuthTimeLTE != nil {
-		predicates = append(predicates, oidcsession.AuthTimeLTE(*i.AuthTimeLTE))
-	}
-
-	switch len(predicates) {
-	case 0:
-		return nil, ErrEmptyOIDCSessionWhereInput
-	case 1:
-		return predicates[0], nil
-	default:
-		return oidcsession.And(predicates...), nil
+		return pkce.And(predicates...), nil
 	}
 }
 

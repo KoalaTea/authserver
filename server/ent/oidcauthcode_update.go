@@ -10,9 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
 	"github.com/koalatea/authserver/server/ent/predicate"
 )
 
@@ -35,32 +34,13 @@ func (oacu *OIDCAuthCodeUpdate) SetAuthorizationCode(s string) *OIDCAuthCodeUpda
 	return oacu
 }
 
-// SetAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID.
-func (oacu *OIDCAuthCodeUpdate) SetAccessRequestID(id int) *OIDCAuthCodeUpdate {
-	oacu.mutation.SetAccessRequestID(id)
-	return oacu
-}
-
-// SetNillableAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID if the given value is not nil.
-func (oacu *OIDCAuthCodeUpdate) SetNillableAccessRequestID(id *int) *OIDCAuthCodeUpdate {
-	if id != nil {
-		oacu = oacu.SetAccessRequestID(*id)
-	}
-	return oacu
-}
-
-// SetAccessRequest sets the "access_request" edge to the AccessRequest entity.
-func (oacu *OIDCAuthCodeUpdate) SetAccessRequest(a *AccessRequest) *OIDCAuthCodeUpdate {
-	return oacu.SetAccessRequestID(a.ID)
-}
-
-// SetSessionID sets the "session" edge to the OIDCSession entity by ID.
+// SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (oacu *OIDCAuthCodeUpdate) SetSessionID(id int) *OIDCAuthCodeUpdate {
 	oacu.mutation.SetSessionID(id)
 	return oacu
 }
 
-// SetNillableSessionID sets the "session" edge to the OIDCSession entity by ID if the given value is not nil.
+// SetNillableSessionID sets the "session" edge to the OAuthSession entity by ID if the given value is not nil.
 func (oacu *OIDCAuthCodeUpdate) SetNillableSessionID(id *int) *OIDCAuthCodeUpdate {
 	if id != nil {
 		oacu = oacu.SetSessionID(*id)
@@ -68,8 +48,8 @@ func (oacu *OIDCAuthCodeUpdate) SetNillableSessionID(id *int) *OIDCAuthCodeUpdat
 	return oacu
 }
 
-// SetSession sets the "session" edge to the OIDCSession entity.
-func (oacu *OIDCAuthCodeUpdate) SetSession(o *OIDCSession) *OIDCAuthCodeUpdate {
+// SetSession sets the "session" edge to the OAuthSession entity.
+func (oacu *OIDCAuthCodeUpdate) SetSession(o *OAuthSession) *OIDCAuthCodeUpdate {
 	return oacu.SetSessionID(o.ID)
 }
 
@@ -78,13 +58,7 @@ func (oacu *OIDCAuthCodeUpdate) Mutation() *OIDCAuthCodeMutation {
 	return oacu.mutation
 }
 
-// ClearAccessRequest clears the "access_request" edge to the AccessRequest entity.
-func (oacu *OIDCAuthCodeUpdate) ClearAccessRequest() *OIDCAuthCodeUpdate {
-	oacu.mutation.ClearAccessRequest()
-	return oacu
-}
-
-// ClearSession clears the "session" edge to the OIDCSession entity.
+// ClearSession clears the "session" edge to the OAuthSession entity.
 func (oacu *OIDCAuthCodeUpdate) ClearSession() *OIDCAuthCodeUpdate {
 	oacu.mutation.ClearSession()
 	return oacu
@@ -165,41 +139,6 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := oacu.mutation.AuthorizationCode(); ok {
 		_spec.SetField(oidcauthcode.FieldAuthorizationCode, field.TypeString, value)
 	}
-	if oacu.mutation.AccessRequestCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   oidcauthcode.AccessRequestTable,
-			Columns: []string{oidcauthcode.AccessRequestColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: accessrequest.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := oacu.mutation.AccessRequestIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   oidcauthcode.AccessRequestTable,
-			Columns: []string{oidcauthcode.AccessRequestColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: accessrequest.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if oacu.mutation.SessionCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -210,7 +149,7 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
-					Column: oidcsession.FieldID,
+					Column: oauthsession.FieldID,
 				},
 			},
 		}
@@ -226,7 +165,7 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
-					Column: oidcsession.FieldID,
+					Column: oauthsession.FieldID,
 				},
 			},
 		}
@@ -260,32 +199,13 @@ func (oacuo *OIDCAuthCodeUpdateOne) SetAuthorizationCode(s string) *OIDCAuthCode
 	return oacuo
 }
 
-// SetAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID.
-func (oacuo *OIDCAuthCodeUpdateOne) SetAccessRequestID(id int) *OIDCAuthCodeUpdateOne {
-	oacuo.mutation.SetAccessRequestID(id)
-	return oacuo
-}
-
-// SetNillableAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID if the given value is not nil.
-func (oacuo *OIDCAuthCodeUpdateOne) SetNillableAccessRequestID(id *int) *OIDCAuthCodeUpdateOne {
-	if id != nil {
-		oacuo = oacuo.SetAccessRequestID(*id)
-	}
-	return oacuo
-}
-
-// SetAccessRequest sets the "access_request" edge to the AccessRequest entity.
-func (oacuo *OIDCAuthCodeUpdateOne) SetAccessRequest(a *AccessRequest) *OIDCAuthCodeUpdateOne {
-	return oacuo.SetAccessRequestID(a.ID)
-}
-
-// SetSessionID sets the "session" edge to the OIDCSession entity by ID.
+// SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (oacuo *OIDCAuthCodeUpdateOne) SetSessionID(id int) *OIDCAuthCodeUpdateOne {
 	oacuo.mutation.SetSessionID(id)
 	return oacuo
 }
 
-// SetNillableSessionID sets the "session" edge to the OIDCSession entity by ID if the given value is not nil.
+// SetNillableSessionID sets the "session" edge to the OAuthSession entity by ID if the given value is not nil.
 func (oacuo *OIDCAuthCodeUpdateOne) SetNillableSessionID(id *int) *OIDCAuthCodeUpdateOne {
 	if id != nil {
 		oacuo = oacuo.SetSessionID(*id)
@@ -293,8 +213,8 @@ func (oacuo *OIDCAuthCodeUpdateOne) SetNillableSessionID(id *int) *OIDCAuthCodeU
 	return oacuo
 }
 
-// SetSession sets the "session" edge to the OIDCSession entity.
-func (oacuo *OIDCAuthCodeUpdateOne) SetSession(o *OIDCSession) *OIDCAuthCodeUpdateOne {
+// SetSession sets the "session" edge to the OAuthSession entity.
+func (oacuo *OIDCAuthCodeUpdateOne) SetSession(o *OAuthSession) *OIDCAuthCodeUpdateOne {
 	return oacuo.SetSessionID(o.ID)
 }
 
@@ -303,13 +223,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) Mutation() *OIDCAuthCodeMutation {
 	return oacuo.mutation
 }
 
-// ClearAccessRequest clears the "access_request" edge to the AccessRequest entity.
-func (oacuo *OIDCAuthCodeUpdateOne) ClearAccessRequest() *OIDCAuthCodeUpdateOne {
-	oacuo.mutation.ClearAccessRequest()
-	return oacuo
-}
-
-// ClearSession clears the "session" edge to the OIDCSession entity.
+// ClearSession clears the "session" edge to the OAuthSession entity.
 func (oacuo *OIDCAuthCodeUpdateOne) ClearSession() *OIDCAuthCodeUpdateOne {
 	oacuo.mutation.ClearSession()
 	return oacuo
@@ -420,41 +334,6 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 	if value, ok := oacuo.mutation.AuthorizationCode(); ok {
 		_spec.SetField(oidcauthcode.FieldAuthorizationCode, field.TypeString, value)
 	}
-	if oacuo.mutation.AccessRequestCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   oidcauthcode.AccessRequestTable,
-			Columns: []string{oidcauthcode.AccessRequestColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: accessrequest.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := oacuo.mutation.AccessRequestIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   oidcauthcode.AccessRequestTable,
-			Columns: []string{oidcauthcode.AccessRequestColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: accessrequest.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if oacuo.mutation.SessionCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -465,7 +344,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
-					Column: oidcsession.FieldID,
+					Column: oauthsession.FieldID,
 				},
 			},
 		}
@@ -481,7 +360,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
-					Column: oidcsession.FieldID,
+					Column: oauthsession.FieldID,
 				},
 			},
 		}

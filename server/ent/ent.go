@@ -10,11 +10,16 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/cert"
+	"github.com/koalatea/authserver/server/ent/denylistedjti"
+	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
+	"github.com/koalatea/authserver/server/ent/oauthclient"
+	"github.com/koalatea/authserver/server/ent/oauthparrequest"
+	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcclient"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
+	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/user"
 )
 
@@ -36,12 +41,17 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
-		accessrequest.Table: accessrequest.ValidColumn,
-		cert.Table:          cert.ValidColumn,
-		oidcauthcode.Table:  oidcauthcode.ValidColumn,
-		oidcclient.Table:    oidcclient.ValidColumn,
-		oidcsession.Table:   oidcsession.ValidColumn,
-		user.Table:          user.ValidColumn,
+		authcode.Table:          authcode.ValidColumn,
+		cert.Table:              cert.ValidColumn,
+		denylistedjti.Table:     denylistedjti.ValidColumn,
+		oauthaccesstoken.Table:  oauthaccesstoken.ValidColumn,
+		oauthclient.Table:       oauthclient.ValidColumn,
+		oauthparrequest.Table:   oauthparrequest.ValidColumn,
+		oauthrefreshtoken.Table: oauthrefreshtoken.ValidColumn,
+		oauthsession.Table:      oauthsession.ValidColumn,
+		oidcauthcode.Table:      oidcauthcode.ValidColumn,
+		pkce.Table:              pkce.ValidColumn,
+		user.Table:              user.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

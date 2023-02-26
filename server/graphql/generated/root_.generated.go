@@ -29,6 +29,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
 	Query() QueryResolver
 }
 
@@ -36,29 +37,34 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	AccessRequest struct {
-		Active             func(childComplexity int) int
-		Form               func(childComplexity int) int
-		GrantedAudiences   func(childComplexity int) int
-		GrantedScopes      func(childComplexity int) int
-		ID                 func(childComplexity int) int
-		Request            func(childComplexity int) int
-		RequestedAudiences func(childComplexity int) int
-		RequestedScopes    func(childComplexity int) int
+	AuthCode struct {
+		Active  func(childComplexity int) int
+		Code    func(childComplexity int) int
+		ID      func(childComplexity int) int
+		Session func(childComplexity int) int
 	}
 
 	Cert struct {
 		ID func(childComplexity int) int
 	}
 
-	OIDCAuthCode struct {
-		AccessRequest     func(childComplexity int) int
-		AuthorizationCode func(childComplexity int) int
-		ID                func(childComplexity int) int
-		Session           func(childComplexity int) int
+	DenyListedJTI struct {
+		Expiration func(childComplexity int) int
+		ID         func(childComplexity int) int
+		Jti        func(childComplexity int) int
 	}
 
-	OIDCClient struct {
+	Mutation struct {
+		RequestCert func(childComplexity int, target string, pubKey string) int
+	}
+
+	OAuthAccessToken struct {
+		ID        func(childComplexity int) int
+		Session   func(childComplexity int) int
+		Signature func(childComplexity int) int
+	}
+
+	OAuthClient struct {
 		ClientID      func(childComplexity int) int
 		GrantTypes    func(childComplexity int) int
 		ID            func(childComplexity int) int
@@ -68,15 +74,44 @@ type ComplexityRoot struct {
 		Secret        func(childComplexity int) int
 	}
 
-	OIDCSession struct {
-		Audiences   func(childComplexity int) int
-		AuthTime    func(childComplexity int) int
-		ExpiresAt   func(childComplexity int) int
-		ID          func(childComplexity int) int
-		IssuedAt    func(childComplexity int) int
-		Issuer      func(childComplexity int) int
-		RequestedAt func(childComplexity int) int
-		Subject     func(childComplexity int) int
+	OAuthPARRequest struct {
+		ID      func(childComplexity int) int
+		Request func(childComplexity int) int
+	}
+
+	OAuthRefreshToken struct {
+		ID        func(childComplexity int) int
+		Session   func(childComplexity int) int
+		Signature func(childComplexity int) int
+	}
+
+	OAuthSession struct {
+		Audiences          func(childComplexity int) int
+		AuthTime           func(childComplexity int) int
+		ExpiresAt          func(childComplexity int) int
+		Form               func(childComplexity int) int
+		GrantedAudiences   func(childComplexity int) int
+		GrantedScopes      func(childComplexity int) int
+		ID                 func(childComplexity int) int
+		IssuedAt           func(childComplexity int) int
+		Issuer             func(childComplexity int) int
+		Request            func(childComplexity int) int
+		RequestedAt        func(childComplexity int) int
+		RequestedAudiences func(childComplexity int) int
+		RequestedScopes    func(childComplexity int) int
+		Subject            func(childComplexity int) int
+	}
+
+	OIDCAuthCode struct {
+		AuthorizationCode func(childComplexity int) int
+		ID                func(childComplexity int) int
+		Session           func(childComplexity int) int
+	}
+
+	PKCE struct {
+		Code    func(childComplexity int) int
+		ID      func(childComplexity int) int
+		Session func(childComplexity int) int
 	}
 
 	PageInfo struct {
@@ -114,61 +149,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "AccessRequest.active":
-		if e.complexity.AccessRequest.Active == nil {
+	case "AuthCode.active":
+		if e.complexity.AuthCode.Active == nil {
 			break
 		}
 
-		return e.complexity.AccessRequest.Active(childComplexity), true
+		return e.complexity.AuthCode.Active(childComplexity), true
 
-	case "AccessRequest.form":
-		if e.complexity.AccessRequest.Form == nil {
+	case "AuthCode.code":
+		if e.complexity.AuthCode.Code == nil {
 			break
 		}
 
-		return e.complexity.AccessRequest.Form(childComplexity), true
+		return e.complexity.AuthCode.Code(childComplexity), true
 
-	case "AccessRequest.grantedAudiences":
-		if e.complexity.AccessRequest.GrantedAudiences == nil {
+	case "AuthCode.id":
+		if e.complexity.AuthCode.ID == nil {
 			break
 		}
 
-		return e.complexity.AccessRequest.GrantedAudiences(childComplexity), true
+		return e.complexity.AuthCode.ID(childComplexity), true
 
-	case "AccessRequest.grantedScopes":
-		if e.complexity.AccessRequest.GrantedScopes == nil {
+	case "AuthCode.session":
+		if e.complexity.AuthCode.Session == nil {
 			break
 		}
 
-		return e.complexity.AccessRequest.GrantedScopes(childComplexity), true
-
-	case "AccessRequest.id":
-		if e.complexity.AccessRequest.ID == nil {
-			break
-		}
-
-		return e.complexity.AccessRequest.ID(childComplexity), true
-
-	case "AccessRequest.request":
-		if e.complexity.AccessRequest.Request == nil {
-			break
-		}
-
-		return e.complexity.AccessRequest.Request(childComplexity), true
-
-	case "AccessRequest.requestedAudiences":
-		if e.complexity.AccessRequest.RequestedAudiences == nil {
-			break
-		}
-
-		return e.complexity.AccessRequest.RequestedAudiences(childComplexity), true
-
-	case "AccessRequest.requestedScopes":
-		if e.complexity.AccessRequest.RequestedScopes == nil {
-			break
-		}
-
-		return e.complexity.AccessRequest.RequestedScopes(childComplexity), true
+		return e.complexity.AuthCode.Session(childComplexity), true
 
 	case "Cert.id":
 		if e.complexity.Cert.ID == nil {
@@ -177,12 +184,241 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Cert.ID(childComplexity), true
 
-	case "OIDCAuthCode.accessRequest":
-		if e.complexity.OIDCAuthCode.AccessRequest == nil {
+	case "DenyListedJTI.expiration":
+		if e.complexity.DenyListedJTI.Expiration == nil {
 			break
 		}
 
-		return e.complexity.OIDCAuthCode.AccessRequest(childComplexity), true
+		return e.complexity.DenyListedJTI.Expiration(childComplexity), true
+
+	case "DenyListedJTI.id":
+		if e.complexity.DenyListedJTI.ID == nil {
+			break
+		}
+
+		return e.complexity.DenyListedJTI.ID(childComplexity), true
+
+	case "DenyListedJTI.jti":
+		if e.complexity.DenyListedJTI.Jti == nil {
+			break
+		}
+
+		return e.complexity.DenyListedJTI.Jti(childComplexity), true
+
+	case "Mutation.requestCert":
+		if e.complexity.Mutation.RequestCert == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestCert_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestCert(childComplexity, args["target"].(string), args["pubKey"].(string)), true
+
+	case "OAuthAccessToken.id":
+		if e.complexity.OAuthAccessToken.ID == nil {
+			break
+		}
+
+		return e.complexity.OAuthAccessToken.ID(childComplexity), true
+
+	case "OAuthAccessToken.session":
+		if e.complexity.OAuthAccessToken.Session == nil {
+			break
+		}
+
+		return e.complexity.OAuthAccessToken.Session(childComplexity), true
+
+	case "OAuthAccessToken.signature":
+		if e.complexity.OAuthAccessToken.Signature == nil {
+			break
+		}
+
+		return e.complexity.OAuthAccessToken.Signature(childComplexity), true
+
+	case "OAuthClient.clientID":
+		if e.complexity.OAuthClient.ClientID == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.ClientID(childComplexity), true
+
+	case "OAuthClient.grantTypes":
+		if e.complexity.OAuthClient.GrantTypes == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.GrantTypes(childComplexity), true
+
+	case "OAuthClient.id":
+		if e.complexity.OAuthClient.ID == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.ID(childComplexity), true
+
+	case "OAuthClient.redirectUris":
+		if e.complexity.OAuthClient.RedirectUris == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.RedirectUris(childComplexity), true
+
+	case "OAuthClient.responseTypes":
+		if e.complexity.OAuthClient.ResponseTypes == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.ResponseTypes(childComplexity), true
+
+	case "OAuthClient.scopes":
+		if e.complexity.OAuthClient.Scopes == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.Scopes(childComplexity), true
+
+	case "OAuthClient.secret":
+		if e.complexity.OAuthClient.Secret == nil {
+			break
+		}
+
+		return e.complexity.OAuthClient.Secret(childComplexity), true
+
+	case "OAuthPARRequest.id":
+		if e.complexity.OAuthPARRequest.ID == nil {
+			break
+		}
+
+		return e.complexity.OAuthPARRequest.ID(childComplexity), true
+
+	case "OAuthPARRequest.request":
+		if e.complexity.OAuthPARRequest.Request == nil {
+			break
+		}
+
+		return e.complexity.OAuthPARRequest.Request(childComplexity), true
+
+	case "OAuthRefreshToken.id":
+		if e.complexity.OAuthRefreshToken.ID == nil {
+			break
+		}
+
+		return e.complexity.OAuthRefreshToken.ID(childComplexity), true
+
+	case "OAuthRefreshToken.session":
+		if e.complexity.OAuthRefreshToken.Session == nil {
+			break
+		}
+
+		return e.complexity.OAuthRefreshToken.Session(childComplexity), true
+
+	case "OAuthRefreshToken.signature":
+		if e.complexity.OAuthRefreshToken.Signature == nil {
+			break
+		}
+
+		return e.complexity.OAuthRefreshToken.Signature(childComplexity), true
+
+	case "OAuthSession.audiences":
+		if e.complexity.OAuthSession.Audiences == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.Audiences(childComplexity), true
+
+	case "OAuthSession.authTime":
+		if e.complexity.OAuthSession.AuthTime == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.AuthTime(childComplexity), true
+
+	case "OAuthSession.expiresAt":
+		if e.complexity.OAuthSession.ExpiresAt == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.ExpiresAt(childComplexity), true
+
+	case "OAuthSession.form":
+		if e.complexity.OAuthSession.Form == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.Form(childComplexity), true
+
+	case "OAuthSession.grantedAudiences":
+		if e.complexity.OAuthSession.GrantedAudiences == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.GrantedAudiences(childComplexity), true
+
+	case "OAuthSession.grantedScopes":
+		if e.complexity.OAuthSession.GrantedScopes == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.GrantedScopes(childComplexity), true
+
+	case "OAuthSession.id":
+		if e.complexity.OAuthSession.ID == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.ID(childComplexity), true
+
+	case "OAuthSession.issuedAt":
+		if e.complexity.OAuthSession.IssuedAt == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.IssuedAt(childComplexity), true
+
+	case "OAuthSession.issuer":
+		if e.complexity.OAuthSession.Issuer == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.Issuer(childComplexity), true
+
+	case "OAuthSession.request":
+		if e.complexity.OAuthSession.Request == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.Request(childComplexity), true
+
+	case "OAuthSession.requestedAt":
+		if e.complexity.OAuthSession.RequestedAt == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.RequestedAt(childComplexity), true
+
+	case "OAuthSession.requestedAudiences":
+		if e.complexity.OAuthSession.RequestedAudiences == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.RequestedAudiences(childComplexity), true
+
+	case "OAuthSession.requestedScopes":
+		if e.complexity.OAuthSession.RequestedScopes == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.RequestedScopes(childComplexity), true
+
+	case "OAuthSession.subject":
+		if e.complexity.OAuthSession.Subject == nil {
+			break
+		}
+
+		return e.complexity.OAuthSession.Subject(childComplexity), true
 
 	case "OIDCAuthCode.authorizationCode":
 		if e.complexity.OIDCAuthCode.AuthorizationCode == nil {
@@ -205,110 +441,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.OIDCAuthCode.Session(childComplexity), true
 
-	case "OIDCClient.clientID":
-		if e.complexity.OIDCClient.ClientID == nil {
+	case "PKCE.code":
+		if e.complexity.PKCE.Code == nil {
 			break
 		}
 
-		return e.complexity.OIDCClient.ClientID(childComplexity), true
+		return e.complexity.PKCE.Code(childComplexity), true
 
-	case "OIDCClient.grantTypes":
-		if e.complexity.OIDCClient.GrantTypes == nil {
+	case "PKCE.id":
+		if e.complexity.PKCE.ID == nil {
 			break
 		}
 
-		return e.complexity.OIDCClient.GrantTypes(childComplexity), true
+		return e.complexity.PKCE.ID(childComplexity), true
 
-	case "OIDCClient.id":
-		if e.complexity.OIDCClient.ID == nil {
+	case "PKCE.session":
+		if e.complexity.PKCE.Session == nil {
 			break
 		}
 
-		return e.complexity.OIDCClient.ID(childComplexity), true
-
-	case "OIDCClient.redirectUris":
-		if e.complexity.OIDCClient.RedirectUris == nil {
-			break
-		}
-
-		return e.complexity.OIDCClient.RedirectUris(childComplexity), true
-
-	case "OIDCClient.responseTypes":
-		if e.complexity.OIDCClient.ResponseTypes == nil {
-			break
-		}
-
-		return e.complexity.OIDCClient.ResponseTypes(childComplexity), true
-
-	case "OIDCClient.scopes":
-		if e.complexity.OIDCClient.Scopes == nil {
-			break
-		}
-
-		return e.complexity.OIDCClient.Scopes(childComplexity), true
-
-	case "OIDCClient.secret":
-		if e.complexity.OIDCClient.Secret == nil {
-			break
-		}
-
-		return e.complexity.OIDCClient.Secret(childComplexity), true
-
-	case "OIDCSession.audiences":
-		if e.complexity.OIDCSession.Audiences == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.Audiences(childComplexity), true
-
-	case "OIDCSession.authTime":
-		if e.complexity.OIDCSession.AuthTime == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.AuthTime(childComplexity), true
-
-	case "OIDCSession.expiresAt":
-		if e.complexity.OIDCSession.ExpiresAt == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.ExpiresAt(childComplexity), true
-
-	case "OIDCSession.id":
-		if e.complexity.OIDCSession.ID == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.ID(childComplexity), true
-
-	case "OIDCSession.issuedAt":
-		if e.complexity.OIDCSession.IssuedAt == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.IssuedAt(childComplexity), true
-
-	case "OIDCSession.issuer":
-		if e.complexity.OIDCSession.Issuer == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.Issuer(childComplexity), true
-
-	case "OIDCSession.requestedAt":
-		if e.complexity.OIDCSession.RequestedAt == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.RequestedAt(childComplexity), true
-
-	case "OIDCSession.subject":
-		if e.complexity.OIDCSession.Subject == nil {
-			break
-		}
-
-		return e.complexity.OIDCSession.Subject(childComplexity), true
+		return e.complexity.PKCE.Session(childComplexity), true
 
 	case "PageInfo.endCursor":
 		if e.complexity.PageInfo.EndCursor == nil {
@@ -398,11 +550,16 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputAccessRequestWhereInput,
+		ec.unmarshalInputAuthCodeWhereInput,
 		ec.unmarshalInputCertWhereInput,
+		ec.unmarshalInputDenyListedJTIWhereInput,
+		ec.unmarshalInputOAuthAccessTokenWhereInput,
+		ec.unmarshalInputOAuthClientWhereInput,
+		ec.unmarshalInputOAuthPARRequestWhereInput,
+		ec.unmarshalInputOAuthRefreshTokenWhereInput,
+		ec.unmarshalInputOAuthSessionWhereInput,
 		ec.unmarshalInputOIDCAuthCodeWhereInput,
-		ec.unmarshalInputOIDCClientWhereInput,
-		ec.unmarshalInputOIDCSessionWhereInput,
+		ec.unmarshalInputPKCEWhereInput,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUserWhereInput,
 	)
@@ -417,6 +574,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			first = false
 			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 			data := ec._Query(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 
@@ -452,24 +624,20 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../schema/query.graphql", Input: `directive @goField(forceResolver: Boolean, name: String) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
-type AccessRequest implements Node {
+type AuthCode implements Node {
   id: ID!
-  requestedScopes: [String!]!
-  grantedScopes: [String!]!
-  requestedAudiences: [String!]!
-  grantedAudiences: [String!]!
-  request: String!
-  form: String!
+  code: String!
   active: Boolean!
+  session: OAuthSession
 }
 """
-AccessRequestWhereInput is used for filtering AccessRequest objects.
+AuthCodeWhereInput is used for filtering AuthCode objects.
 Input was generated by ent.
 """
-input AccessRequestWhereInput {
-  not: AccessRequestWhereInput
-  and: [AccessRequestWhereInput!]
-  or: [AccessRequestWhereInput!]
+input AuthCodeWhereInput {
+  not: AuthCodeWhereInput
+  and: [AuthCodeWhereInput!]
+  or: [AuthCodeWhereInput!]
   """id field predicates"""
   id: ID
   idNEQ: ID
@@ -479,37 +647,26 @@ input AccessRequestWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """request field predicates"""
-  request: String
-  requestNEQ: String
-  requestIn: [String!]
-  requestNotIn: [String!]
-  requestGT: String
-  requestGTE: String
-  requestLT: String
-  requestLTE: String
-  requestContains: String
-  requestHasPrefix: String
-  requestHasSuffix: String
-  requestEqualFold: String
-  requestContainsFold: String
-  """form field predicates"""
-  form: String
-  formNEQ: String
-  formIn: [String!]
-  formNotIn: [String!]
-  formGT: String
-  formGTE: String
-  formLT: String
-  formLTE: String
-  formContains: String
-  formHasPrefix: String
-  formHasSuffix: String
-  formEqualFold: String
-  formContainsFold: String
+  """code field predicates"""
+  code: String
+  codeNEQ: String
+  codeIn: [String!]
+  codeNotIn: [String!]
+  codeGT: String
+  codeGTE: String
+  codeLT: String
+  codeLTE: String
+  codeContains: String
+  codeHasPrefix: String
+  codeHasSuffix: String
+  codeEqualFold: String
+  codeContainsFold: String
   """active field predicates"""
   active: Boolean
   activeNEQ: Boolean
+  """session edge predicates"""
+  hasSession: Boolean
+  hasSessionWith: [OAuthSessionWhereInput!]
 }
 type Cert implements Node {
   id: ID!
@@ -537,28 +694,19 @@ Define a Relay Cursor type:
 https://relay.dev/graphql/connections.htm#sec-Cursor
 """
 scalar Cursor
-"""
-An object with an ID.
-Follows the [Relay Global Object Identification Specification](https://relay.dev/graphql/objectidentification.htm)
-"""
-interface Node @goModel(model: "github.com/koalatea/authserver/server/ent.Noder") {
-  """The id of the object."""
+type DenyListedJTI implements Node {
   id: ID!
-}
-type OIDCAuthCode implements Node {
-  id: ID!
-  authorizationCode: String!
-  accessRequest: AccessRequest
-  session: OIDCSession
+  jti: String!
+  expiration: Time!
 }
 """
-OIDCAuthCodeWhereInput is used for filtering OIDCAuthCode objects.
+DenyListedJTIWhereInput is used for filtering DenyListedJTI objects.
 Input was generated by ent.
 """
-input OIDCAuthCodeWhereInput {
-  not: OIDCAuthCodeWhereInput
-  and: [OIDCAuthCodeWhereInput!]
-  or: [OIDCAuthCodeWhereInput!]
+input DenyListedJTIWhereInput {
+  not: DenyListedJTIWhereInput
+  and: [DenyListedJTIWhereInput!]
+  or: [DenyListedJTIWhereInput!]
   """id field predicates"""
   id: ID
   idNEQ: ID
@@ -568,28 +716,79 @@ input OIDCAuthCodeWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """authorization_code field predicates"""
-  authorizationCode: String
-  authorizationCodeNEQ: String
-  authorizationCodeIn: [String!]
-  authorizationCodeNotIn: [String!]
-  authorizationCodeGT: String
-  authorizationCodeGTE: String
-  authorizationCodeLT: String
-  authorizationCodeLTE: String
-  authorizationCodeContains: String
-  authorizationCodeHasPrefix: String
-  authorizationCodeHasSuffix: String
-  authorizationCodeEqualFold: String
-  authorizationCodeContainsFold: String
-  """access_request edge predicates"""
-  hasAccessRequest: Boolean
-  hasAccessRequestWith: [AccessRequestWhereInput!]
+  """jti field predicates"""
+  jti: String
+  jtiNEQ: String
+  jtiIn: [String!]
+  jtiNotIn: [String!]
+  jtiGT: String
+  jtiGTE: String
+  jtiLT: String
+  jtiLTE: String
+  jtiContains: String
+  jtiHasPrefix: String
+  jtiHasSuffix: String
+  jtiEqualFold: String
+  jtiContainsFold: String
+  """expiration field predicates"""
+  expiration: Time
+  expirationNEQ: Time
+  expirationIn: [Time!]
+  expirationNotIn: [Time!]
+  expirationGT: Time
+  expirationGTE: Time
+  expirationLT: Time
+  expirationLTE: Time
+}
+"""
+An object with an ID.
+Follows the [Relay Global Object Identification Specification](https://relay.dev/graphql/objectidentification.htm)
+"""
+interface Node @goModel(model: "github.com/koalatea/authserver/server/ent.Noder") {
+  """The id of the object."""
+  id: ID!
+}
+type OAuthAccessToken implements Node {
+  id: ID!
+  signature: String!
+  session: OAuthSession
+}
+"""
+OAuthAccessTokenWhereInput is used for filtering OAuthAccessToken objects.
+Input was generated by ent.
+"""
+input OAuthAccessTokenWhereInput {
+  not: OAuthAccessTokenWhereInput
+  and: [OAuthAccessTokenWhereInput!]
+  or: [OAuthAccessTokenWhereInput!]
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """signature field predicates"""
+  signature: String
+  signatureNEQ: String
+  signatureIn: [String!]
+  signatureNotIn: [String!]
+  signatureGT: String
+  signatureGTE: String
+  signatureLT: String
+  signatureLTE: String
+  signatureContains: String
+  signatureHasPrefix: String
+  signatureHasSuffix: String
+  signatureEqualFold: String
+  signatureContainsFold: String
   """session edge predicates"""
   hasSession: Boolean
-  hasSessionWith: [OIDCSessionWhereInput!]
+  hasSessionWith: [OAuthSessionWhereInput!]
 }
-type OIDCClient implements Node {
+type OAuthClient implements Node {
   id: ID!
   clientID: String!
   secret: String!
@@ -599,13 +798,13 @@ type OIDCClient implements Node {
   scopes: [String!]!
 }
 """
-OIDCClientWhereInput is used for filtering OIDCClient objects.
+OAuthClientWhereInput is used for filtering OAuthClient objects.
 Input was generated by ent.
 """
-input OIDCClientWhereInput {
-  not: OIDCClientWhereInput
-  and: [OIDCClientWhereInput!]
-  or: [OIDCClientWhereInput!]
+input OAuthClientWhereInput {
+  not: OAuthClientWhereInput
+  and: [OAuthClientWhereInput!]
+  or: [OAuthClientWhereInput!]
   """id field predicates"""
   id: ID
   idNEQ: ID
@@ -644,7 +843,83 @@ input OIDCClientWhereInput {
   secretEqualFold: String
   secretContainsFold: String
 }
-type OIDCSession implements Node {
+type OAuthPARRequest implements Node {
+  id: ID!
+  request: String!
+}
+"""
+OAuthPARRequestWhereInput is used for filtering OAuthPARRequest objects.
+Input was generated by ent.
+"""
+input OAuthPARRequestWhereInput {
+  not: OAuthPARRequestWhereInput
+  and: [OAuthPARRequestWhereInput!]
+  or: [OAuthPARRequestWhereInput!]
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """request field predicates"""
+  request: String
+  requestNEQ: String
+  requestIn: [String!]
+  requestNotIn: [String!]
+  requestGT: String
+  requestGTE: String
+  requestLT: String
+  requestLTE: String
+  requestContains: String
+  requestHasPrefix: String
+  requestHasSuffix: String
+  requestEqualFold: String
+  requestContainsFold: String
+}
+type OAuthRefreshToken implements Node {
+  id: ID!
+  signature: String!
+  session: OAuthSession
+}
+"""
+OAuthRefreshTokenWhereInput is used for filtering OAuthRefreshToken objects.
+Input was generated by ent.
+"""
+input OAuthRefreshTokenWhereInput {
+  not: OAuthRefreshTokenWhereInput
+  and: [OAuthRefreshTokenWhereInput!]
+  or: [OAuthRefreshTokenWhereInput!]
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """signature field predicates"""
+  signature: String
+  signatureNEQ: String
+  signatureIn: [String!]
+  signatureNotIn: [String!]
+  signatureGT: String
+  signatureGTE: String
+  signatureLT: String
+  signatureLTE: String
+  signatureContains: String
+  signatureHasPrefix: String
+  signatureHasSuffix: String
+  signatureEqualFold: String
+  signatureContainsFold: String
+  """session edge predicates"""
+  hasSession: Boolean
+  hasSessionWith: [OAuthSessionWhereInput!]
+}
+type OAuthSession implements Node {
   id: ID!
   issuer: String!
   subject: String!
@@ -653,15 +928,21 @@ type OIDCSession implements Node {
   issuedAt: Time!
   requestedAt: Time!
   authTime: Time!
+  requestedScopes: [String!]!
+  grantedScopes: [String!]!
+  requestedAudiences: [String!]!
+  grantedAudiences: [String!]!
+  request: String!
+  form: String!
 }
 """
-OIDCSessionWhereInput is used for filtering OIDCSession objects.
+OAuthSessionWhereInput is used for filtering OAuthSession objects.
 Input was generated by ent.
 """
-input OIDCSessionWhereInput {
-  not: OIDCSessionWhereInput
-  and: [OIDCSessionWhereInput!]
-  or: [OIDCSessionWhereInput!]
+input OAuthSessionWhereInput {
+  not: OAuthSessionWhereInput
+  and: [OAuthSessionWhereInput!]
+  or: [OAuthSessionWhereInput!]
   """id field predicates"""
   id: ID
   idNEQ: ID
@@ -735,6 +1016,74 @@ input OIDCSessionWhereInput {
   authTimeGTE: Time
   authTimeLT: Time
   authTimeLTE: Time
+  """request field predicates"""
+  request: String
+  requestNEQ: String
+  requestIn: [String!]
+  requestNotIn: [String!]
+  requestGT: String
+  requestGTE: String
+  requestLT: String
+  requestLTE: String
+  requestContains: String
+  requestHasPrefix: String
+  requestHasSuffix: String
+  requestEqualFold: String
+  requestContainsFold: String
+  """form field predicates"""
+  form: String
+  formNEQ: String
+  formIn: [String!]
+  formNotIn: [String!]
+  formGT: String
+  formGTE: String
+  formLT: String
+  formLTE: String
+  formContains: String
+  formHasPrefix: String
+  formHasSuffix: String
+  formEqualFold: String
+  formContainsFold: String
+}
+type OIDCAuthCode implements Node {
+  id: ID!
+  authorizationCode: String!
+  session: OAuthSession
+}
+"""
+OIDCAuthCodeWhereInput is used for filtering OIDCAuthCode objects.
+Input was generated by ent.
+"""
+input OIDCAuthCodeWhereInput {
+  not: OIDCAuthCodeWhereInput
+  and: [OIDCAuthCodeWhereInput!]
+  or: [OIDCAuthCodeWhereInput!]
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """authorization_code field predicates"""
+  authorizationCode: String
+  authorizationCodeNEQ: String
+  authorizationCodeIn: [String!]
+  authorizationCodeNotIn: [String!]
+  authorizationCodeGT: String
+  authorizationCodeGTE: String
+  authorizationCodeLT: String
+  authorizationCodeLTE: String
+  authorizationCodeContains: String
+  authorizationCodeHasPrefix: String
+  authorizationCodeHasSuffix: String
+  authorizationCodeEqualFold: String
+  authorizationCodeContainsFold: String
+  """session edge predicates"""
+  hasSession: Boolean
+  hasSessionWith: [OAuthSessionWhereInput!]
 }
 """Possible directions in which to order a list of items when provided an ` + "`" + `orderBy` + "`" + ` argument."""
 enum OrderDirection {
@@ -742,6 +1091,46 @@ enum OrderDirection {
   ASC
   """Specifies a descending order for a given ` + "`" + `orderBy` + "`" + ` argument."""
   DESC
+}
+type PKCE implements Node {
+  id: ID!
+  code: String!
+  session: OAuthSession
+}
+"""
+PKCEWhereInput is used for filtering PKCE objects.
+Input was generated by ent.
+"""
+input PKCEWhereInput {
+  not: PKCEWhereInput
+  and: [PKCEWhereInput!]
+  or: [PKCEWhereInput!]
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """code field predicates"""
+  code: String
+  codeNEQ: String
+  codeIn: [String!]
+  codeNotIn: [String!]
+  codeGT: String
+  codeGTE: String
+  codeLT: String
+  codeLTE: String
+  codeContains: String
+  codeHasPrefix: String
+  codeHasSuffix: String
+  codeEqualFold: String
+  codeContainsFold: String
+  """session edge predicates"""
+  hasSession: Boolean
+  hasSessionWith: [OAuthSessionWhereInput!]
 }
 """
 Information about pagination in a connection.
@@ -770,8 +1159,6 @@ type Query {
   ): [Node]!
   users: [User!]!
 }
-"""The builtin Time type"""
-scalar Time
 """
 UpdateUserInput is used for update User object.
 Input was generated by ent.
@@ -825,5 +1212,9 @@ input UserWhereInput {
   isactivatedNEQ: Boolean
 }
 `, BuiltIn: false},
+	{Name: "../schema/scalars.graphql", Input: `scalar Time`, BuiltIn: false},
+	{Name: "../schema/mutation.graphql", Input: `type Mutation {
+    requestCert(target: String!, pubKey: String!): String!
+}`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

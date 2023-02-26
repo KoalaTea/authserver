@@ -10,30 +10,44 @@ import (
 )
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (ar *AccessRequestQuery) CollectFields(ctx context.Context, satisfies ...string) (*AccessRequestQuery, error) {
+func (ac *AuthCodeQuery) CollectFields(ctx context.Context, satisfies ...string) (*AuthCodeQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {
-		return ar, nil
+		return ac, nil
 	}
-	if err := ar.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+	if err := ac.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
 		return nil, err
 	}
-	return ar, nil
+	return ac, nil
 }
 
-func (ar *AccessRequestQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+func (ac *AuthCodeQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
 	path = append([]string(nil), path...)
+	for _, field := range graphql.CollectFields(op, field.Selections, satisfies) {
+		switch field.Name {
+		case "session":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = &OAuthSessionQuery{config: ac.config}
+			)
+			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
+				return err
+			}
+			ac.withSession = query
+		}
+	}
 	return nil
 }
 
-type accessrequestPaginateArgs struct {
+type authcodePaginateArgs struct {
 	first, last   *int
 	after, before *Cursor
-	opts          []AccessRequestPaginateOption
+	opts          []AuthCodePaginateOption
 }
 
-func newAccessRequestPaginateArgs(rv map[string]interface{}) *accessrequestPaginateArgs {
-	args := &accessrequestPaginateArgs{}
+func newAuthCodePaginateArgs(rv map[string]interface{}) *authcodePaginateArgs {
+	args := &authcodePaginateArgs{}
 	if rv == nil {
 		return args
 	}
@@ -49,8 +63,8 @@ func newAccessRequestPaginateArgs(rv map[string]interface{}) *accessrequestPagin
 	if v := rv[beforeField]; v != nil {
 		args.before = v.(*Cursor)
 	}
-	if v, ok := rv[whereField].(*AccessRequestWhereInput); ok {
-		args.opts = append(args.opts, WithAccessRequestFilter(v.Filter))
+	if v, ok := rv[whereField].(*AuthCodeWhereInput); ok {
+		args.opts = append(args.opts, WithAuthCodeFilter(v.Filter))
 	}
 	return args
 }
@@ -102,6 +116,310 @@ func newCertPaginateArgs(rv map[string]interface{}) *certPaginateArgs {
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (dlj *DenyListedJTIQuery) CollectFields(ctx context.Context, satisfies ...string) (*DenyListedJTIQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return dlj, nil
+	}
+	if err := dlj.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return dlj, nil
+}
+
+func (dlj *DenyListedJTIQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type denylistedjtiPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []DenyListedJTIPaginateOption
+}
+
+func newDenyListedJTIPaginateArgs(rv map[string]interface{}) *denylistedjtiPaginateArgs {
+	args := &denylistedjtiPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*DenyListedJTIWhereInput); ok {
+		args.opts = append(args.opts, WithDenyListedJTIFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (oat *OAuthAccessTokenQuery) CollectFields(ctx context.Context, satisfies ...string) (*OAuthAccessTokenQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return oat, nil
+	}
+	if err := oat.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return oat, nil
+}
+
+func (oat *OAuthAccessTokenQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	for _, field := range graphql.CollectFields(op, field.Selections, satisfies) {
+		switch field.Name {
+		case "session":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = &OAuthSessionQuery{config: oat.config}
+			)
+			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
+				return err
+			}
+			oat.withSession = query
+		}
+	}
+	return nil
+}
+
+type oauthaccesstokenPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []OAuthAccessTokenPaginateOption
+}
+
+func newOAuthAccessTokenPaginateArgs(rv map[string]interface{}) *oauthaccesstokenPaginateArgs {
+	args := &oauthaccesstokenPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*OAuthAccessTokenWhereInput); ok {
+		args.opts = append(args.opts, WithOAuthAccessTokenFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (oc *OAuthClientQuery) CollectFields(ctx context.Context, satisfies ...string) (*OAuthClientQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return oc, nil
+	}
+	if err := oc.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return oc, nil
+}
+
+func (oc *OAuthClientQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type oauthclientPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []OAuthClientPaginateOption
+}
+
+func newOAuthClientPaginateArgs(rv map[string]interface{}) *oauthclientPaginateArgs {
+	args := &oauthclientPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*OAuthClientWhereInput); ok {
+		args.opts = append(args.opts, WithOAuthClientFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (opr *OAuthPARRequestQuery) CollectFields(ctx context.Context, satisfies ...string) (*OAuthPARRequestQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return opr, nil
+	}
+	if err := opr.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return opr, nil
+}
+
+func (opr *OAuthPARRequestQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type oauthparrequestPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []OAuthPARRequestPaginateOption
+}
+
+func newOAuthPARRequestPaginateArgs(rv map[string]interface{}) *oauthparrequestPaginateArgs {
+	args := &oauthparrequestPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*OAuthPARRequestWhereInput); ok {
+		args.opts = append(args.opts, WithOAuthPARRequestFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (ort *OAuthRefreshTokenQuery) CollectFields(ctx context.Context, satisfies ...string) (*OAuthRefreshTokenQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return ort, nil
+	}
+	if err := ort.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return ort, nil
+}
+
+func (ort *OAuthRefreshTokenQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	for _, field := range graphql.CollectFields(op, field.Selections, satisfies) {
+		switch field.Name {
+		case "session":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = &OAuthSessionQuery{config: ort.config}
+			)
+			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
+				return err
+			}
+			ort.withSession = query
+		}
+	}
+	return nil
+}
+
+type oauthrefreshtokenPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []OAuthRefreshTokenPaginateOption
+}
+
+func newOAuthRefreshTokenPaginateArgs(rv map[string]interface{}) *oauthrefreshtokenPaginateArgs {
+	args := &oauthrefreshtokenPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*OAuthRefreshTokenWhereInput); ok {
+		args.opts = append(args.opts, WithOAuthRefreshTokenFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (os *OAuthSessionQuery) CollectFields(ctx context.Context, satisfies ...string) (*OAuthSessionQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return os, nil
+	}
+	if err := os.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return os, nil
+}
+
+func (os *OAuthSessionQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type oauthsessionPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []OAuthSessionPaginateOption
+}
+
+func newOAuthSessionPaginateArgs(rv map[string]interface{}) *oauthsessionPaginateArgs {
+	args := &oauthsessionPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*OAuthSessionWhereInput); ok {
+		args.opts = append(args.opts, WithOAuthSessionFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (oac *OIDCAuthCodeQuery) CollectFields(ctx context.Context, satisfies ...string) (*OIDCAuthCodeQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {
@@ -117,21 +435,11 @@ func (oac *OIDCAuthCodeQuery) collectField(ctx context.Context, op *graphql.Oper
 	path = append([]string(nil), path...)
 	for _, field := range graphql.CollectFields(op, field.Selections, satisfies) {
 		switch field.Name {
-		case "accessRequest":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = &AccessRequestQuery{config: oac.config}
-			)
-			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
-				return err
-			}
-			oac.withAccessRequest = query
 		case "session":
 			var (
 				alias = field.Alias
 				path  = append(path, alias)
-				query = &OIDCSessionQuery{config: oac.config}
+				query = &OAuthSessionQuery{config: oac.config}
 			)
 			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
 				return err
@@ -172,30 +480,44 @@ func newOIDCAuthCodePaginateArgs(rv map[string]interface{}) *oidcauthcodePaginat
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (oc *OIDCClientQuery) CollectFields(ctx context.Context, satisfies ...string) (*OIDCClientQuery, error) {
+func (pk *PKCEQuery) CollectFields(ctx context.Context, satisfies ...string) (*PKCEQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {
-		return oc, nil
+		return pk, nil
 	}
-	if err := oc.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+	if err := pk.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
 		return nil, err
 	}
-	return oc, nil
+	return pk, nil
 }
 
-func (oc *OIDCClientQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+func (pk *PKCEQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
 	path = append([]string(nil), path...)
+	for _, field := range graphql.CollectFields(op, field.Selections, satisfies) {
+		switch field.Name {
+		case "session":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = &OAuthSessionQuery{config: pk.config}
+			)
+			if err := query.collectField(ctx, op, field, path, satisfies...); err != nil {
+				return err
+			}
+			pk.withSession = query
+		}
+	}
 	return nil
 }
 
-type oidcclientPaginateArgs struct {
+type pkcePaginateArgs struct {
 	first, last   *int
 	after, before *Cursor
-	opts          []OIDCClientPaginateOption
+	opts          []PKCEPaginateOption
 }
 
-func newOIDCClientPaginateArgs(rv map[string]interface{}) *oidcclientPaginateArgs {
-	args := &oidcclientPaginateArgs{}
+func newPKCEPaginateArgs(rv map[string]interface{}) *pkcePaginateArgs {
+	args := &pkcePaginateArgs{}
 	if rv == nil {
 		return args
 	}
@@ -211,54 +533,8 @@ func newOIDCClientPaginateArgs(rv map[string]interface{}) *oidcclientPaginateArg
 	if v := rv[beforeField]; v != nil {
 		args.before = v.(*Cursor)
 	}
-	if v, ok := rv[whereField].(*OIDCClientWhereInput); ok {
-		args.opts = append(args.opts, WithOIDCClientFilter(v.Filter))
-	}
-	return args
-}
-
-// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (os *OIDCSessionQuery) CollectFields(ctx context.Context, satisfies ...string) (*OIDCSessionQuery, error) {
-	fc := graphql.GetFieldContext(ctx)
-	if fc == nil {
-		return os, nil
-	}
-	if err := os.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
-		return nil, err
-	}
-	return os, nil
-}
-
-func (os *OIDCSessionQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
-	path = append([]string(nil), path...)
-	return nil
-}
-
-type oidcsessionPaginateArgs struct {
-	first, last   *int
-	after, before *Cursor
-	opts          []OIDCSessionPaginateOption
-}
-
-func newOIDCSessionPaginateArgs(rv map[string]interface{}) *oidcsessionPaginateArgs {
-	args := &oidcsessionPaginateArgs{}
-	if rv == nil {
-		return args
-	}
-	if v := rv[firstField]; v != nil {
-		args.first = v.(*int)
-	}
-	if v := rv[lastField]; v != nil {
-		args.last = v.(*int)
-	}
-	if v := rv[afterField]; v != nil {
-		args.after = v.(*Cursor)
-	}
-	if v := rv[beforeField]; v != nil {
-		args.before = v.(*Cursor)
-	}
-	if v, ok := rv[whereField].(*OIDCSessionWhereInput); ok {
-		args.opts = append(args.opts, WithOIDCSessionFilter(v.Filter))
+	if v, ok := rv[whereField].(*PKCEWhereInput); ok {
+		args.opts = append(args.opts, WithPKCEFilter(v.Filter))
 	}
 	return args
 }

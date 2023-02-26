@@ -24,12 +24,17 @@ type config struct {
 
 // hooks per client, for fast access.
 type hooks struct {
-	AccessRequest []ent.Hook
-	Cert          []ent.Hook
-	OIDCAuthCode  []ent.Hook
-	OIDCClient    []ent.Hook
-	OIDCSession   []ent.Hook
-	User          []ent.Hook
+	AuthCode          []ent.Hook
+	Cert              []ent.Hook
+	DenyListedJTI     []ent.Hook
+	OAuthAccessToken  []ent.Hook
+	OAuthClient       []ent.Hook
+	OAuthPARRequest   []ent.Hook
+	OAuthRefreshToken []ent.Hook
+	OAuthSession      []ent.Hook
+	OIDCAuthCode      []ent.Hook
+	PKCE              []ent.Hook
+	User              []ent.Hook
 }
 
 // Options applies the options on the config object.

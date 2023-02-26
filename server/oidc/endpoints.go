@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/ory/fosite"
 )
 
 func (o *OIDCProvider) tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
+	// ITODO for some reason if openid is not a scope this still runs GetOpenIDConnectSession without the create getting run in the initial auth call
+
 	// Create an empty session object which will be passed to the request handlers
-	mySessionData := newSession("")
+	mySessionData := &fosite.DefaultSession{}
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
+	fmt.Println("Running NewAccessRequest")
 	accessRequest, err := o.oauth2.NewAccessRequest(ctx, req, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %+v", err)
@@ -29,9 +34,11 @@ func (o *OIDCProvider) tokenEndpoint(rw http.ResponseWriter, req *http.Request) 
 			accessRequest.GrantScope(scope)
 		}
 	}
+	fmt.Printf("%+v\n", accessRequest)
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
 	// and aggregate the result in response.
+	fmt.Println("Running NewAccessResponse")
 	response, err := o.oauth2.NewAccessResponse(ctx, accessRequest)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessResponse: %+v", err)
@@ -40,6 +47,7 @@ func (o *OIDCProvider) tokenEndpoint(rw http.ResponseWriter, req *http.Request) 
 	}
 
 	// All done, send the response.
+	fmt.Println("Running WriteAccessResponse")
 	o.oauth2.WriteAccessResponse(ctx, rw, accessRequest, response)
 }
 
@@ -48,6 +56,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Let's create an AuthorizeRequest object!
 	// It will analyze the request and extract important information like scopes, response type and others.
+	fmt.Println("Running NewAuthorizeRequest")
 	ar, err := o.oauth2.NewAuthorizeRequest(ctx, req)
 	if err != nil {
 		log.Printf("Error occurred in NewAuthorizeRequest: %+v", err)
@@ -83,6 +92,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// let's see what scopes the user gave consent to
 	for _, scope := range req.PostForm["scopes"] {
+		fmt.Printf("\nscopes: %s\n", scope)
 		ar.GrantScope(scope)
 	}
 
@@ -104,6 +114,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
 	// to support open id connect.
+	fmt.Println("Running NewAuthorizeResponse")
 	response, err := o.oauth2.NewAuthorizeResponse(ctx, ar, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewAuthorizeResponse: %+v", err)
@@ -111,6 +122,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	fmt.Println("Running WriteAuthorizeResponse")
 	o.oauth2.WriteAuthorizeResponse(ctx, rw, ar, response)
 }
 

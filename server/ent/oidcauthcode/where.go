@@ -185,34 +185,6 @@ func AuthorizationCodeContainsFold(v string) predicate.OIDCAuthCode {
 	})
 }
 
-// HasAccessRequest applies the HasEdge predicate on the "access_request" edge.
-func HasAccessRequest() predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AccessRequestTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AccessRequestTable, AccessRequestColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasAccessRequestWith applies the HasEdge predicate on the "access_request" edge with a given conditions (other predicates).
-func HasAccessRequestWith(preds ...predicate.AccessRequest) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AccessRequestInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, AccessRequestTable, AccessRequestColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasSession applies the HasEdge predicate on the "session" edge.
 func HasSession() predicate.OIDCAuthCode {
 	return predicate.OIDCAuthCode(func(s *sql.Selector) {
@@ -226,7 +198,7 @@ func HasSession() predicate.OIDCAuthCode {
 }
 
 // HasSessionWith applies the HasEdge predicate on the "session" edge with a given conditions (other predicates).
-func HasSessionWith(preds ...predicate.OIDCSession) predicate.OIDCAuthCode {
+func HasSessionWith(preds ...predicate.OAuthSession) predicate.OIDCAuthCode {
 	return predicate.OIDCAuthCode(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),

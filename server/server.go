@@ -23,6 +23,8 @@ func newServer(ctx context.Context, options ...func(*Server)) *Server {
 }
 
 func (srv *Server) Run(ctx context.Context) error {
+	//https://github.com/ory/hydra/blob/c3af131e131e0e5f5584708a45c5c7e91d31bac9/persistence/sql/persister_oauth2.go#L210 look at this for some inspiration
+	// largely wondering why seperate right now
 	_, span := tracer.Start(ctx, "Run")
 	router := http.NewServeMux()
 

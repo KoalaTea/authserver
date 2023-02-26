@@ -11,11 +11,12 @@ import (
 	"time"
 )
 
-var CAKEY *rsa.PrivateKey
-var CA *x509.Certificate
+type CAProvider struct {
+	ca  *x509.Certificate
+	key *rsa.PrivateKey
+}
 
-func makeCA() error {
-	// Create CA
+func NewCertProvider() (*CAProvider, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -33,19 +34,17 @@ func makeCA() error {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
-	CA = ca
 
 	// Gen private key
 	caPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	CAKEY = caPrivKey
 
 	// Create Cert
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// PEM Encode
@@ -61,10 +60,11 @@ func makeCA() error {
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	})
 
-	return nil
+	provider := &CAProvider{ca: ca, key: caPrivKey}
+	return provider, nil
 }
 
-func CreateCertificate() error {
+func (p *CAProvider) CreateCertificate() error {
 	// create cert to sign
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
@@ -85,7 +85,7 @@ func CreateCertificate() error {
 	}
 
 	// sign cert with the CA
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, CA, &certPrivKey.PublicKey, CAKEY)
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, &certPrivKey.PublicKey, p.key)
 	if err != nil {
 		return err
 	}
@@ -105,3 +105,6 @@ func CreateCertificate() error {
 
 	return nil
 }
+
+// Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine
+// other fields may also need to be filled out correctly for the same reason it all depends on what is using it

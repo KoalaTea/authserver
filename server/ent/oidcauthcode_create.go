@@ -9,9 +9,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
 )
 
 // OIDCAuthCodeCreate is the builder for creating a OIDCAuthCode entity.
@@ -27,32 +26,13 @@ func (oacc *OIDCAuthCodeCreate) SetAuthorizationCode(s string) *OIDCAuthCodeCrea
 	return oacc
 }
 
-// SetAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID.
-func (oacc *OIDCAuthCodeCreate) SetAccessRequestID(id int) *OIDCAuthCodeCreate {
-	oacc.mutation.SetAccessRequestID(id)
-	return oacc
-}
-
-// SetNillableAccessRequestID sets the "access_request" edge to the AccessRequest entity by ID if the given value is not nil.
-func (oacc *OIDCAuthCodeCreate) SetNillableAccessRequestID(id *int) *OIDCAuthCodeCreate {
-	if id != nil {
-		oacc = oacc.SetAccessRequestID(*id)
-	}
-	return oacc
-}
-
-// SetAccessRequest sets the "access_request" edge to the AccessRequest entity.
-func (oacc *OIDCAuthCodeCreate) SetAccessRequest(a *AccessRequest) *OIDCAuthCodeCreate {
-	return oacc.SetAccessRequestID(a.ID)
-}
-
-// SetSessionID sets the "session" edge to the OIDCSession entity by ID.
+// SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (oacc *OIDCAuthCodeCreate) SetSessionID(id int) *OIDCAuthCodeCreate {
 	oacc.mutation.SetSessionID(id)
 	return oacc
 }
 
-// SetNillableSessionID sets the "session" edge to the OIDCSession entity by ID if the given value is not nil.
+// SetNillableSessionID sets the "session" edge to the OAuthSession entity by ID if the given value is not nil.
 func (oacc *OIDCAuthCodeCreate) SetNillableSessionID(id *int) *OIDCAuthCodeCreate {
 	if id != nil {
 		oacc = oacc.SetSessionID(*id)
@@ -60,8 +40,8 @@ func (oacc *OIDCAuthCodeCreate) SetNillableSessionID(id *int) *OIDCAuthCodeCreat
 	return oacc
 }
 
-// SetSession sets the "session" edge to the OIDCSession entity.
-func (oacc *OIDCAuthCodeCreate) SetSession(o *OIDCSession) *OIDCAuthCodeCreate {
+// SetSession sets the "session" edge to the OAuthSession entity.
+func (oacc *OIDCAuthCodeCreate) SetSession(o *OAuthSession) *OIDCAuthCodeCreate {
 	return oacc.SetSessionID(o.ID)
 }
 
@@ -175,26 +155,6 @@ func (oacc *OIDCAuthCodeCreate) createSpec() (*OIDCAuthCode, *sqlgraph.CreateSpe
 		_spec.SetField(oidcauthcode.FieldAuthorizationCode, field.TypeString, value)
 		_node.AuthorizationCode = value
 	}
-	if nodes := oacc.mutation.AccessRequestIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   oidcauthcode.AccessRequestTable,
-			Columns: []string{oidcauthcode.AccessRequestColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: accessrequest.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.oidc_auth_code_access_request = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := oacc.mutation.SessionIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -205,7 +165,7 @@ func (oacc *OIDCAuthCodeCreate) createSpec() (*OIDCAuthCode, *sqlgraph.CreateSpe
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
-					Column: oidcsession.FieldID,
+					Column: oauthsession.FieldID,
 				},
 			},
 		}

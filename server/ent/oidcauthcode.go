@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
 )
 
 // OIDCAuthCode is the model entity for the OIDCAuthCode schema.
@@ -21,44 +20,28 @@ type OIDCAuthCode struct {
 	AuthorizationCode string `json:"authorization_code,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the OIDCAuthCodeQuery when eager-loading is set.
-	Edges                         OIDCAuthCodeEdges `json:"edges"`
-	oidc_auth_code_access_request *int
-	oidc_auth_code_session        *int
+	Edges                  OIDCAuthCodeEdges `json:"edges"`
+	oidc_auth_code_session *int
 }
 
 // OIDCAuthCodeEdges holds the relations/edges for other nodes in the graph.
 type OIDCAuthCodeEdges struct {
 	// information about the request
-	AccessRequest *AccessRequest `json:"access_request,omitempty"`
-	// information about the request
-	Session *OIDCSession `json:"session,omitempty"`
+	Session *OAuthSession `json:"session,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 	// totalCount holds the count of the edges above.
-	totalCount [2]map[string]int
-}
-
-// AccessRequestOrErr returns the AccessRequest value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e OIDCAuthCodeEdges) AccessRequestOrErr() (*AccessRequest, error) {
-	if e.loadedTypes[0] {
-		if e.AccessRequest == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: accessrequest.Label}
-		}
-		return e.AccessRequest, nil
-	}
-	return nil, &NotLoadedError{edge: "access_request"}
+	totalCount [1]map[string]int
 }
 
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e OIDCAuthCodeEdges) SessionOrErr() (*OIDCSession, error) {
-	if e.loadedTypes[1] {
+func (e OIDCAuthCodeEdges) SessionOrErr() (*OAuthSession, error) {
+	if e.loadedTypes[0] {
 		if e.Session == nil {
 			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oidcsession.Label}
+			return nil, &NotFoundError{label: oauthsession.Label}
 		}
 		return e.Session, nil
 	}
@@ -74,9 +57,7 @@ func (*OIDCAuthCode) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case oidcauthcode.FieldAuthorizationCode:
 			values[i] = new(sql.NullString)
-		case oidcauthcode.ForeignKeys[0]: // oidc_auth_code_access_request
-			values[i] = new(sql.NullInt64)
-		case oidcauthcode.ForeignKeys[1]: // oidc_auth_code_session
+		case oidcauthcode.ForeignKeys[0]: // oidc_auth_code_session
 			values[i] = new(sql.NullInt64)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type OIDCAuthCode", columns[i])
@@ -107,13 +88,6 @@ func (oac *OIDCAuthCode) assignValues(columns []string, values []any) error {
 			}
 		case oidcauthcode.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field oidc_auth_code_access_request", value)
-			} else if value.Valid {
-				oac.oidc_auth_code_access_request = new(int)
-				*oac.oidc_auth_code_access_request = int(value.Int64)
-			}
-		case oidcauthcode.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field oidc_auth_code_session", value)
 			} else if value.Valid {
 				oac.oidc_auth_code_session = new(int)
@@ -124,13 +98,8 @@ func (oac *OIDCAuthCode) assignValues(columns []string, values []any) error {
 	return nil
 }
 
-// QueryAccessRequest queries the "access_request" edge of the OIDCAuthCode entity.
-func (oac *OIDCAuthCode) QueryAccessRequest() *AccessRequestQuery {
-	return (&OIDCAuthCodeClient{config: oac.config}).QueryAccessRequest(oac)
-}
-
 // QuerySession queries the "session" edge of the OIDCAuthCode entity.
-func (oac *OIDCAuthCode) QuerySession() *OIDCSessionQuery {
+func (oac *OIDCAuthCode) QuerySession() *OAuthSessionQuery {
 	return (&OIDCAuthCodeClient{config: oac.config}).QuerySession(oac)
 }
 

@@ -8,22 +8,26 @@ import (
 )
 
 var (
-	// AccessRequestsColumns holds the columns for the "access_requests" table.
-	AccessRequestsColumns = []*schema.Column{
+	// AuthCodesColumns holds the columns for the "auth_codes" table.
+	AuthCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "requested_scopes", Type: field.TypeJSON},
-		{Name: "granted_scopes", Type: field.TypeJSON},
-		{Name: "requested_audiences", Type: field.TypeJSON},
-		{Name: "granted_audiences", Type: field.TypeJSON},
-		{Name: "request", Type: field.TypeString},
-		{Name: "form", Type: field.TypeString},
+		{Name: "code", Type: field.TypeString},
 		{Name: "active", Type: field.TypeBool},
+		{Name: "auth_code_session", Type: field.TypeInt, Nullable: true},
 	}
-	// AccessRequestsTable holds the schema information for the "access_requests" table.
-	AccessRequestsTable = &schema.Table{
-		Name:       "access_requests",
-		Columns:    AccessRequestsColumns,
-		PrimaryKey: []*schema.Column{AccessRequestsColumns[0]},
+	// AuthCodesTable holds the schema information for the "auth_codes" table.
+	AuthCodesTable = &schema.Table{
+		Name:       "auth_codes",
+		Columns:    AuthCodesColumns,
+		PrimaryKey: []*schema.Column{AuthCodesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "auth_codes_oauth_sessions_session",
+				Columns:    []*schema.Column{AuthCodesColumns[3]},
+				RefColumns: []*schema.Column{OauthSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 	}
 	// CertsColumns holds the columns for the "certs" table.
 	CertsColumns = []*schema.Column{
@@ -35,11 +39,112 @@ var (
 		Columns:    CertsColumns,
 		PrimaryKey: []*schema.Column{CertsColumns[0]},
 	}
+	// DenyListedJtIsColumns holds the columns for the "deny_listed_jt_is" table.
+	DenyListedJtIsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "jti", Type: field.TypeString, Unique: true},
+		{Name: "expiration", Type: field.TypeTime},
+	}
+	// DenyListedJtIsTable holds the schema information for the "deny_listed_jt_is" table.
+	DenyListedJtIsTable = &schema.Table{
+		Name:       "deny_listed_jt_is",
+		Columns:    DenyListedJtIsColumns,
+		PrimaryKey: []*schema.Column{DenyListedJtIsColumns[0]},
+	}
+	// OauthAccessTokensColumns holds the columns for the "oauth_access_tokens" table.
+	OauthAccessTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "signature", Type: field.TypeString},
+		{Name: "oauth_access_token_session", Type: field.TypeInt, Nullable: true},
+	}
+	// OauthAccessTokensTable holds the schema information for the "oauth_access_tokens" table.
+	OauthAccessTokensTable = &schema.Table{
+		Name:       "oauth_access_tokens",
+		Columns:    OauthAccessTokensColumns,
+		PrimaryKey: []*schema.Column{OauthAccessTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oauth_access_tokens_oauth_sessions_session",
+				Columns:    []*schema.Column{OauthAccessTokensColumns[2]},
+				RefColumns: []*schema.Column{OauthSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
+	// OauthClientsColumns holds the columns for the "oauth_clients" table.
+	OauthClientsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "client_id", Type: field.TypeString},
+		{Name: "secret", Type: field.TypeString},
+		{Name: "redirect_uris", Type: field.TypeJSON},
+		{Name: "response_types", Type: field.TypeJSON},
+		{Name: "grant_types", Type: field.TypeJSON},
+		{Name: "scopes", Type: field.TypeJSON},
+	}
+	// OauthClientsTable holds the schema information for the "oauth_clients" table.
+	OauthClientsTable = &schema.Table{
+		Name:       "oauth_clients",
+		Columns:    OauthClientsColumns,
+		PrimaryKey: []*schema.Column{OauthClientsColumns[0]},
+	}
+	// OauthParRequestsColumns holds the columns for the "oauth_par_requests" table.
+	OauthParRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "request", Type: field.TypeString},
+	}
+	// OauthParRequestsTable holds the schema information for the "oauth_par_requests" table.
+	OauthParRequestsTable = &schema.Table{
+		Name:       "oauth_par_requests",
+		Columns:    OauthParRequestsColumns,
+		PrimaryKey: []*schema.Column{OauthParRequestsColumns[0]},
+	}
+	// OauthRefreshTokensColumns holds the columns for the "oauth_refresh_tokens" table.
+	OauthRefreshTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "signature", Type: field.TypeString},
+		{Name: "oauth_refresh_token_session", Type: field.TypeInt, Nullable: true},
+	}
+	// OauthRefreshTokensTable holds the schema information for the "oauth_refresh_tokens" table.
+	OauthRefreshTokensTable = &schema.Table{
+		Name:       "oauth_refresh_tokens",
+		Columns:    OauthRefreshTokensColumns,
+		PrimaryKey: []*schema.Column{OauthRefreshTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oauth_refresh_tokens_oauth_sessions_session",
+				Columns:    []*schema.Column{OauthRefreshTokensColumns[2]},
+				RefColumns: []*schema.Column{OauthSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
+	// OauthSessionsColumns holds the columns for the "oauth_sessions" table.
+	OauthSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "issuer", Type: field.TypeString},
+		{Name: "subject", Type: field.TypeString},
+		{Name: "audiences", Type: field.TypeJSON},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "issued_at", Type: field.TypeTime},
+		{Name: "requested_at", Type: field.TypeTime},
+		{Name: "auth_time", Type: field.TypeTime},
+		{Name: "requested_scopes", Type: field.TypeJSON},
+		{Name: "granted_scopes", Type: field.TypeJSON},
+		{Name: "requested_audiences", Type: field.TypeJSON},
+		{Name: "granted_audiences", Type: field.TypeJSON},
+		{Name: "request", Type: field.TypeString},
+		{Name: "form", Type: field.TypeString},
+	}
+	// OauthSessionsTable holds the schema information for the "oauth_sessions" table.
+	OauthSessionsTable = &schema.Table{
+		Name:       "oauth_sessions",
+		Columns:    OauthSessionsColumns,
+		PrimaryKey: []*schema.Column{OauthSessionsColumns[0]},
+	}
 	// OidcAuthCodesColumns holds the columns for the "oidc_auth_codes" table.
 	OidcAuthCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "authorization_code", Type: field.TypeString},
-		{Name: "oidc_auth_code_access_request", Type: field.TypeInt, Nullable: true},
 		{Name: "oidc_auth_code_session", Type: field.TypeInt, Nullable: true},
 	}
 	// OidcAuthCodesTable holds the schema information for the "oidc_auth_codes" table.
@@ -49,51 +154,32 @@ var (
 		PrimaryKey: []*schema.Column{OidcAuthCodesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "oidc_auth_codes_access_requests_access_request",
+				Symbol:     "oidc_auth_codes_oauth_sessions_session",
 				Columns:    []*schema.Column{OidcAuthCodesColumns[2]},
-				RefColumns: []*schema.Column{AccessRequestsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "oidc_auth_codes_oidc_sessions_session",
-				Columns:    []*schema.Column{OidcAuthCodesColumns[3]},
-				RefColumns: []*schema.Column{OidcSessionsColumns[0]},
-				OnDelete:   schema.SetNull,
+				RefColumns: []*schema.Column{OauthSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
-	// OidcClientsColumns holds the columns for the "oidc_clients" table.
-	OidcClientsColumns = []*schema.Column{
+	// PkcEsColumns holds the columns for the "pkc_es" table.
+	PkcEsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "client_id", Type: field.TypeString},
-		{Name: "secret", Type: field.TypeString},
-		{Name: "redirect_uris", Type: field.TypeJSON},
-		{Name: "response_types", Type: field.TypeJSON},
-		{Name: "grant_types", Type: field.TypeJSON},
-		{Name: "scopes", Type: field.TypeJSON},
+		{Name: "code", Type: field.TypeString},
+		{Name: "pkce_session", Type: field.TypeInt, Nullable: true},
 	}
-	// OidcClientsTable holds the schema information for the "oidc_clients" table.
-	OidcClientsTable = &schema.Table{
-		Name:       "oidc_clients",
-		Columns:    OidcClientsColumns,
-		PrimaryKey: []*schema.Column{OidcClientsColumns[0]},
-	}
-	// OidcSessionsColumns holds the columns for the "oidc_sessions" table.
-	OidcSessionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "issuer", Type: field.TypeString},
-		{Name: "subject", Type: field.TypeString},
-		{Name: "audiences", Type: field.TypeJSON},
-		{Name: "expires_at", Type: field.TypeTime},
-		{Name: "issued_at", Type: field.TypeTime},
-		{Name: "requested_at", Type: field.TypeTime},
-		{Name: "auth_time", Type: field.TypeTime},
-	}
-	// OidcSessionsTable holds the schema information for the "oidc_sessions" table.
-	OidcSessionsTable = &schema.Table{
-		Name:       "oidc_sessions",
-		Columns:    OidcSessionsColumns,
-		PrimaryKey: []*schema.Column{OidcSessionsColumns[0]},
+	// PkcEsTable holds the schema information for the "pkc_es" table.
+	PkcEsTable = &schema.Table{
+		Name:       "pkc_es",
+		Columns:    PkcEsColumns,
+		PrimaryKey: []*schema.Column{PkcEsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "pkc_es_oauth_sessions_session",
+				Columns:    []*schema.Column{PkcEsColumns[2]},
+				RefColumns: []*schema.Column{OauthSessionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -111,16 +197,24 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		AccessRequestsTable,
+		AuthCodesTable,
 		CertsTable,
+		DenyListedJtIsTable,
+		OauthAccessTokensTable,
+		OauthClientsTable,
+		OauthParRequestsTable,
+		OauthRefreshTokensTable,
+		OauthSessionsTable,
 		OidcAuthCodesTable,
-		OidcClientsTable,
-		OidcSessionsTable,
+		PkcEsTable,
 		UsersTable,
 	}
 )
 
 func init() {
-	OidcAuthCodesTable.ForeignKeys[0].RefTable = AccessRequestsTable
-	OidcAuthCodesTable.ForeignKeys[1].RefTable = OidcSessionsTable
+	AuthCodesTable.ForeignKeys[0].RefTable = OauthSessionsTable
+	OauthAccessTokensTable.ForeignKeys[0].RefTable = OauthSessionsTable
+	OauthRefreshTokensTable.ForeignKeys[0].RefTable = OauthSessionsTable
+	OidcAuthCodesTable.ForeignKeys[0].RefTable = OauthSessionsTable
+	PkcEsTable.ForeignKeys[0].RefTable = OauthSessionsTable
 }

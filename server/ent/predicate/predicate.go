@@ -6,20 +6,35 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
-// AccessRequest is the predicate function for accessrequest builders.
-type AccessRequest func(*sql.Selector)
+// AuthCode is the predicate function for authcode builders.
+type AuthCode func(*sql.Selector)
 
 // Cert is the predicate function for cert builders.
 type Cert func(*sql.Selector)
 
+// DenyListedJTI is the predicate function for denylistedjti builders.
+type DenyListedJTI func(*sql.Selector)
+
+// OAuthAccessToken is the predicate function for oauthaccesstoken builders.
+type OAuthAccessToken func(*sql.Selector)
+
+// OAuthClient is the predicate function for oauthclient builders.
+type OAuthClient func(*sql.Selector)
+
+// OAuthPARRequest is the predicate function for oauthparrequest builders.
+type OAuthPARRequest func(*sql.Selector)
+
+// OAuthRefreshToken is the predicate function for oauthrefreshtoken builders.
+type OAuthRefreshToken func(*sql.Selector)
+
+// OAuthSession is the predicate function for oauthsession builders.
+type OAuthSession func(*sql.Selector)
+
 // OIDCAuthCode is the predicate function for oidcauthcode builders.
 type OIDCAuthCode func(*sql.Selector)
 
-// OIDCClient is the predicate function for oidcclient builders.
-type OIDCClient func(*sql.Selector)
-
-// OIDCSession is the predicate function for oidcsession builders.
-type OIDCSession func(*sql.Selector)
+// PKCE is the predicate function for pkce builders.
+type PKCE func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

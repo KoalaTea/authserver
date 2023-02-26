@@ -10,26 +10,24 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
 	"github.com/koalatea/authserver/server/ent/predicate"
 )
 
 // OIDCAuthCodeQuery is the builder for querying OIDCAuthCode entities.
 type OIDCAuthCodeQuery struct {
 	config
-	limit             *int
-	offset            *int
-	unique            *bool
-	order             []OrderFunc
-	fields            []string
-	predicates        []predicate.OIDCAuthCode
-	withAccessRequest *AccessRequestQuery
-	withSession       *OIDCSessionQuery
-	withFKs           bool
-	modifiers         []func(*sql.Selector)
-	loadTotal         []func(context.Context, []*OIDCAuthCode) error
+	limit       *int
+	offset      *int
+	unique      *bool
+	order       []OrderFunc
+	fields      []string
+	predicates  []predicate.OIDCAuthCode
+	withSession *OAuthSessionQuery
+	withFKs     bool
+	modifiers   []func(*sql.Selector)
+	loadTotal   []func(context.Context, []*OIDCAuthCode) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -66,31 +64,9 @@ func (oacq *OIDCAuthCodeQuery) Order(o ...OrderFunc) *OIDCAuthCodeQuery {
 	return oacq
 }
 
-// QueryAccessRequest chains the current query on the "access_request" edge.
-func (oacq *OIDCAuthCodeQuery) QueryAccessRequest() *AccessRequestQuery {
-	query := &AccessRequestQuery{config: oacq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := oacq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := oacq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(oidcauthcode.Table, oidcauthcode.FieldID, selector),
-			sqlgraph.To(accessrequest.Table, accessrequest.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, oidcauthcode.AccessRequestTable, oidcauthcode.AccessRequestColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(oacq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
 // QuerySession chains the current query on the "session" edge.
-func (oacq *OIDCAuthCodeQuery) QuerySession() *OIDCSessionQuery {
-	query := &OIDCSessionQuery{config: oacq.config}
+func (oacq *OIDCAuthCodeQuery) QuerySession() *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: oacq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := oacq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -101,7 +77,7 @@ func (oacq *OIDCAuthCodeQuery) QuerySession() *OIDCSessionQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oidcauthcode.Table, oidcauthcode.FieldID, selector),
-			sqlgraph.To(oidcsession.Table, oidcsession.FieldID),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, oidcauthcode.SessionTable, oidcauthcode.SessionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(oacq.driver.Dialect(), step)
@@ -286,13 +262,12 @@ func (oacq *OIDCAuthCodeQuery) Clone() *OIDCAuthCodeQuery {
 		return nil
 	}
 	return &OIDCAuthCodeQuery{
-		config:            oacq.config,
-		limit:             oacq.limit,
-		offset:            oacq.offset,
-		order:             append([]OrderFunc{}, oacq.order...),
-		predicates:        append([]predicate.OIDCAuthCode{}, oacq.predicates...),
-		withAccessRequest: oacq.withAccessRequest.Clone(),
-		withSession:       oacq.withSession.Clone(),
+		config:      oacq.config,
+		limit:       oacq.limit,
+		offset:      oacq.offset,
+		order:       append([]OrderFunc{}, oacq.order...),
+		predicates:  append([]predicate.OIDCAuthCode{}, oacq.predicates...),
+		withSession: oacq.withSession.Clone(),
 		// clone intermediate query.
 		sql:    oacq.sql.Clone(),
 		path:   oacq.path,
@@ -300,21 +275,10 @@ func (oacq *OIDCAuthCodeQuery) Clone() *OIDCAuthCodeQuery {
 	}
 }
 
-// WithAccessRequest tells the query-builder to eager-load the nodes that are connected to
-// the "access_request" edge. The optional arguments are used to configure the query builder of the edge.
-func (oacq *OIDCAuthCodeQuery) WithAccessRequest(opts ...func(*AccessRequestQuery)) *OIDCAuthCodeQuery {
-	query := &AccessRequestQuery{config: oacq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	oacq.withAccessRequest = query
-	return oacq
-}
-
 // WithSession tells the query-builder to eager-load the nodes that are connected to
 // the "session" edge. The optional arguments are used to configure the query builder of the edge.
-func (oacq *OIDCAuthCodeQuery) WithSession(opts ...func(*OIDCSessionQuery)) *OIDCAuthCodeQuery {
-	query := &OIDCSessionQuery{config: oacq.config}
+func (oacq *OIDCAuthCodeQuery) WithSession(opts ...func(*OAuthSessionQuery)) *OIDCAuthCodeQuery {
+	query := &OAuthSessionQuery{config: oacq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -396,12 +360,11 @@ func (oacq *OIDCAuthCodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*OIDCAuthCode{}
 		withFKs     = oacq.withFKs
 		_spec       = oacq.querySpec()
-		loadedTypes = [2]bool{
-			oacq.withAccessRequest != nil,
+		loadedTypes = [1]bool{
 			oacq.withSession != nil,
 		}
 	)
-	if oacq.withAccessRequest != nil || oacq.withSession != nil {
+	if oacq.withSession != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -428,15 +391,9 @@ func (oacq *OIDCAuthCodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := oacq.withAccessRequest; query != nil {
-		if err := oacq.loadAccessRequest(ctx, query, nodes, nil,
-			func(n *OIDCAuthCode, e *AccessRequest) { n.Edges.AccessRequest = e }); err != nil {
-			return nil, err
-		}
-	}
 	if query := oacq.withSession; query != nil {
 		if err := oacq.loadSession(ctx, query, nodes, nil,
-			func(n *OIDCAuthCode, e *OIDCSession) { n.Edges.Session = e }); err != nil {
+			func(n *OIDCAuthCode, e *OAuthSession) { n.Edges.Session = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -448,36 +405,7 @@ func (oacq *OIDCAuthCodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	return nodes, nil
 }
 
-func (oacq *OIDCAuthCodeQuery) loadAccessRequest(ctx context.Context, query *AccessRequestQuery, nodes []*OIDCAuthCode, init func(*OIDCAuthCode), assign func(*OIDCAuthCode, *AccessRequest)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*OIDCAuthCode)
-	for i := range nodes {
-		if nodes[i].oidc_auth_code_access_request == nil {
-			continue
-		}
-		fk := *nodes[i].oidc_auth_code_access_request
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	query.Where(accessrequest.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "oidc_auth_code_access_request" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (oacq *OIDCAuthCodeQuery) loadSession(ctx context.Context, query *OIDCSessionQuery, nodes []*OIDCAuthCode, init func(*OIDCAuthCode), assign func(*OIDCAuthCode, *OIDCSession)) error {
+func (oacq *OIDCAuthCodeQuery) loadSession(ctx context.Context, query *OAuthSessionQuery, nodes []*OIDCAuthCode, init func(*OIDCAuthCode), assign func(*OIDCAuthCode, *OAuthSession)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*OIDCAuthCode)
 	for i := range nodes {
@@ -490,7 +418,7 @@ func (oacq *OIDCAuthCodeQuery) loadSession(ctx context.Context, query *OIDCSessi
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(oidcsession.IDIn(ids...))
+	query.Where(oauthsession.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err

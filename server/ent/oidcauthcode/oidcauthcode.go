@@ -9,24 +9,15 @@ const (
 	FieldID = "id"
 	// FieldAuthorizationCode holds the string denoting the authorization_code field in the database.
 	FieldAuthorizationCode = "authorization_code"
-	// EdgeAccessRequest holds the string denoting the access_request edge name in mutations.
-	EdgeAccessRequest = "access_request"
 	// EdgeSession holds the string denoting the session edge name in mutations.
 	EdgeSession = "session"
 	// Table holds the table name of the oidcauthcode in the database.
 	Table = "oidc_auth_codes"
-	// AccessRequestTable is the table that holds the access_request relation/edge.
-	AccessRequestTable = "oidc_auth_codes"
-	// AccessRequestInverseTable is the table name for the AccessRequest entity.
-	// It exists in this package in order to avoid circular dependency with the "accessrequest" package.
-	AccessRequestInverseTable = "access_requests"
-	// AccessRequestColumn is the table column denoting the access_request relation/edge.
-	AccessRequestColumn = "oidc_auth_code_access_request"
 	// SessionTable is the table that holds the session relation/edge.
 	SessionTable = "oidc_auth_codes"
-	// SessionInverseTable is the table name for the OIDCSession entity.
-	// It exists in this package in order to avoid circular dependency with the "oidcsession" package.
-	SessionInverseTable = "oidc_sessions"
+	// SessionInverseTable is the table name for the OAuthSession entity.
+	// It exists in this package in order to avoid circular dependency with the "oauthsession" package.
+	SessionInverseTable = "oauth_sessions"
 	// SessionColumn is the table column denoting the session relation/edge.
 	SessionColumn = "oidc_auth_code_session"
 )
@@ -40,7 +31,6 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "oidc_auth_codes"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"oidc_auth_code_access_request",
 	"oidc_auth_code_session",
 }
 

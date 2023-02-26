@@ -4,18 +4,42 @@ package ent
 
 import "context"
 
-func (oac *OIDCAuthCode) AccessRequest(ctx context.Context) (*AccessRequest, error) {
-	result, err := oac.Edges.AccessRequestOrErr()
+func (ac *AuthCode) Session(ctx context.Context) (*OAuthSession, error) {
+	result, err := ac.Edges.SessionOrErr()
 	if IsNotLoaded(err) {
-		result, err = oac.QueryAccessRequest().Only(ctx)
+		result, err = ac.QuerySession().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
 
-func (oac *OIDCAuthCode) Session(ctx context.Context) (*OIDCSession, error) {
+func (oat *OAuthAccessToken) Session(ctx context.Context) (*OAuthSession, error) {
+	result, err := oat.Edges.SessionOrErr()
+	if IsNotLoaded(err) {
+		result, err = oat.QuerySession().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (ort *OAuthRefreshToken) Session(ctx context.Context) (*OAuthSession, error) {
+	result, err := ort.Edges.SessionOrErr()
+	if IsNotLoaded(err) {
+		result, err = ort.QuerySession().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (oac *OIDCAuthCode) Session(ctx context.Context) (*OAuthSession, error) {
 	result, err := oac.Edges.SessionOrErr()
 	if IsNotLoaded(err) {
 		result, err = oac.QuerySession().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (pk *PKCE) Session(ctx context.Context) (*OAuthSession, error) {
+	result, err := pk.Edges.SessionOrErr()
+	if IsNotLoaded(err) {
+		result, err = pk.QuerySession().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

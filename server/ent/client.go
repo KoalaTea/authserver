@@ -10,11 +10,16 @@ import (
 
 	"github.com/koalatea/authserver/server/ent/migrate"
 
-	"github.com/koalatea/authserver/server/ent/accessrequest"
+	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/cert"
+	"github.com/koalatea/authserver/server/ent/denylistedjti"
+	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
+	"github.com/koalatea/authserver/server/ent/oauthclient"
+	"github.com/koalatea/authserver/server/ent/oauthparrequest"
+	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
+	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
-	"github.com/koalatea/authserver/server/ent/oidcclient"
-	"github.com/koalatea/authserver/server/ent/oidcsession"
+	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/user"
 
 	"entgo.io/ent/dialect"
@@ -27,16 +32,26 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// AccessRequest is the client for interacting with the AccessRequest builders.
-	AccessRequest *AccessRequestClient
+	// AuthCode is the client for interacting with the AuthCode builders.
+	AuthCode *AuthCodeClient
 	// Cert is the client for interacting with the Cert builders.
 	Cert *CertClient
+	// DenyListedJTI is the client for interacting with the DenyListedJTI builders.
+	DenyListedJTI *DenyListedJTIClient
+	// OAuthAccessToken is the client for interacting with the OAuthAccessToken builders.
+	OAuthAccessToken *OAuthAccessTokenClient
+	// OAuthClient is the client for interacting with the OAuthClient builders.
+	OAuthClient *OAuthClientClient
+	// OAuthPARRequest is the client for interacting with the OAuthPARRequest builders.
+	OAuthPARRequest *OAuthPARRequestClient
+	// OAuthRefreshToken is the client for interacting with the OAuthRefreshToken builders.
+	OAuthRefreshToken *OAuthRefreshTokenClient
+	// OAuthSession is the client for interacting with the OAuthSession builders.
+	OAuthSession *OAuthSessionClient
 	// OIDCAuthCode is the client for interacting with the OIDCAuthCode builders.
 	OIDCAuthCode *OIDCAuthCodeClient
-	// OIDCClient is the client for interacting with the OIDCClient builders.
-	OIDCClient *OIDCClientClient
-	// OIDCSession is the client for interacting with the OIDCSession builders.
-	OIDCSession *OIDCSessionClient
+	// PKCE is the client for interacting with the PKCE builders.
+	PKCE *PKCEClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// additional fields for node api
@@ -54,11 +69,16 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.AccessRequest = NewAccessRequestClient(c.config)
+	c.AuthCode = NewAuthCodeClient(c.config)
 	c.Cert = NewCertClient(c.config)
+	c.DenyListedJTI = NewDenyListedJTIClient(c.config)
+	c.OAuthAccessToken = NewOAuthAccessTokenClient(c.config)
+	c.OAuthClient = NewOAuthClientClient(c.config)
+	c.OAuthPARRequest = NewOAuthPARRequestClient(c.config)
+	c.OAuthRefreshToken = NewOAuthRefreshTokenClient(c.config)
+	c.OAuthSession = NewOAuthSessionClient(c.config)
 	c.OIDCAuthCode = NewOIDCAuthCodeClient(c.config)
-	c.OIDCClient = NewOIDCClientClient(c.config)
-	c.OIDCSession = NewOIDCSessionClient(c.config)
+	c.PKCE = NewPKCEClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -91,14 +111,19 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		AccessRequest: NewAccessRequestClient(cfg),
-		Cert:          NewCertClient(cfg),
-		OIDCAuthCode:  NewOIDCAuthCodeClient(cfg),
-		OIDCClient:    NewOIDCClientClient(cfg),
-		OIDCSession:   NewOIDCSessionClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthCode:          NewAuthCodeClient(cfg),
+		Cert:              NewCertClient(cfg),
+		DenyListedJTI:     NewDenyListedJTIClient(cfg),
+		OAuthAccessToken:  NewOAuthAccessTokenClient(cfg),
+		OAuthClient:       NewOAuthClientClient(cfg),
+		OAuthPARRequest:   NewOAuthPARRequestClient(cfg),
+		OAuthRefreshToken: NewOAuthRefreshTokenClient(cfg),
+		OAuthSession:      NewOAuthSessionClient(cfg),
+		OIDCAuthCode:      NewOIDCAuthCodeClient(cfg),
+		PKCE:              NewPKCEClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
@@ -116,21 +141,26 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		AccessRequest: NewAccessRequestClient(cfg),
-		Cert:          NewCertClient(cfg),
-		OIDCAuthCode:  NewOIDCAuthCodeClient(cfg),
-		OIDCClient:    NewOIDCClientClient(cfg),
-		OIDCSession:   NewOIDCSessionClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthCode:          NewAuthCodeClient(cfg),
+		Cert:              NewCertClient(cfg),
+		DenyListedJTI:     NewDenyListedJTIClient(cfg),
+		OAuthAccessToken:  NewOAuthAccessTokenClient(cfg),
+		OAuthClient:       NewOAuthClientClient(cfg),
+		OAuthPARRequest:   NewOAuthPARRequestClient(cfg),
+		OAuthRefreshToken: NewOAuthRefreshTokenClient(cfg),
+		OAuthSession:      NewOAuthSessionClient(cfg),
+		OIDCAuthCode:      NewOIDCAuthCodeClient(cfg),
+		PKCE:              NewPKCEClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		AccessRequest.
+//		AuthCode.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -152,92 +182,97 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.AccessRequest.Use(hooks...)
+	c.AuthCode.Use(hooks...)
 	c.Cert.Use(hooks...)
+	c.DenyListedJTI.Use(hooks...)
+	c.OAuthAccessToken.Use(hooks...)
+	c.OAuthClient.Use(hooks...)
+	c.OAuthPARRequest.Use(hooks...)
+	c.OAuthRefreshToken.Use(hooks...)
+	c.OAuthSession.Use(hooks...)
 	c.OIDCAuthCode.Use(hooks...)
-	c.OIDCClient.Use(hooks...)
-	c.OIDCSession.Use(hooks...)
+	c.PKCE.Use(hooks...)
 	c.User.Use(hooks...)
 }
 
-// AccessRequestClient is a client for the AccessRequest schema.
-type AccessRequestClient struct {
+// AuthCodeClient is a client for the AuthCode schema.
+type AuthCodeClient struct {
 	config
 }
 
-// NewAccessRequestClient returns a client for the AccessRequest from the given config.
-func NewAccessRequestClient(c config) *AccessRequestClient {
-	return &AccessRequestClient{config: c}
+// NewAuthCodeClient returns a client for the AuthCode from the given config.
+func NewAuthCodeClient(c config) *AuthCodeClient {
+	return &AuthCodeClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `accessrequest.Hooks(f(g(h())))`.
-func (c *AccessRequestClient) Use(hooks ...Hook) {
-	c.hooks.AccessRequest = append(c.hooks.AccessRequest, hooks...)
+// A call to `Use(f, g, h)` equals to `authcode.Hooks(f(g(h())))`.
+func (c *AuthCodeClient) Use(hooks ...Hook) {
+	c.hooks.AuthCode = append(c.hooks.AuthCode, hooks...)
 }
 
-// Create returns a builder for creating a AccessRequest entity.
-func (c *AccessRequestClient) Create() *AccessRequestCreate {
-	mutation := newAccessRequestMutation(c.config, OpCreate)
-	return &AccessRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a AuthCode entity.
+func (c *AuthCodeClient) Create() *AuthCodeCreate {
+	mutation := newAuthCodeMutation(c.config, OpCreate)
+	return &AuthCodeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of AccessRequest entities.
-func (c *AccessRequestClient) CreateBulk(builders ...*AccessRequestCreate) *AccessRequestCreateBulk {
-	return &AccessRequestCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of AuthCode entities.
+func (c *AuthCodeClient) CreateBulk(builders ...*AuthCodeCreate) *AuthCodeCreateBulk {
+	return &AuthCodeCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for AccessRequest.
-func (c *AccessRequestClient) Update() *AccessRequestUpdate {
-	mutation := newAccessRequestMutation(c.config, OpUpdate)
-	return &AccessRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for AuthCode.
+func (c *AuthCodeClient) Update() *AuthCodeUpdate {
+	mutation := newAuthCodeMutation(c.config, OpUpdate)
+	return &AuthCodeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *AccessRequestClient) UpdateOne(ar *AccessRequest) *AccessRequestUpdateOne {
-	mutation := newAccessRequestMutation(c.config, OpUpdateOne, withAccessRequest(ar))
-	return &AccessRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *AuthCodeClient) UpdateOne(ac *AuthCode) *AuthCodeUpdateOne {
+	mutation := newAuthCodeMutation(c.config, OpUpdateOne, withAuthCode(ac))
+	return &AuthCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *AccessRequestClient) UpdateOneID(id int) *AccessRequestUpdateOne {
-	mutation := newAccessRequestMutation(c.config, OpUpdateOne, withAccessRequestID(id))
-	return &AccessRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *AuthCodeClient) UpdateOneID(id int) *AuthCodeUpdateOne {
+	mutation := newAuthCodeMutation(c.config, OpUpdateOne, withAuthCodeID(id))
+	return &AuthCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for AccessRequest.
-func (c *AccessRequestClient) Delete() *AccessRequestDelete {
-	mutation := newAccessRequestMutation(c.config, OpDelete)
-	return &AccessRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for AuthCode.
+func (c *AuthCodeClient) Delete() *AuthCodeDelete {
+	mutation := newAuthCodeMutation(c.config, OpDelete)
+	return &AuthCodeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *AccessRequestClient) DeleteOne(ar *AccessRequest) *AccessRequestDeleteOne {
-	return c.DeleteOneID(ar.ID)
+func (c *AuthCodeClient) DeleteOne(ac *AuthCode) *AuthCodeDeleteOne {
+	return c.DeleteOneID(ac.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AccessRequestClient) DeleteOneID(id int) *AccessRequestDeleteOne {
-	builder := c.Delete().Where(accessrequest.ID(id))
+func (c *AuthCodeClient) DeleteOneID(id int) *AuthCodeDeleteOne {
+	builder := c.Delete().Where(authcode.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &AccessRequestDeleteOne{builder}
+	return &AuthCodeDeleteOne{builder}
 }
 
-// Query returns a query builder for AccessRequest.
-func (c *AccessRequestClient) Query() *AccessRequestQuery {
-	return &AccessRequestQuery{
+// Query returns a query builder for AuthCode.
+func (c *AuthCodeClient) Query() *AuthCodeQuery {
+	return &AuthCodeQuery{
 		config: c.config,
 	}
 }
 
-// Get returns a AccessRequest entity by its id.
-func (c *AccessRequestClient) Get(ctx context.Context, id int) (*AccessRequest, error) {
-	return c.Query().Where(accessrequest.ID(id)).Only(ctx)
+// Get returns a AuthCode entity by its id.
+func (c *AuthCodeClient) Get(ctx context.Context, id int) (*AuthCode, error) {
+	return c.Query().Where(authcode.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *AccessRequestClient) GetX(ctx context.Context, id int) *AccessRequest {
+func (c *AuthCodeClient) GetX(ctx context.Context, id int) *AuthCode {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -245,9 +280,25 @@ func (c *AccessRequestClient) GetX(ctx context.Context, id int) *AccessRequest {
 	return obj
 }
 
+// QuerySession queries the session edge of a AuthCode.
+func (c *AuthCodeClient) QuerySession(ac *AuthCode) *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ac.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(authcode.Table, authcode.FieldID, id),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, authcode.SessionTable, authcode.SessionColumn),
+		)
+		fromV = sqlgraph.Neighbors(ac.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
-func (c *AccessRequestClient) Hooks() []Hook {
-	return c.hooks.AccessRequest
+func (c *AuthCodeClient) Hooks() []Hook {
+	return c.hooks.AuthCode
 }
 
 // CertClient is a client for the Cert schema.
@@ -340,6 +391,578 @@ func (c *CertClient) Hooks() []Hook {
 	return c.hooks.Cert
 }
 
+// DenyListedJTIClient is a client for the DenyListedJTI schema.
+type DenyListedJTIClient struct {
+	config
+}
+
+// NewDenyListedJTIClient returns a client for the DenyListedJTI from the given config.
+func NewDenyListedJTIClient(c config) *DenyListedJTIClient {
+	return &DenyListedJTIClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `denylistedjti.Hooks(f(g(h())))`.
+func (c *DenyListedJTIClient) Use(hooks ...Hook) {
+	c.hooks.DenyListedJTI = append(c.hooks.DenyListedJTI, hooks...)
+}
+
+// Create returns a builder for creating a DenyListedJTI entity.
+func (c *DenyListedJTIClient) Create() *DenyListedJTICreate {
+	mutation := newDenyListedJTIMutation(c.config, OpCreate)
+	return &DenyListedJTICreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DenyListedJTI entities.
+func (c *DenyListedJTIClient) CreateBulk(builders ...*DenyListedJTICreate) *DenyListedJTICreateBulk {
+	return &DenyListedJTICreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DenyListedJTI.
+func (c *DenyListedJTIClient) Update() *DenyListedJTIUpdate {
+	mutation := newDenyListedJTIMutation(c.config, OpUpdate)
+	return &DenyListedJTIUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DenyListedJTIClient) UpdateOne(dlj *DenyListedJTI) *DenyListedJTIUpdateOne {
+	mutation := newDenyListedJTIMutation(c.config, OpUpdateOne, withDenyListedJTI(dlj))
+	return &DenyListedJTIUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DenyListedJTIClient) UpdateOneID(id int) *DenyListedJTIUpdateOne {
+	mutation := newDenyListedJTIMutation(c.config, OpUpdateOne, withDenyListedJTIID(id))
+	return &DenyListedJTIUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DenyListedJTI.
+func (c *DenyListedJTIClient) Delete() *DenyListedJTIDelete {
+	mutation := newDenyListedJTIMutation(c.config, OpDelete)
+	return &DenyListedJTIDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DenyListedJTIClient) DeleteOne(dlj *DenyListedJTI) *DenyListedJTIDeleteOne {
+	return c.DeleteOneID(dlj.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DenyListedJTIClient) DeleteOneID(id int) *DenyListedJTIDeleteOne {
+	builder := c.Delete().Where(denylistedjti.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DenyListedJTIDeleteOne{builder}
+}
+
+// Query returns a query builder for DenyListedJTI.
+func (c *DenyListedJTIClient) Query() *DenyListedJTIQuery {
+	return &DenyListedJTIQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a DenyListedJTI entity by its id.
+func (c *DenyListedJTIClient) Get(ctx context.Context, id int) (*DenyListedJTI, error) {
+	return c.Query().Where(denylistedjti.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DenyListedJTIClient) GetX(ctx context.Context, id int) *DenyListedJTI {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *DenyListedJTIClient) Hooks() []Hook {
+	return c.hooks.DenyListedJTI
+}
+
+// OAuthAccessTokenClient is a client for the OAuthAccessToken schema.
+type OAuthAccessTokenClient struct {
+	config
+}
+
+// NewOAuthAccessTokenClient returns a client for the OAuthAccessToken from the given config.
+func NewOAuthAccessTokenClient(c config) *OAuthAccessTokenClient {
+	return &OAuthAccessTokenClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthaccesstoken.Hooks(f(g(h())))`.
+func (c *OAuthAccessTokenClient) Use(hooks ...Hook) {
+	c.hooks.OAuthAccessToken = append(c.hooks.OAuthAccessToken, hooks...)
+}
+
+// Create returns a builder for creating a OAuthAccessToken entity.
+func (c *OAuthAccessTokenClient) Create() *OAuthAccessTokenCreate {
+	mutation := newOAuthAccessTokenMutation(c.config, OpCreate)
+	return &OAuthAccessTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthAccessToken entities.
+func (c *OAuthAccessTokenClient) CreateBulk(builders ...*OAuthAccessTokenCreate) *OAuthAccessTokenCreateBulk {
+	return &OAuthAccessTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Update() *OAuthAccessTokenUpdate {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdate)
+	return &OAuthAccessTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthAccessTokenClient) UpdateOne(oat *OAuthAccessToken) *OAuthAccessTokenUpdateOne {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdateOne, withOAuthAccessToken(oat))
+	return &OAuthAccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthAccessTokenClient) UpdateOneID(id int) *OAuthAccessTokenUpdateOne {
+	mutation := newOAuthAccessTokenMutation(c.config, OpUpdateOne, withOAuthAccessTokenID(id))
+	return &OAuthAccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Delete() *OAuthAccessTokenDelete {
+	mutation := newOAuthAccessTokenMutation(c.config, OpDelete)
+	return &OAuthAccessTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthAccessTokenClient) DeleteOne(oat *OAuthAccessToken) *OAuthAccessTokenDeleteOne {
+	return c.DeleteOneID(oat.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthAccessTokenClient) DeleteOneID(id int) *OAuthAccessTokenDeleteOne {
+	builder := c.Delete().Where(oauthaccesstoken.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthAccessTokenDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthAccessToken.
+func (c *OAuthAccessTokenClient) Query() *OAuthAccessTokenQuery {
+	return &OAuthAccessTokenQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a OAuthAccessToken entity by its id.
+func (c *OAuthAccessTokenClient) Get(ctx context.Context, id int) (*OAuthAccessToken, error) {
+	return c.Query().Where(oauthaccesstoken.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthAccessTokenClient) GetX(ctx context.Context, id int) *OAuthAccessToken {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySession queries the session edge of a OAuthAccessToken.
+func (c *OAuthAccessTokenClient) QuerySession(oat *OAuthAccessToken) *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := oat.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oauthaccesstoken.Table, oauthaccesstoken.FieldID, id),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, oauthaccesstoken.SessionTable, oauthaccesstoken.SessionColumn),
+		)
+		fromV = sqlgraph.Neighbors(oat.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthAccessTokenClient) Hooks() []Hook {
+	return c.hooks.OAuthAccessToken
+}
+
+// OAuthClientClient is a client for the OAuthClient schema.
+type OAuthClientClient struct {
+	config
+}
+
+// NewOAuthClientClient returns a client for the OAuthClient from the given config.
+func NewOAuthClientClient(c config) *OAuthClientClient {
+	return &OAuthClientClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthclient.Hooks(f(g(h())))`.
+func (c *OAuthClientClient) Use(hooks ...Hook) {
+	c.hooks.OAuthClient = append(c.hooks.OAuthClient, hooks...)
+}
+
+// Create returns a builder for creating a OAuthClient entity.
+func (c *OAuthClientClient) Create() *OAuthClientCreate {
+	mutation := newOAuthClientMutation(c.config, OpCreate)
+	return &OAuthClientCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthClient entities.
+func (c *OAuthClientClient) CreateBulk(builders ...*OAuthClientCreate) *OAuthClientCreateBulk {
+	return &OAuthClientCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthClient.
+func (c *OAuthClientClient) Update() *OAuthClientUpdate {
+	mutation := newOAuthClientMutation(c.config, OpUpdate)
+	return &OAuthClientUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthClientClient) UpdateOne(oc *OAuthClient) *OAuthClientUpdateOne {
+	mutation := newOAuthClientMutation(c.config, OpUpdateOne, withOAuthClient(oc))
+	return &OAuthClientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthClientClient) UpdateOneID(id int) *OAuthClientUpdateOne {
+	mutation := newOAuthClientMutation(c.config, OpUpdateOne, withOAuthClientID(id))
+	return &OAuthClientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthClient.
+func (c *OAuthClientClient) Delete() *OAuthClientDelete {
+	mutation := newOAuthClientMutation(c.config, OpDelete)
+	return &OAuthClientDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthClientClient) DeleteOne(oc *OAuthClient) *OAuthClientDeleteOne {
+	return c.DeleteOneID(oc.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthClientClient) DeleteOneID(id int) *OAuthClientDeleteOne {
+	builder := c.Delete().Where(oauthclient.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthClientDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthClient.
+func (c *OAuthClientClient) Query() *OAuthClientQuery {
+	return &OAuthClientQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a OAuthClient entity by its id.
+func (c *OAuthClientClient) Get(ctx context.Context, id int) (*OAuthClient, error) {
+	return c.Query().Where(oauthclient.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthClientClient) GetX(ctx context.Context, id int) *OAuthClient {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthClientClient) Hooks() []Hook {
+	return c.hooks.OAuthClient
+}
+
+// OAuthPARRequestClient is a client for the OAuthPARRequest schema.
+type OAuthPARRequestClient struct {
+	config
+}
+
+// NewOAuthPARRequestClient returns a client for the OAuthPARRequest from the given config.
+func NewOAuthPARRequestClient(c config) *OAuthPARRequestClient {
+	return &OAuthPARRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthparrequest.Hooks(f(g(h())))`.
+func (c *OAuthPARRequestClient) Use(hooks ...Hook) {
+	c.hooks.OAuthPARRequest = append(c.hooks.OAuthPARRequest, hooks...)
+}
+
+// Create returns a builder for creating a OAuthPARRequest entity.
+func (c *OAuthPARRequestClient) Create() *OAuthPARRequestCreate {
+	mutation := newOAuthPARRequestMutation(c.config, OpCreate)
+	return &OAuthPARRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthPARRequest entities.
+func (c *OAuthPARRequestClient) CreateBulk(builders ...*OAuthPARRequestCreate) *OAuthPARRequestCreateBulk {
+	return &OAuthPARRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthPARRequest.
+func (c *OAuthPARRequestClient) Update() *OAuthPARRequestUpdate {
+	mutation := newOAuthPARRequestMutation(c.config, OpUpdate)
+	return &OAuthPARRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthPARRequestClient) UpdateOne(opr *OAuthPARRequest) *OAuthPARRequestUpdateOne {
+	mutation := newOAuthPARRequestMutation(c.config, OpUpdateOne, withOAuthPARRequest(opr))
+	return &OAuthPARRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthPARRequestClient) UpdateOneID(id int) *OAuthPARRequestUpdateOne {
+	mutation := newOAuthPARRequestMutation(c.config, OpUpdateOne, withOAuthPARRequestID(id))
+	return &OAuthPARRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthPARRequest.
+func (c *OAuthPARRequestClient) Delete() *OAuthPARRequestDelete {
+	mutation := newOAuthPARRequestMutation(c.config, OpDelete)
+	return &OAuthPARRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthPARRequestClient) DeleteOne(opr *OAuthPARRequest) *OAuthPARRequestDeleteOne {
+	return c.DeleteOneID(opr.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthPARRequestClient) DeleteOneID(id int) *OAuthPARRequestDeleteOne {
+	builder := c.Delete().Where(oauthparrequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthPARRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthPARRequest.
+func (c *OAuthPARRequestClient) Query() *OAuthPARRequestQuery {
+	return &OAuthPARRequestQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a OAuthPARRequest entity by its id.
+func (c *OAuthPARRequestClient) Get(ctx context.Context, id int) (*OAuthPARRequest, error) {
+	return c.Query().Where(oauthparrequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthPARRequestClient) GetX(ctx context.Context, id int) *OAuthPARRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthPARRequestClient) Hooks() []Hook {
+	return c.hooks.OAuthPARRequest
+}
+
+// OAuthRefreshTokenClient is a client for the OAuthRefreshToken schema.
+type OAuthRefreshTokenClient struct {
+	config
+}
+
+// NewOAuthRefreshTokenClient returns a client for the OAuthRefreshToken from the given config.
+func NewOAuthRefreshTokenClient(c config) *OAuthRefreshTokenClient {
+	return &OAuthRefreshTokenClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthrefreshtoken.Hooks(f(g(h())))`.
+func (c *OAuthRefreshTokenClient) Use(hooks ...Hook) {
+	c.hooks.OAuthRefreshToken = append(c.hooks.OAuthRefreshToken, hooks...)
+}
+
+// Create returns a builder for creating a OAuthRefreshToken entity.
+func (c *OAuthRefreshTokenClient) Create() *OAuthRefreshTokenCreate {
+	mutation := newOAuthRefreshTokenMutation(c.config, OpCreate)
+	return &OAuthRefreshTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthRefreshToken entities.
+func (c *OAuthRefreshTokenClient) CreateBulk(builders ...*OAuthRefreshTokenCreate) *OAuthRefreshTokenCreateBulk {
+	return &OAuthRefreshTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthRefreshToken.
+func (c *OAuthRefreshTokenClient) Update() *OAuthRefreshTokenUpdate {
+	mutation := newOAuthRefreshTokenMutation(c.config, OpUpdate)
+	return &OAuthRefreshTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthRefreshTokenClient) UpdateOne(ort *OAuthRefreshToken) *OAuthRefreshTokenUpdateOne {
+	mutation := newOAuthRefreshTokenMutation(c.config, OpUpdateOne, withOAuthRefreshToken(ort))
+	return &OAuthRefreshTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthRefreshTokenClient) UpdateOneID(id int) *OAuthRefreshTokenUpdateOne {
+	mutation := newOAuthRefreshTokenMutation(c.config, OpUpdateOne, withOAuthRefreshTokenID(id))
+	return &OAuthRefreshTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthRefreshToken.
+func (c *OAuthRefreshTokenClient) Delete() *OAuthRefreshTokenDelete {
+	mutation := newOAuthRefreshTokenMutation(c.config, OpDelete)
+	return &OAuthRefreshTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthRefreshTokenClient) DeleteOne(ort *OAuthRefreshToken) *OAuthRefreshTokenDeleteOne {
+	return c.DeleteOneID(ort.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthRefreshTokenClient) DeleteOneID(id int) *OAuthRefreshTokenDeleteOne {
+	builder := c.Delete().Where(oauthrefreshtoken.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthRefreshTokenDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthRefreshToken.
+func (c *OAuthRefreshTokenClient) Query() *OAuthRefreshTokenQuery {
+	return &OAuthRefreshTokenQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a OAuthRefreshToken entity by its id.
+func (c *OAuthRefreshTokenClient) Get(ctx context.Context, id int) (*OAuthRefreshToken, error) {
+	return c.Query().Where(oauthrefreshtoken.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthRefreshTokenClient) GetX(ctx context.Context, id int) *OAuthRefreshToken {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySession queries the session edge of a OAuthRefreshToken.
+func (c *OAuthRefreshTokenClient) QuerySession(ort *OAuthRefreshToken) *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ort.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oauthrefreshtoken.Table, oauthrefreshtoken.FieldID, id),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, oauthrefreshtoken.SessionTable, oauthrefreshtoken.SessionColumn),
+		)
+		fromV = sqlgraph.Neighbors(ort.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthRefreshTokenClient) Hooks() []Hook {
+	return c.hooks.OAuthRefreshToken
+}
+
+// OAuthSessionClient is a client for the OAuthSession schema.
+type OAuthSessionClient struct {
+	config
+}
+
+// NewOAuthSessionClient returns a client for the OAuthSession from the given config.
+func NewOAuthSessionClient(c config) *OAuthSessionClient {
+	return &OAuthSessionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthsession.Hooks(f(g(h())))`.
+func (c *OAuthSessionClient) Use(hooks ...Hook) {
+	c.hooks.OAuthSession = append(c.hooks.OAuthSession, hooks...)
+}
+
+// Create returns a builder for creating a OAuthSession entity.
+func (c *OAuthSessionClient) Create() *OAuthSessionCreate {
+	mutation := newOAuthSessionMutation(c.config, OpCreate)
+	return &OAuthSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthSession entities.
+func (c *OAuthSessionClient) CreateBulk(builders ...*OAuthSessionCreate) *OAuthSessionCreateBulk {
+	return &OAuthSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthSession.
+func (c *OAuthSessionClient) Update() *OAuthSessionUpdate {
+	mutation := newOAuthSessionMutation(c.config, OpUpdate)
+	return &OAuthSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthSessionClient) UpdateOne(os *OAuthSession) *OAuthSessionUpdateOne {
+	mutation := newOAuthSessionMutation(c.config, OpUpdateOne, withOAuthSession(os))
+	return &OAuthSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthSessionClient) UpdateOneID(id int) *OAuthSessionUpdateOne {
+	mutation := newOAuthSessionMutation(c.config, OpUpdateOne, withOAuthSessionID(id))
+	return &OAuthSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthSession.
+func (c *OAuthSessionClient) Delete() *OAuthSessionDelete {
+	mutation := newOAuthSessionMutation(c.config, OpDelete)
+	return &OAuthSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthSessionClient) DeleteOne(os *OAuthSession) *OAuthSessionDeleteOne {
+	return c.DeleteOneID(os.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthSessionClient) DeleteOneID(id int) *OAuthSessionDeleteOne {
+	builder := c.Delete().Where(oauthsession.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthSessionDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthSession.
+func (c *OAuthSessionClient) Query() *OAuthSessionQuery {
+	return &OAuthSessionQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a OAuthSession entity by its id.
+func (c *OAuthSessionClient) Get(ctx context.Context, id int) (*OAuthSession, error) {
+	return c.Query().Where(oauthsession.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthSessionClient) GetX(ctx context.Context, id int) *OAuthSession {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthSessionClient) Hooks() []Hook {
+	return c.hooks.OAuthSession
+}
+
 // OIDCAuthCodeClient is a client for the OIDCAuthCode schema.
 type OIDCAuthCodeClient struct {
 	config
@@ -425,30 +1048,14 @@ func (c *OIDCAuthCodeClient) GetX(ctx context.Context, id int) *OIDCAuthCode {
 	return obj
 }
 
-// QueryAccessRequest queries the access_request edge of a OIDCAuthCode.
-func (c *OIDCAuthCodeClient) QueryAccessRequest(oac *OIDCAuthCode) *AccessRequestQuery {
-	query := &AccessRequestQuery{config: c.config}
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := oac.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(oidcauthcode.Table, oidcauthcode.FieldID, id),
-			sqlgraph.To(accessrequest.Table, accessrequest.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, oidcauthcode.AccessRequestTable, oidcauthcode.AccessRequestColumn),
-		)
-		fromV = sqlgraph.Neighbors(oac.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QuerySession queries the session edge of a OIDCAuthCode.
-func (c *OIDCAuthCodeClient) QuerySession(oac *OIDCAuthCode) *OIDCSessionQuery {
-	query := &OIDCSessionQuery{config: c.config}
+func (c *OIDCAuthCodeClient) QuerySession(oac *OIDCAuthCode) *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: c.config}
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := oac.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oidcauthcode.Table, oidcauthcode.FieldID, id),
-			sqlgraph.To(oidcsession.Table, oidcsession.FieldID),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, oidcauthcode.SessionTable, oidcauthcode.SessionColumn),
 		)
 		fromV = sqlgraph.Neighbors(oac.driver.Dialect(), step)
@@ -462,84 +1069,84 @@ func (c *OIDCAuthCodeClient) Hooks() []Hook {
 	return c.hooks.OIDCAuthCode
 }
 
-// OIDCClientClient is a client for the OIDCClient schema.
-type OIDCClientClient struct {
+// PKCEClient is a client for the PKCE schema.
+type PKCEClient struct {
 	config
 }
 
-// NewOIDCClientClient returns a client for the OIDCClient from the given config.
-func NewOIDCClientClient(c config) *OIDCClientClient {
-	return &OIDCClientClient{config: c}
+// NewPKCEClient returns a client for the PKCE from the given config.
+func NewPKCEClient(c config) *PKCEClient {
+	return &PKCEClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `oidcclient.Hooks(f(g(h())))`.
-func (c *OIDCClientClient) Use(hooks ...Hook) {
-	c.hooks.OIDCClient = append(c.hooks.OIDCClient, hooks...)
+// A call to `Use(f, g, h)` equals to `pkce.Hooks(f(g(h())))`.
+func (c *PKCEClient) Use(hooks ...Hook) {
+	c.hooks.PKCE = append(c.hooks.PKCE, hooks...)
 }
 
-// Create returns a builder for creating a OIDCClient entity.
-func (c *OIDCClientClient) Create() *OIDCClientCreate {
-	mutation := newOIDCClientMutation(c.config, OpCreate)
-	return &OIDCClientCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a PKCE entity.
+func (c *PKCEClient) Create() *PKCECreate {
+	mutation := newPKCEMutation(c.config, OpCreate)
+	return &PKCECreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of OIDCClient entities.
-func (c *OIDCClientClient) CreateBulk(builders ...*OIDCClientCreate) *OIDCClientCreateBulk {
-	return &OIDCClientCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of PKCE entities.
+func (c *PKCEClient) CreateBulk(builders ...*PKCECreate) *PKCECreateBulk {
+	return &PKCECreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for OIDCClient.
-func (c *OIDCClientClient) Update() *OIDCClientUpdate {
-	mutation := newOIDCClientMutation(c.config, OpUpdate)
-	return &OIDCClientUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for PKCE.
+func (c *PKCEClient) Update() *PKCEUpdate {
+	mutation := newPKCEMutation(c.config, OpUpdate)
+	return &PKCEUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *OIDCClientClient) UpdateOne(oc *OIDCClient) *OIDCClientUpdateOne {
-	mutation := newOIDCClientMutation(c.config, OpUpdateOne, withOIDCClient(oc))
-	return &OIDCClientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *PKCEClient) UpdateOne(pk *PKCE) *PKCEUpdateOne {
+	mutation := newPKCEMutation(c.config, OpUpdateOne, withPKCE(pk))
+	return &PKCEUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *OIDCClientClient) UpdateOneID(id int) *OIDCClientUpdateOne {
-	mutation := newOIDCClientMutation(c.config, OpUpdateOne, withOIDCClientID(id))
-	return &OIDCClientUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *PKCEClient) UpdateOneID(id int) *PKCEUpdateOne {
+	mutation := newPKCEMutation(c.config, OpUpdateOne, withPKCEID(id))
+	return &PKCEUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for OIDCClient.
-func (c *OIDCClientClient) Delete() *OIDCClientDelete {
-	mutation := newOIDCClientMutation(c.config, OpDelete)
-	return &OIDCClientDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for PKCE.
+func (c *PKCEClient) Delete() *PKCEDelete {
+	mutation := newPKCEMutation(c.config, OpDelete)
+	return &PKCEDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *OIDCClientClient) DeleteOne(oc *OIDCClient) *OIDCClientDeleteOne {
-	return c.DeleteOneID(oc.ID)
+func (c *PKCEClient) DeleteOne(pk *PKCE) *PKCEDeleteOne {
+	return c.DeleteOneID(pk.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *OIDCClientClient) DeleteOneID(id int) *OIDCClientDeleteOne {
-	builder := c.Delete().Where(oidcclient.ID(id))
+func (c *PKCEClient) DeleteOneID(id int) *PKCEDeleteOne {
+	builder := c.Delete().Where(pkce.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &OIDCClientDeleteOne{builder}
+	return &PKCEDeleteOne{builder}
 }
 
-// Query returns a query builder for OIDCClient.
-func (c *OIDCClientClient) Query() *OIDCClientQuery {
-	return &OIDCClientQuery{
+// Query returns a query builder for PKCE.
+func (c *PKCEClient) Query() *PKCEQuery {
+	return &PKCEQuery{
 		config: c.config,
 	}
 }
 
-// Get returns a OIDCClient entity by its id.
-func (c *OIDCClientClient) Get(ctx context.Context, id int) (*OIDCClient, error) {
-	return c.Query().Where(oidcclient.ID(id)).Only(ctx)
+// Get returns a PKCE entity by its id.
+func (c *PKCEClient) Get(ctx context.Context, id int) (*PKCE, error) {
+	return c.Query().Where(pkce.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *OIDCClientClient) GetX(ctx context.Context, id int) *OIDCClient {
+func (c *PKCEClient) GetX(ctx context.Context, id int) *PKCE {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -547,99 +1154,25 @@ func (c *OIDCClientClient) GetX(ctx context.Context, id int) *OIDCClient {
 	return obj
 }
 
-// Hooks returns the client hooks.
-func (c *OIDCClientClient) Hooks() []Hook {
-	return c.hooks.OIDCClient
-}
-
-// OIDCSessionClient is a client for the OIDCSession schema.
-type OIDCSessionClient struct {
-	config
-}
-
-// NewOIDCSessionClient returns a client for the OIDCSession from the given config.
-func NewOIDCSessionClient(c config) *OIDCSessionClient {
-	return &OIDCSessionClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `oidcsession.Hooks(f(g(h())))`.
-func (c *OIDCSessionClient) Use(hooks ...Hook) {
-	c.hooks.OIDCSession = append(c.hooks.OIDCSession, hooks...)
-}
-
-// Create returns a builder for creating a OIDCSession entity.
-func (c *OIDCSessionClient) Create() *OIDCSessionCreate {
-	mutation := newOIDCSessionMutation(c.config, OpCreate)
-	return &OIDCSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of OIDCSession entities.
-func (c *OIDCSessionClient) CreateBulk(builders ...*OIDCSessionCreate) *OIDCSessionCreateBulk {
-	return &OIDCSessionCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for OIDCSession.
-func (c *OIDCSessionClient) Update() *OIDCSessionUpdate {
-	mutation := newOIDCSessionMutation(c.config, OpUpdate)
-	return &OIDCSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *OIDCSessionClient) UpdateOne(os *OIDCSession) *OIDCSessionUpdateOne {
-	mutation := newOIDCSessionMutation(c.config, OpUpdateOne, withOIDCSession(os))
-	return &OIDCSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *OIDCSessionClient) UpdateOneID(id int) *OIDCSessionUpdateOne {
-	mutation := newOIDCSessionMutation(c.config, OpUpdateOne, withOIDCSessionID(id))
-	return &OIDCSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for OIDCSession.
-func (c *OIDCSessionClient) Delete() *OIDCSessionDelete {
-	mutation := newOIDCSessionMutation(c.config, OpDelete)
-	return &OIDCSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *OIDCSessionClient) DeleteOne(os *OIDCSession) *OIDCSessionDeleteOne {
-	return c.DeleteOneID(os.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *OIDCSessionClient) DeleteOneID(id int) *OIDCSessionDeleteOne {
-	builder := c.Delete().Where(oidcsession.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &OIDCSessionDeleteOne{builder}
-}
-
-// Query returns a query builder for OIDCSession.
-func (c *OIDCSessionClient) Query() *OIDCSessionQuery {
-	return &OIDCSessionQuery{
-		config: c.config,
+// QuerySession queries the session edge of a PKCE.
+func (c *PKCEClient) QuerySession(pk *PKCE) *OAuthSessionQuery {
+	query := &OAuthSessionQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pk.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(pkce.Table, pkce.FieldID, id),
+			sqlgraph.To(oauthsession.Table, oauthsession.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, pkce.SessionTable, pkce.SessionColumn),
+		)
+		fromV = sqlgraph.Neighbors(pk.driver.Dialect(), step)
+		return fromV, nil
 	}
-}
-
-// Get returns a OIDCSession entity by its id.
-func (c *OIDCSessionClient) Get(ctx context.Context, id int) (*OIDCSession, error) {
-	return c.Query().Where(oidcsession.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *OIDCSessionClient) GetX(ctx context.Context, id int) *OIDCSession {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
+	return query
 }
 
 // Hooks returns the client hooks.
-func (c *OIDCSessionClient) Hooks() []Hook {
-	return c.hooks.OIDCSession
+func (c *PKCEClient) Hooks() []Hook {
+	return c.hooks.PKCE
 }
 
 // UserClient is a client for the User schema.

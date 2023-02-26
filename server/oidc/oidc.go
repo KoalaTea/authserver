@@ -8,12 +8,20 @@ import (
 
 	"github.com/ory/fosite"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 )
+
+var tracer = otel.Tracer("authserver/oidc")
+
+type OIDCProvider struct {
+	oidcStorage *OIDCStorage
+	oauth2      fosite.OAuth2Provider
+}
 
 func (o *OIDCProvider) RegisterHandlers(router *http.ServeMux) {
 	// Set up oauth2 endpoints. You could also use gorilla/mux or any other router.
@@ -26,11 +34,6 @@ func (o *OIDCProvider) RegisterHandlers(router *http.ServeMux) {
 
 	// Helper functions for manual testing that things work
 	o.RegisterTestHandlers(router)
-}
-
-type OIDCProvider struct {
-	oidcStorage *OIDCStorage
-	oauth2      fosite.OAuth2Provider
 }
 
 func NewOIDCProvider(client *ent.Client) *OIDCProvider {

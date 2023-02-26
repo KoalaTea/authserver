@@ -1,5 +1,7 @@
 schema:
   - schema/query.graphql
+  - schema/scalars.graphql
+  - schema/mutation.graphql
 
 model:
   package: graphql
