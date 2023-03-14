@@ -139,6 +139,32 @@ func (f PKCEFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return f(ctx, mv)
 }
 
+// The PublicJWKFunc type is an adapter to allow the use of ordinary
+// function as PublicJWK mutator.
+type PublicJWKFunc func(context.Context, *ent.PublicJWKMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PublicJWKFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.PublicJWKMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PublicJWKMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The PublicJWKSetFunc type is an adapter to allow the use of ordinary
+// function as PublicJWKSet mutator.
+type PublicJWKSetFunc func(context.Context, *ent.PublicJWKSetMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PublicJWKSetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.PublicJWKSetMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PublicJWKSetMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

@@ -181,6 +181,31 @@ var (
 			},
 		},
 	}
+	// PublicJwKsColumns holds the columns for the "public_jw_ks" table.
+	PublicJwKsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "sid", Type: field.TypeString},
+		{Name: "kid", Type: field.TypeString},
+		{Name: "key", Type: field.TypeString},
+		{Name: "issuer", Type: field.TypeString},
+		{Name: "scopes", Type: field.TypeJSON},
+	}
+	// PublicJwKsTable holds the schema information for the "public_jw_ks" table.
+	PublicJwKsTable = &schema.Table{
+		Name:       "public_jw_ks",
+		Columns:    PublicJwKsColumns,
+		PrimaryKey: []*schema.Column{PublicJwKsColumns[0]},
+	}
+	// PublicJwkSetsColumns holds the columns for the "public_jwk_sets" table.
+	PublicJwkSetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// PublicJwkSetsTable holds the schema information for the "public_jwk_sets" table.
+	PublicJwkSetsTable = &schema.Table{
+		Name:       "public_jwk_sets",
+		Columns:    PublicJwkSetsColumns,
+		PrimaryKey: []*schema.Column{PublicJwkSetsColumns[0]},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -207,6 +232,8 @@ var (
 		OauthSessionsTable,
 		OidcAuthCodesTable,
 		PkcEsTable,
+		PublicJwKsTable,
+		PublicJwkSetsTable,
 		UsersTable,
 	}
 )

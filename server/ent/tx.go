@@ -32,6 +32,10 @@ type Tx struct {
 	OIDCAuthCode *OIDCAuthCodeClient
 	// PKCE is the client for interacting with the PKCE builders.
 	PKCE *PKCEClient
+	// PublicJWK is the client for interacting with the PublicJWK builders.
+	PublicJWK *PublicJWKClient
+	// PublicJWKSet is the client for interacting with the PublicJWKSet builders.
+	PublicJWKSet *PublicJWKSetClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -175,6 +179,8 @@ func (tx *Tx) init() {
 	tx.OAuthSession = NewOAuthSessionClient(tx.config)
 	tx.OIDCAuthCode = NewOIDCAuthCodeClient(tx.config)
 	tx.PKCE = NewPKCEClient(tx.config)
+	tx.PublicJWK = NewPublicJWKClient(tx.config)
+	tx.PublicJWKSet = NewPublicJWKSetClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 

@@ -34,6 +34,8 @@ type hooks struct {
 	OAuthSession      []ent.Hook
 	OIDCAuthCode      []ent.Hook
 	PKCE              []ent.Hook
+	PublicJWK         []ent.Hook
+	PublicJWKSet      []ent.Hook
 	User              []ent.Hook
 }
 

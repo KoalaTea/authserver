@@ -36,5 +36,11 @@ type OIDCAuthCode func(*sql.Selector)
 // PKCE is the predicate function for pkce builders.
 type PKCE func(*sql.Selector)
 
+// PublicJWK is the predicate function for publicjwk builders.
+type PublicJWK func(*sql.Selector)
+
+// PublicJWKSet is the predicate function for publicjwkset builders.
+type PublicJWKSet func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

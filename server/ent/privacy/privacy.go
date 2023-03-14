@@ -389,6 +389,54 @@ func (f PKCEMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) 
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.PKCEMutation", m)
 }
 
+// The PublicJWKQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type PublicJWKQueryRuleFunc func(context.Context, *ent.PublicJWKQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f PublicJWKQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.PublicJWKQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.PublicJWKQuery", q)
+}
+
+// The PublicJWKMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type PublicJWKMutationRuleFunc func(context.Context, *ent.PublicJWKMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f PublicJWKMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.PublicJWKMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.PublicJWKMutation", m)
+}
+
+// The PublicJWKSetQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type PublicJWKSetQueryRuleFunc func(context.Context, *ent.PublicJWKSetQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f PublicJWKSetQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.PublicJWKSetQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.PublicJWKSetQuery", q)
+}
+
+// The PublicJWKSetMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type PublicJWKSetMutationRuleFunc func(context.Context, *ent.PublicJWKSetMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f PublicJWKSetMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.PublicJWKSetMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.PublicJWKSetMutation", m)
+}
+
 // The UserQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type UserQueryRuleFunc func(context.Context, *ent.UserQuery) error

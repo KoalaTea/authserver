@@ -24,6 +24,8 @@ import (
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
+	"github.com/koalatea/authserver/server/ent/publicjwkset"
 	"github.com/koalatea/authserver/server/ent/user"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"github.com/vmihailenco/msgpack/v5"
@@ -2558,6 +2560,468 @@ func (pk *PKCE) ToEdge(order *PKCEOrder) *PKCEEdge {
 	return &PKCEEdge{
 		Node:   pk,
 		Cursor: order.Field.toCursor(pk),
+	}
+}
+
+// PublicJWKEdge is the edge representation of PublicJWK.
+type PublicJWKEdge struct {
+	Node   *PublicJWK `json:"node"`
+	Cursor Cursor     `json:"cursor"`
+}
+
+// PublicJWKConnection is the connection containing edges to PublicJWK.
+type PublicJWKConnection struct {
+	Edges      []*PublicJWKEdge `json:"edges"`
+	PageInfo   PageInfo         `json:"pageInfo"`
+	TotalCount int              `json:"totalCount"`
+}
+
+func (c *PublicJWKConnection) build(nodes []*PublicJWK, pager *publicjwkPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *PublicJWK
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *PublicJWK {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *PublicJWK {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*PublicJWKEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &PublicJWKEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// PublicJWKPaginateOption enables pagination customization.
+type PublicJWKPaginateOption func(*publicjwkPager) error
+
+// WithPublicJWKOrder configures pagination ordering.
+func WithPublicJWKOrder(order *PublicJWKOrder) PublicJWKPaginateOption {
+	if order == nil {
+		order = DefaultPublicJWKOrder
+	}
+	o := *order
+	return func(pager *publicjwkPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultPublicJWKOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithPublicJWKFilter configures pagination filter.
+func WithPublicJWKFilter(filter func(*PublicJWKQuery) (*PublicJWKQuery, error)) PublicJWKPaginateOption {
+	return func(pager *publicjwkPager) error {
+		if filter == nil {
+			return errors.New("PublicJWKQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type publicjwkPager struct {
+	order  *PublicJWKOrder
+	filter func(*PublicJWKQuery) (*PublicJWKQuery, error)
+}
+
+func newPublicJWKPager(opts []PublicJWKPaginateOption) (*publicjwkPager, error) {
+	pager := &publicjwkPager{}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultPublicJWKOrder
+	}
+	return pager, nil
+}
+
+func (p *publicjwkPager) applyFilter(query *PublicJWKQuery) (*PublicJWKQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *publicjwkPager) toCursor(pj *PublicJWK) Cursor {
+	return p.order.Field.toCursor(pj)
+}
+
+func (p *publicjwkPager) applyCursors(query *PublicJWKQuery, after, before *Cursor) *PublicJWKQuery {
+	for _, predicate := range cursorsToPredicates(
+		p.order.Direction, after, before,
+		p.order.Field.field, DefaultPublicJWKOrder.Field.field,
+	) {
+		query = query.Where(predicate)
+	}
+	return query
+}
+
+func (p *publicjwkPager) applyOrder(query *PublicJWKQuery, reverse bool) *PublicJWKQuery {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	query = query.Order(direction.orderFunc(p.order.Field.field))
+	if p.order.Field != DefaultPublicJWKOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultPublicJWKOrder.Field.field))
+	}
+	return query
+}
+
+func (p *publicjwkPager) orderExpr(reverse bool) sql.Querier {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.field).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultPublicJWKOrder.Field {
+			b.Comma().Ident(DefaultPublicJWKOrder.Field.field).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to PublicJWK.
+func (pj *PublicJWKQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...PublicJWKPaginateOption,
+) (*PublicJWKConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newPublicJWKPager(opts)
+	if err != nil {
+		return nil, err
+	}
+	if pj, err = pager.applyFilter(pj); err != nil {
+		return nil, err
+	}
+	conn := &PublicJWKConnection{Edges: []*PublicJWKEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			if conn.TotalCount, err = pj.Clone().Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+
+	pj = pager.applyCursors(pj, after, before)
+	pj = pager.applyOrder(pj, last != nil)
+	if limit := paginateLimit(first, last); limit != 0 {
+		pj.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := pj.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+
+	nodes, err := pj.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+// PublicJWKOrderField defines the ordering field of PublicJWK.
+type PublicJWKOrderField struct {
+	field    string
+	toCursor func(*PublicJWK) Cursor
+}
+
+// PublicJWKOrder defines the ordering of PublicJWK.
+type PublicJWKOrder struct {
+	Direction OrderDirection       `json:"direction"`
+	Field     *PublicJWKOrderField `json:"field"`
+}
+
+// DefaultPublicJWKOrder is the default ordering of PublicJWK.
+var DefaultPublicJWKOrder = &PublicJWKOrder{
+	Direction: OrderDirectionAsc,
+	Field: &PublicJWKOrderField{
+		field: publicjwk.FieldID,
+		toCursor: func(pj *PublicJWK) Cursor {
+			return Cursor{ID: pj.ID}
+		},
+	},
+}
+
+// ToEdge converts PublicJWK into PublicJWKEdge.
+func (pj *PublicJWK) ToEdge(order *PublicJWKOrder) *PublicJWKEdge {
+	if order == nil {
+		order = DefaultPublicJWKOrder
+	}
+	return &PublicJWKEdge{
+		Node:   pj,
+		Cursor: order.Field.toCursor(pj),
+	}
+}
+
+// PublicJWKSetEdge is the edge representation of PublicJWKSet.
+type PublicJWKSetEdge struct {
+	Node   *PublicJWKSet `json:"node"`
+	Cursor Cursor        `json:"cursor"`
+}
+
+// PublicJWKSetConnection is the connection containing edges to PublicJWKSet.
+type PublicJWKSetConnection struct {
+	Edges      []*PublicJWKSetEdge `json:"edges"`
+	PageInfo   PageInfo            `json:"pageInfo"`
+	TotalCount int                 `json:"totalCount"`
+}
+
+func (c *PublicJWKSetConnection) build(nodes []*PublicJWKSet, pager *publicjwksetPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *PublicJWKSet
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *PublicJWKSet {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *PublicJWKSet {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*PublicJWKSetEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &PublicJWKSetEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// PublicJWKSetPaginateOption enables pagination customization.
+type PublicJWKSetPaginateOption func(*publicjwksetPager) error
+
+// WithPublicJWKSetOrder configures pagination ordering.
+func WithPublicJWKSetOrder(order *PublicJWKSetOrder) PublicJWKSetPaginateOption {
+	if order == nil {
+		order = DefaultPublicJWKSetOrder
+	}
+	o := *order
+	return func(pager *publicjwksetPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultPublicJWKSetOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithPublicJWKSetFilter configures pagination filter.
+func WithPublicJWKSetFilter(filter func(*PublicJWKSetQuery) (*PublicJWKSetQuery, error)) PublicJWKSetPaginateOption {
+	return func(pager *publicjwksetPager) error {
+		if filter == nil {
+			return errors.New("PublicJWKSetQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type publicjwksetPager struct {
+	order  *PublicJWKSetOrder
+	filter func(*PublicJWKSetQuery) (*PublicJWKSetQuery, error)
+}
+
+func newPublicJWKSetPager(opts []PublicJWKSetPaginateOption) (*publicjwksetPager, error) {
+	pager := &publicjwksetPager{}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultPublicJWKSetOrder
+	}
+	return pager, nil
+}
+
+func (p *publicjwksetPager) applyFilter(query *PublicJWKSetQuery) (*PublicJWKSetQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *publicjwksetPager) toCursor(pjs *PublicJWKSet) Cursor {
+	return p.order.Field.toCursor(pjs)
+}
+
+func (p *publicjwksetPager) applyCursors(query *PublicJWKSetQuery, after, before *Cursor) *PublicJWKSetQuery {
+	for _, predicate := range cursorsToPredicates(
+		p.order.Direction, after, before,
+		p.order.Field.field, DefaultPublicJWKSetOrder.Field.field,
+	) {
+		query = query.Where(predicate)
+	}
+	return query
+}
+
+func (p *publicjwksetPager) applyOrder(query *PublicJWKSetQuery, reverse bool) *PublicJWKSetQuery {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	query = query.Order(direction.orderFunc(p.order.Field.field))
+	if p.order.Field != DefaultPublicJWKSetOrder.Field {
+		query = query.Order(direction.orderFunc(DefaultPublicJWKSetOrder.Field.field))
+	}
+	return query
+}
+
+func (p *publicjwksetPager) orderExpr(reverse bool) sql.Querier {
+	direction := p.order.Direction
+	if reverse {
+		direction = direction.reverse()
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.field).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultPublicJWKSetOrder.Field {
+			b.Comma().Ident(DefaultPublicJWKSetOrder.Field.field).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to PublicJWKSet.
+func (pjs *PublicJWKSetQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...PublicJWKSetPaginateOption,
+) (*PublicJWKSetConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newPublicJWKSetPager(opts)
+	if err != nil {
+		return nil, err
+	}
+	if pjs, err = pager.applyFilter(pjs); err != nil {
+		return nil, err
+	}
+	conn := &PublicJWKSetConnection{Edges: []*PublicJWKSetEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			if conn.TotalCount, err = pjs.Clone().Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+
+	pjs = pager.applyCursors(pjs, after, before)
+	pjs = pager.applyOrder(pjs, last != nil)
+	if limit := paginateLimit(first, last); limit != 0 {
+		pjs.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := pjs.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+
+	nodes, err := pjs.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+// PublicJWKSetOrderField defines the ordering field of PublicJWKSet.
+type PublicJWKSetOrderField struct {
+	field    string
+	toCursor func(*PublicJWKSet) Cursor
+}
+
+// PublicJWKSetOrder defines the ordering of PublicJWKSet.
+type PublicJWKSetOrder struct {
+	Direction OrderDirection          `json:"direction"`
+	Field     *PublicJWKSetOrderField `json:"field"`
+}
+
+// DefaultPublicJWKSetOrder is the default ordering of PublicJWKSet.
+var DefaultPublicJWKSetOrder = &PublicJWKSetOrder{
+	Direction: OrderDirectionAsc,
+	Field: &PublicJWKSetOrderField{
+		field: publicjwkset.FieldID,
+		toCursor: func(pjs *PublicJWKSet) Cursor {
+			return Cursor{ID: pjs.ID}
+		},
+	},
+}
+
+// ToEdge converts PublicJWKSet into PublicJWKSetEdge.
+func (pjs *PublicJWKSet) ToEdge(order *PublicJWKSetOrder) *PublicJWKSetEdge {
+	if order == nil {
+		order = DefaultPublicJWKSetOrder
+	}
+	return &PublicJWKSetEdge{
+		Node:   pjs,
+		Cursor: order.Field.toCursor(pjs),
 	}
 }
 

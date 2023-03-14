@@ -25,6 +25,8 @@ import (
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
+	"github.com/koalatea/authserver/server/ent/publicjwkset"
 	"github.com/koalatea/authserver/server/ent/user"
 	"golang.org/x/sync/semaphore"
 )
@@ -439,6 +441,67 @@ func (pk *PKCE) Node(ctx context.Context) (node *Node, err error) {
 	return node, nil
 }
 
+func (pj *PublicJWK) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     pj.ID,
+		Type:   "PublicJWK",
+		Fields: make([]*Field, 5),
+		Edges:  make([]*Edge, 0),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(pj.Sid); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "string",
+		Name:  "sid",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pj.Kid); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "string",
+		Name:  "kid",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pj.Key); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "string",
+		Name:  "key",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pj.Issuer); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "string",
+		Name:  "issuer",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(pj.Scopes); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "[]string",
+		Name:  "scopes",
+		Value: string(buf),
+	}
+	return node, nil
+}
+
+func (pjs *PublicJWKSet) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     pjs.ID,
+		Type:   "PublicJWKSet",
+		Fields: make([]*Field, 0),
+		Edges:  make([]*Edge, 0),
+	}
+	return node, nil
+}
+
 func (u *User) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     u.ID,
@@ -652,6 +715,30 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 		query := c.PKCE.Query().
 			Where(pkce.ID(id))
 		query, err := query.CollectFields(ctx, "PKCE")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case publicjwk.Table:
+		query := c.PublicJWK.Query().
+			Where(publicjwk.ID(id))
+		query, err := query.CollectFields(ctx, "PublicJWK")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case publicjwkset.Table:
+		query := c.PublicJWKSet.Query().
+			Where(publicjwkset.ID(id))
+		query, err := query.CollectFields(ctx, "PublicJWKSet")
 		if err != nil {
 			return nil, err
 		}
@@ -893,6 +980,38 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 		query := c.PKCE.Query().
 			Where(pkce.IDIn(ids...))
 		query, err := query.CollectFields(ctx, "PKCE")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case publicjwk.Table:
+		query := c.PublicJWK.Query().
+			Where(publicjwk.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "PublicJWK")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case publicjwkset.Table:
+		query := c.PublicJWKSet.Query().
+			Where(publicjwkset.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "PublicJWKSet")
 		if err != nil {
 			return nil, err
 		}

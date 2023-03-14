@@ -18,6 +18,8 @@ import (
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/predicate"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
+	"github.com/koalatea/authserver/server/ent/publicjwkset"
 	"github.com/koalatea/authserver/server/ent/user"
 )
 
@@ -2250,6 +2252,470 @@ func (i *PKCEWhereInput) P() (predicate.PKCE, error) {
 		return predicates[0], nil
 	default:
 		return pkce.And(predicates...), nil
+	}
+}
+
+// PublicJWKWhereInput represents a where input for filtering PublicJWK queries.
+type PublicJWKWhereInput struct {
+	Predicates []predicate.PublicJWK  `json:"-"`
+	Not        *PublicJWKWhereInput   `json:"not,omitempty"`
+	Or         []*PublicJWKWhereInput `json:"or,omitempty"`
+	And        []*PublicJWKWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "sid" field predicates.
+	Sid             *string  `json:"sid,omitempty"`
+	SidNEQ          *string  `json:"sidNEQ,omitempty"`
+	SidIn           []string `json:"sidIn,omitempty"`
+	SidNotIn        []string `json:"sidNotIn,omitempty"`
+	SidGT           *string  `json:"sidGT,omitempty"`
+	SidGTE          *string  `json:"sidGTE,omitempty"`
+	SidLT           *string  `json:"sidLT,omitempty"`
+	SidLTE          *string  `json:"sidLTE,omitempty"`
+	SidContains     *string  `json:"sidContains,omitempty"`
+	SidHasPrefix    *string  `json:"sidHasPrefix,omitempty"`
+	SidHasSuffix    *string  `json:"sidHasSuffix,omitempty"`
+	SidEqualFold    *string  `json:"sidEqualFold,omitempty"`
+	SidContainsFold *string  `json:"sidContainsFold,omitempty"`
+
+	// "kid" field predicates.
+	Kid             *string  `json:"kid,omitempty"`
+	KidNEQ          *string  `json:"kidNEQ,omitempty"`
+	KidIn           []string `json:"kidIn,omitempty"`
+	KidNotIn        []string `json:"kidNotIn,omitempty"`
+	KidGT           *string  `json:"kidGT,omitempty"`
+	KidGTE          *string  `json:"kidGTE,omitempty"`
+	KidLT           *string  `json:"kidLT,omitempty"`
+	KidLTE          *string  `json:"kidLTE,omitempty"`
+	KidContains     *string  `json:"kidContains,omitempty"`
+	KidHasPrefix    *string  `json:"kidHasPrefix,omitempty"`
+	KidHasSuffix    *string  `json:"kidHasSuffix,omitempty"`
+	KidEqualFold    *string  `json:"kidEqualFold,omitempty"`
+	KidContainsFold *string  `json:"kidContainsFold,omitempty"`
+
+	// "key" field predicates.
+	Key             *string  `json:"key,omitempty"`
+	KeyNEQ          *string  `json:"keyNEQ,omitempty"`
+	KeyIn           []string `json:"keyIn,omitempty"`
+	KeyNotIn        []string `json:"keyNotIn,omitempty"`
+	KeyGT           *string  `json:"keyGT,omitempty"`
+	KeyGTE          *string  `json:"keyGTE,omitempty"`
+	KeyLT           *string  `json:"keyLT,omitempty"`
+	KeyLTE          *string  `json:"keyLTE,omitempty"`
+	KeyContains     *string  `json:"keyContains,omitempty"`
+	KeyHasPrefix    *string  `json:"keyHasPrefix,omitempty"`
+	KeyHasSuffix    *string  `json:"keyHasSuffix,omitempty"`
+	KeyEqualFold    *string  `json:"keyEqualFold,omitempty"`
+	KeyContainsFold *string  `json:"keyContainsFold,omitempty"`
+
+	// "issuer" field predicates.
+	Issuer             *string  `json:"issuer,omitempty"`
+	IssuerNEQ          *string  `json:"issuerNEQ,omitempty"`
+	IssuerIn           []string `json:"issuerIn,omitempty"`
+	IssuerNotIn        []string `json:"issuerNotIn,omitempty"`
+	IssuerGT           *string  `json:"issuerGT,omitempty"`
+	IssuerGTE          *string  `json:"issuerGTE,omitempty"`
+	IssuerLT           *string  `json:"issuerLT,omitempty"`
+	IssuerLTE          *string  `json:"issuerLTE,omitempty"`
+	IssuerContains     *string  `json:"issuerContains,omitempty"`
+	IssuerHasPrefix    *string  `json:"issuerHasPrefix,omitempty"`
+	IssuerHasSuffix    *string  `json:"issuerHasSuffix,omitempty"`
+	IssuerEqualFold    *string  `json:"issuerEqualFold,omitempty"`
+	IssuerContainsFold *string  `json:"issuerContainsFold,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *PublicJWKWhereInput) AddPredicates(predicates ...predicate.PublicJWK) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the PublicJWKWhereInput filter on the PublicJWKQuery builder.
+func (i *PublicJWKWhereInput) Filter(q *PublicJWKQuery) (*PublicJWKQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyPublicJWKWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyPublicJWKWhereInput is returned in case the PublicJWKWhereInput is empty.
+var ErrEmptyPublicJWKWhereInput = errors.New("ent: empty predicate PublicJWKWhereInput")
+
+// P returns a predicate for filtering publicjwks.
+// An error is returned if the input is empty or invalid.
+func (i *PublicJWKWhereInput) P() (predicate.PublicJWK, error) {
+	var predicates []predicate.PublicJWK
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, publicjwk.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.PublicJWK, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, publicjwk.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.PublicJWK, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, publicjwk.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, publicjwk.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, publicjwk.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, publicjwk.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, publicjwk.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, publicjwk.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, publicjwk.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, publicjwk.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, publicjwk.IDLTE(*i.IDLTE))
+	}
+	if i.Sid != nil {
+		predicates = append(predicates, publicjwk.SidEQ(*i.Sid))
+	}
+	if i.SidNEQ != nil {
+		predicates = append(predicates, publicjwk.SidNEQ(*i.SidNEQ))
+	}
+	if len(i.SidIn) > 0 {
+		predicates = append(predicates, publicjwk.SidIn(i.SidIn...))
+	}
+	if len(i.SidNotIn) > 0 {
+		predicates = append(predicates, publicjwk.SidNotIn(i.SidNotIn...))
+	}
+	if i.SidGT != nil {
+		predicates = append(predicates, publicjwk.SidGT(*i.SidGT))
+	}
+	if i.SidGTE != nil {
+		predicates = append(predicates, publicjwk.SidGTE(*i.SidGTE))
+	}
+	if i.SidLT != nil {
+		predicates = append(predicates, publicjwk.SidLT(*i.SidLT))
+	}
+	if i.SidLTE != nil {
+		predicates = append(predicates, publicjwk.SidLTE(*i.SidLTE))
+	}
+	if i.SidContains != nil {
+		predicates = append(predicates, publicjwk.SidContains(*i.SidContains))
+	}
+	if i.SidHasPrefix != nil {
+		predicates = append(predicates, publicjwk.SidHasPrefix(*i.SidHasPrefix))
+	}
+	if i.SidHasSuffix != nil {
+		predicates = append(predicates, publicjwk.SidHasSuffix(*i.SidHasSuffix))
+	}
+	if i.SidEqualFold != nil {
+		predicates = append(predicates, publicjwk.SidEqualFold(*i.SidEqualFold))
+	}
+	if i.SidContainsFold != nil {
+		predicates = append(predicates, publicjwk.SidContainsFold(*i.SidContainsFold))
+	}
+	if i.Kid != nil {
+		predicates = append(predicates, publicjwk.KidEQ(*i.Kid))
+	}
+	if i.KidNEQ != nil {
+		predicates = append(predicates, publicjwk.KidNEQ(*i.KidNEQ))
+	}
+	if len(i.KidIn) > 0 {
+		predicates = append(predicates, publicjwk.KidIn(i.KidIn...))
+	}
+	if len(i.KidNotIn) > 0 {
+		predicates = append(predicates, publicjwk.KidNotIn(i.KidNotIn...))
+	}
+	if i.KidGT != nil {
+		predicates = append(predicates, publicjwk.KidGT(*i.KidGT))
+	}
+	if i.KidGTE != nil {
+		predicates = append(predicates, publicjwk.KidGTE(*i.KidGTE))
+	}
+	if i.KidLT != nil {
+		predicates = append(predicates, publicjwk.KidLT(*i.KidLT))
+	}
+	if i.KidLTE != nil {
+		predicates = append(predicates, publicjwk.KidLTE(*i.KidLTE))
+	}
+	if i.KidContains != nil {
+		predicates = append(predicates, publicjwk.KidContains(*i.KidContains))
+	}
+	if i.KidHasPrefix != nil {
+		predicates = append(predicates, publicjwk.KidHasPrefix(*i.KidHasPrefix))
+	}
+	if i.KidHasSuffix != nil {
+		predicates = append(predicates, publicjwk.KidHasSuffix(*i.KidHasSuffix))
+	}
+	if i.KidEqualFold != nil {
+		predicates = append(predicates, publicjwk.KidEqualFold(*i.KidEqualFold))
+	}
+	if i.KidContainsFold != nil {
+		predicates = append(predicates, publicjwk.KidContainsFold(*i.KidContainsFold))
+	}
+	if i.Key != nil {
+		predicates = append(predicates, publicjwk.KeyEQ(*i.Key))
+	}
+	if i.KeyNEQ != nil {
+		predicates = append(predicates, publicjwk.KeyNEQ(*i.KeyNEQ))
+	}
+	if len(i.KeyIn) > 0 {
+		predicates = append(predicates, publicjwk.KeyIn(i.KeyIn...))
+	}
+	if len(i.KeyNotIn) > 0 {
+		predicates = append(predicates, publicjwk.KeyNotIn(i.KeyNotIn...))
+	}
+	if i.KeyGT != nil {
+		predicates = append(predicates, publicjwk.KeyGT(*i.KeyGT))
+	}
+	if i.KeyGTE != nil {
+		predicates = append(predicates, publicjwk.KeyGTE(*i.KeyGTE))
+	}
+	if i.KeyLT != nil {
+		predicates = append(predicates, publicjwk.KeyLT(*i.KeyLT))
+	}
+	if i.KeyLTE != nil {
+		predicates = append(predicates, publicjwk.KeyLTE(*i.KeyLTE))
+	}
+	if i.KeyContains != nil {
+		predicates = append(predicates, publicjwk.KeyContains(*i.KeyContains))
+	}
+	if i.KeyHasPrefix != nil {
+		predicates = append(predicates, publicjwk.KeyHasPrefix(*i.KeyHasPrefix))
+	}
+	if i.KeyHasSuffix != nil {
+		predicates = append(predicates, publicjwk.KeyHasSuffix(*i.KeyHasSuffix))
+	}
+	if i.KeyEqualFold != nil {
+		predicates = append(predicates, publicjwk.KeyEqualFold(*i.KeyEqualFold))
+	}
+	if i.KeyContainsFold != nil {
+		predicates = append(predicates, publicjwk.KeyContainsFold(*i.KeyContainsFold))
+	}
+	if i.Issuer != nil {
+		predicates = append(predicates, publicjwk.IssuerEQ(*i.Issuer))
+	}
+	if i.IssuerNEQ != nil {
+		predicates = append(predicates, publicjwk.IssuerNEQ(*i.IssuerNEQ))
+	}
+	if len(i.IssuerIn) > 0 {
+		predicates = append(predicates, publicjwk.IssuerIn(i.IssuerIn...))
+	}
+	if len(i.IssuerNotIn) > 0 {
+		predicates = append(predicates, publicjwk.IssuerNotIn(i.IssuerNotIn...))
+	}
+	if i.IssuerGT != nil {
+		predicates = append(predicates, publicjwk.IssuerGT(*i.IssuerGT))
+	}
+	if i.IssuerGTE != nil {
+		predicates = append(predicates, publicjwk.IssuerGTE(*i.IssuerGTE))
+	}
+	if i.IssuerLT != nil {
+		predicates = append(predicates, publicjwk.IssuerLT(*i.IssuerLT))
+	}
+	if i.IssuerLTE != nil {
+		predicates = append(predicates, publicjwk.IssuerLTE(*i.IssuerLTE))
+	}
+	if i.IssuerContains != nil {
+		predicates = append(predicates, publicjwk.IssuerContains(*i.IssuerContains))
+	}
+	if i.IssuerHasPrefix != nil {
+		predicates = append(predicates, publicjwk.IssuerHasPrefix(*i.IssuerHasPrefix))
+	}
+	if i.IssuerHasSuffix != nil {
+		predicates = append(predicates, publicjwk.IssuerHasSuffix(*i.IssuerHasSuffix))
+	}
+	if i.IssuerEqualFold != nil {
+		predicates = append(predicates, publicjwk.IssuerEqualFold(*i.IssuerEqualFold))
+	}
+	if i.IssuerContainsFold != nil {
+		predicates = append(predicates, publicjwk.IssuerContainsFold(*i.IssuerContainsFold))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyPublicJWKWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return publicjwk.And(predicates...), nil
+	}
+}
+
+// PublicJWKSetWhereInput represents a where input for filtering PublicJWKSet queries.
+type PublicJWKSetWhereInput struct {
+	Predicates []predicate.PublicJWKSet  `json:"-"`
+	Not        *PublicJWKSetWhereInput   `json:"not,omitempty"`
+	Or         []*PublicJWKSetWhereInput `json:"or,omitempty"`
+	And        []*PublicJWKSetWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *PublicJWKSetWhereInput) AddPredicates(predicates ...predicate.PublicJWKSet) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the PublicJWKSetWhereInput filter on the PublicJWKSetQuery builder.
+func (i *PublicJWKSetWhereInput) Filter(q *PublicJWKSetQuery) (*PublicJWKSetQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyPublicJWKSetWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyPublicJWKSetWhereInput is returned in case the PublicJWKSetWhereInput is empty.
+var ErrEmptyPublicJWKSetWhereInput = errors.New("ent: empty predicate PublicJWKSetWhereInput")
+
+// P returns a predicate for filtering publicjwksets.
+// An error is returned if the input is empty or invalid.
+func (i *PublicJWKSetWhereInput) P() (predicate.PublicJWKSet, error) {
+	var predicates []predicate.PublicJWKSet
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, publicjwkset.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.PublicJWKSet, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, publicjwkset.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.PublicJWKSet, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, publicjwkset.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, publicjwkset.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, publicjwkset.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, publicjwkset.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, publicjwkset.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, publicjwkset.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, publicjwkset.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, publicjwkset.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, publicjwkset.IDLTE(*i.IDLTE))
+	}
+
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyPublicJWKSetWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return publicjwkset.And(predicates...), nil
 	}
 }
 

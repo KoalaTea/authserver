@@ -20,6 +20,8 @@ import (
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
+	"github.com/koalatea/authserver/server/ent/publicjwkset"
 	"github.com/koalatea/authserver/server/ent/user"
 
 	"entgo.io/ent/dialect"
@@ -52,6 +54,10 @@ type Client struct {
 	OIDCAuthCode *OIDCAuthCodeClient
 	// PKCE is the client for interacting with the PKCE builders.
 	PKCE *PKCEClient
+	// PublicJWK is the client for interacting with the PublicJWK builders.
+	PublicJWK *PublicJWKClient
+	// PublicJWKSet is the client for interacting with the PublicJWKSet builders.
+	PublicJWKSet *PublicJWKSetClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// additional fields for node api
@@ -79,6 +85,8 @@ func (c *Client) init() {
 	c.OAuthSession = NewOAuthSessionClient(c.config)
 	c.OIDCAuthCode = NewOIDCAuthCodeClient(c.config)
 	c.PKCE = NewPKCEClient(c.config)
+	c.PublicJWK = NewPublicJWKClient(c.config)
+	c.PublicJWKSet = NewPublicJWKSetClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -123,6 +131,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		OAuthSession:      NewOAuthSessionClient(cfg),
 		OIDCAuthCode:      NewOIDCAuthCodeClient(cfg),
 		PKCE:              NewPKCEClient(cfg),
+		PublicJWK:         NewPublicJWKClient(cfg),
+		PublicJWKSet:      NewPublicJWKSetClient(cfg),
 		User:              NewUserClient(cfg),
 	}, nil
 }
@@ -153,6 +163,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		OAuthSession:      NewOAuthSessionClient(cfg),
 		OIDCAuthCode:      NewOIDCAuthCodeClient(cfg),
 		PKCE:              NewPKCEClient(cfg),
+		PublicJWK:         NewPublicJWKClient(cfg),
+		PublicJWKSet:      NewPublicJWKSetClient(cfg),
 		User:              NewUserClient(cfg),
 	}, nil
 }
@@ -192,6 +204,8 @@ func (c *Client) Use(hooks ...Hook) {
 	c.OAuthSession.Use(hooks...)
 	c.OIDCAuthCode.Use(hooks...)
 	c.PKCE.Use(hooks...)
+	c.PublicJWK.Use(hooks...)
+	c.PublicJWKSet.Use(hooks...)
 	c.User.Use(hooks...)
 }
 
@@ -1173,6 +1187,186 @@ func (c *PKCEClient) QuerySession(pk *PKCE) *OAuthSessionQuery {
 // Hooks returns the client hooks.
 func (c *PKCEClient) Hooks() []Hook {
 	return c.hooks.PKCE
+}
+
+// PublicJWKClient is a client for the PublicJWK schema.
+type PublicJWKClient struct {
+	config
+}
+
+// NewPublicJWKClient returns a client for the PublicJWK from the given config.
+func NewPublicJWKClient(c config) *PublicJWKClient {
+	return &PublicJWKClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `publicjwk.Hooks(f(g(h())))`.
+func (c *PublicJWKClient) Use(hooks ...Hook) {
+	c.hooks.PublicJWK = append(c.hooks.PublicJWK, hooks...)
+}
+
+// Create returns a builder for creating a PublicJWK entity.
+func (c *PublicJWKClient) Create() *PublicJWKCreate {
+	mutation := newPublicJWKMutation(c.config, OpCreate)
+	return &PublicJWKCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PublicJWK entities.
+func (c *PublicJWKClient) CreateBulk(builders ...*PublicJWKCreate) *PublicJWKCreateBulk {
+	return &PublicJWKCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PublicJWK.
+func (c *PublicJWKClient) Update() *PublicJWKUpdate {
+	mutation := newPublicJWKMutation(c.config, OpUpdate)
+	return &PublicJWKUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PublicJWKClient) UpdateOne(pj *PublicJWK) *PublicJWKUpdateOne {
+	mutation := newPublicJWKMutation(c.config, OpUpdateOne, withPublicJWK(pj))
+	return &PublicJWKUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PublicJWKClient) UpdateOneID(id int) *PublicJWKUpdateOne {
+	mutation := newPublicJWKMutation(c.config, OpUpdateOne, withPublicJWKID(id))
+	return &PublicJWKUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PublicJWK.
+func (c *PublicJWKClient) Delete() *PublicJWKDelete {
+	mutation := newPublicJWKMutation(c.config, OpDelete)
+	return &PublicJWKDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PublicJWKClient) DeleteOne(pj *PublicJWK) *PublicJWKDeleteOne {
+	return c.DeleteOneID(pj.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PublicJWKClient) DeleteOneID(id int) *PublicJWKDeleteOne {
+	builder := c.Delete().Where(publicjwk.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PublicJWKDeleteOne{builder}
+}
+
+// Query returns a query builder for PublicJWK.
+func (c *PublicJWKClient) Query() *PublicJWKQuery {
+	return &PublicJWKQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a PublicJWK entity by its id.
+func (c *PublicJWKClient) Get(ctx context.Context, id int) (*PublicJWK, error) {
+	return c.Query().Where(publicjwk.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PublicJWKClient) GetX(ctx context.Context, id int) *PublicJWK {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PublicJWKClient) Hooks() []Hook {
+	return c.hooks.PublicJWK
+}
+
+// PublicJWKSetClient is a client for the PublicJWKSet schema.
+type PublicJWKSetClient struct {
+	config
+}
+
+// NewPublicJWKSetClient returns a client for the PublicJWKSet from the given config.
+func NewPublicJWKSetClient(c config) *PublicJWKSetClient {
+	return &PublicJWKSetClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `publicjwkset.Hooks(f(g(h())))`.
+func (c *PublicJWKSetClient) Use(hooks ...Hook) {
+	c.hooks.PublicJWKSet = append(c.hooks.PublicJWKSet, hooks...)
+}
+
+// Create returns a builder for creating a PublicJWKSet entity.
+func (c *PublicJWKSetClient) Create() *PublicJWKSetCreate {
+	mutation := newPublicJWKSetMutation(c.config, OpCreate)
+	return &PublicJWKSetCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PublicJWKSet entities.
+func (c *PublicJWKSetClient) CreateBulk(builders ...*PublicJWKSetCreate) *PublicJWKSetCreateBulk {
+	return &PublicJWKSetCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PublicJWKSet.
+func (c *PublicJWKSetClient) Update() *PublicJWKSetUpdate {
+	mutation := newPublicJWKSetMutation(c.config, OpUpdate)
+	return &PublicJWKSetUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PublicJWKSetClient) UpdateOne(pjs *PublicJWKSet) *PublicJWKSetUpdateOne {
+	mutation := newPublicJWKSetMutation(c.config, OpUpdateOne, withPublicJWKSet(pjs))
+	return &PublicJWKSetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PublicJWKSetClient) UpdateOneID(id int) *PublicJWKSetUpdateOne {
+	mutation := newPublicJWKSetMutation(c.config, OpUpdateOne, withPublicJWKSetID(id))
+	return &PublicJWKSetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PublicJWKSet.
+func (c *PublicJWKSetClient) Delete() *PublicJWKSetDelete {
+	mutation := newPublicJWKSetMutation(c.config, OpDelete)
+	return &PublicJWKSetDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PublicJWKSetClient) DeleteOne(pjs *PublicJWKSet) *PublicJWKSetDeleteOne {
+	return c.DeleteOneID(pjs.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PublicJWKSetClient) DeleteOneID(id int) *PublicJWKSetDeleteOne {
+	builder := c.Delete().Where(publicjwkset.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PublicJWKSetDeleteOne{builder}
+}
+
+// Query returns a query builder for PublicJWKSet.
+func (c *PublicJWKSetClient) Query() *PublicJWKSetQuery {
+	return &PublicJWKSetQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a PublicJWKSet entity by its id.
+func (c *PublicJWKSetClient) Get(ctx context.Context, id int) (*PublicJWKSet, error) {
+	return c.Query().Where(publicjwkset.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PublicJWKSetClient) GetX(ctx context.Context, id int) *PublicJWKSet {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PublicJWKSetClient) Hooks() []Hook {
+	return c.hooks.PublicJWKSet
 }
 
 // UserClient is a client for the User schema.

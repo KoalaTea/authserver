@@ -540,6 +540,98 @@ func newPKCEPaginateArgs(rv map[string]interface{}) *pkcePaginateArgs {
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (pj *PublicJWKQuery) CollectFields(ctx context.Context, satisfies ...string) (*PublicJWKQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return pj, nil
+	}
+	if err := pj.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return pj, nil
+}
+
+func (pj *PublicJWKQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type publicjwkPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []PublicJWKPaginateOption
+}
+
+func newPublicJWKPaginateArgs(rv map[string]interface{}) *publicjwkPaginateArgs {
+	args := &publicjwkPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*PublicJWKWhereInput); ok {
+		args.opts = append(args.opts, WithPublicJWKFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (pjs *PublicJWKSetQuery) CollectFields(ctx context.Context, satisfies ...string) (*PublicJWKSetQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return pjs, nil
+	}
+	if err := pjs.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return pjs, nil
+}
+
+func (pjs *PublicJWKSetQuery) collectField(ctx context.Context, op *graphql.OperationContext, field graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	return nil
+}
+
+type publicjwksetPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []PublicJWKSetPaginateOption
+}
+
+func newPublicJWKSetPaginateArgs(rv map[string]interface{}) *publicjwksetPaginateArgs {
+	args := &publicjwksetPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*PublicJWKSetWhereInput); ok {
+		args.opts = append(args.opts, WithPublicJWKSetFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (u *UserQuery) CollectFields(ctx context.Context, satisfies ...string) (*UserQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {

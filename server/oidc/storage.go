@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -152,7 +154,7 @@ func (o *OIDCStorage) DeleteOpenIDConnectSession(c context.Context, authorizeCod
 	defer span.End()
 	// remove authorizecode from the db
 	stored_auth_code, err := o.client.OIDCAuthCode.Query().Where(oidcauthcode.AuthorizationCode(authorizeCode)).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	o.client.OIDCAuthCode.DeleteOne(stored_auth_code)
@@ -178,6 +180,8 @@ func (o *OIDCStorage) GetClient(c context.Context, id string) (fosite.Client, er
 		Scopes:         []string{"fosite", "openid", "photos", "offline"},
 	}, nil
 }
+
+// TODO? Doesnt seem to be in hydra
 
 func (o *OIDCStorage) SetTokenLifespans(clientID string, lifespans *fosite.ClientLifespanConfig) error {
 	fmt.Println("SetTokenLifespans RAN")
@@ -265,7 +269,9 @@ func (o *OIDCStorage) GetAuthorizeCodeSession(c context.Context, code string, _ 
 
 	sess, err := o.client.AuthCode.Query().Where(authcode.Code(code)).QuerySession().Only(ctx)
 	if err != nil {
-		//fmtf("%s\n", err)
+		if ent.IsNotFound(err) {
+			return nil, fosite.ErrNotFound
+		}
 		return nil, err
 	}
 	temp, _ := o.GetClient(ctx, "my-client")
@@ -281,7 +287,7 @@ func (o *OIDCStorage) InvalidateAuthorizeCodeSession(c context.Context, code str
 	ctx, span := tracer.Start(c, "InvalidateAuthorizeCodeSession")
 	defer span.End()
 	stored_authcode, err := o.client.AuthCode.Query().Where(authcode.Code(code)).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	_, err = stored_authcode.Update().SetActive(false).Save(ctx)
@@ -318,7 +324,9 @@ func (o *OIDCStorage) GetPKCERequestSession(c context.Context, code string, _ fo
 
 	sess, err := o.client.PKCE.Query().Where(pkce.Code(code)).QuerySession().Only(ctx)
 	if err != nil {
-		//fmtf("%s\n", err)
+		if ent.IsNotFound(err) {
+			return nil, fosite.ErrNotFound
+		}
 		return nil, err
 	}
 	temp, _ := o.GetClient(ctx, "my-client")
@@ -335,7 +343,7 @@ func (o *OIDCStorage) DeletePKCERequestSession(c context.Context, code string) e
 	ctx, span := tracer.Start(c, "DeletePKCERequestSession")
 	defer span.End()
 	stored_pkce, err := o.client.PKCE.Query().Where(pkce.Code(code)).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = o.client.PKCE.DeleteOne(stored_pkce).Exec(ctx)
@@ -372,6 +380,9 @@ func (o *OIDCStorage) GetAccessTokenSession(c context.Context, signature string,
 
 	sess, err := o.client.OAuthAccessToken.Query().Where(oauthaccesstoken.Signature(signature)).QuerySession().Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fosite.ErrNotFound
+		}
 		return nil, err
 	}
 	temp, _ := o.GetClient(ctx, "my-client")
@@ -389,7 +400,7 @@ func (o *OIDCStorage) DeleteAccessTokenSession(c context.Context, signature stri
 	defer span.End()
 	// remove authorizecode from the db
 	stored_access_token, err := o.client.OAuthAccessToken.Query().Where(oauthaccesstoken.Signature(signature)).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = o.client.OAuthAccessToken.DeleteOne(stored_access_token).Exec(ctx)
@@ -426,6 +437,9 @@ func (o *OIDCStorage) GetRefreshTokenSession(c context.Context, signature string
 
 	sess, err := o.client.OAuthRefreshToken.Query().Where(oauthrefreshtoken.Signature(signature)).QuerySession().Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fosite.ErrNotFound
+		}
 		return nil, err
 	}
 	temp, _ := o.GetClient(ctx, "my-client")
@@ -443,7 +457,7 @@ func (o *OIDCStorage) DeleteRefreshTokenSession(c context.Context, signature str
 	defer span.End()
 	// remove authorizecode from the db
 	stored_refresh_token, err := o.client.OAuthRefreshToken.Query().Where(oauthrefreshtoken.Signature(signature)).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = o.client.OAuthRefreshToken.DeleteOne(stored_refresh_token).Exec(ctx)
@@ -453,6 +467,9 @@ func (o *OIDCStorage) DeleteRefreshTokenSession(c context.Context, signature str
 	return nil
 }
 
+// TODO? Don't know that this is actually necessary seems like a sort of injection of a potentially useful function though not directly related to
+// correctly doing oidc/oauth
+
 func (o *OIDCStorage) Authenticate(_ context.Context, name string, secret string) error {
 	fmt.Println("Authenticate RAN")
 	return nil
@@ -460,11 +477,11 @@ func (o *OIDCStorage) Authenticate(_ context.Context, name string, secret string
 
 func (o *OIDCStorage) RevokeRefreshToken(c context.Context, requestID string) error {
 	fmt.Println("RevokeRefreshToken RAN")
-	ctx, span := tracer.Start(c, "DeleteRefreshTokenSession")
+	ctx, span := tracer.Start(c, "RevokeRefreshTokenn")
 	defer span.End()
 	// remove authorizecode from the db
 	stored_refresh_token, err := o.client.OAuthRefreshToken.Query().Where(oauthrefreshtoken.HasSessionWith(oauthsession.Request(requestID))).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = o.client.OAuthRefreshToken.DeleteOne(stored_refresh_token).Exec(ctx)
@@ -475,18 +492,19 @@ func (o *OIDCStorage) RevokeRefreshToken(c context.Context, requestID string) er
 }
 
 func (o *OIDCStorage) RevokeRefreshTokenMaybeGracePeriod(ctx context.Context, requestID string, signature string) error {
-	// no configuration option is available; grace period is not available with memory store
 	fmt.Println("RevokeRefreshTokenMaybeGracePeriod RAN")
-	return nil
+	// no configuration option is available; grace period is not available in my curernt version of store
+	// TODO?
+	return o.RevokeRefreshToken(ctx, requestID)
 }
 
-func (o *OIDCStorage) RevokeAccessToken(ctx context.Context, requestID string) error {
+func (o *OIDCStorage) RevokeAccessToken(c context.Context, requestID string) error {
 	fmt.Println("RevokeAccessToken RAN")
 	ctx, span := tracer.Start(c, "DeleteAccessTokenSession")
 	defer span.End()
 	// remove authorizecode from the db
 	stored_access_token, err := o.client.OAuthAccessToken.Query().Where(oauthaccesstoken.HasSessionWith(oauthsession.Request(requestID))).Only(ctx)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = o.client.OAuthAccessToken.DeleteOne(stored_access_token).Exec(ctx)
@@ -496,46 +514,93 @@ func (o *OIDCStorage) RevokeAccessToken(ctx context.Context, requestID string) e
 	return nil
 }
 
-func (o *OIDCStorage) GetPublicKey(ctx context.Context, issuer string, subject string, keyId string) (*jose.JSONWebKey, error) {
+func (o *OIDCStorage) GetPublicKey(c context.Context, issuer string, subject string, keyId string) (*jose.JSONWebKey, error) {
+	//https://github.com/ory/hydra/blob/c3af131e131e0e5f5584708a45c5c7e91d31bac9/persistence/sql/persister_jwk.go#L124
+	ctx, span := tracer.Start(c, "GetPublicKey")
+	defer span.End()
 	fmt.Println("GetPublicKey RAN")
-	return nil, nil
+	key, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Kid(keyId), publicjwk.Sid(subject))).Only(ctx)
+	if err != nil {
+		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
+	}
+	jwk := &jose.JSONWebKey{}
+	err = json.Unmarshal([]byte(key.Key), jwk)
+	if err != nil {
+		return nil, err
+	}
+
+	return jwk, nil
 }
-func (o *OIDCStorage) GetPublicKeys(ctx context.Context, issuer string, subject string) (*jose.JSONWebKeySet, error) {
+func (o *OIDCStorage) GetPublicKeys(c context.Context, issuer string, subject string) (*jose.JSONWebKeySet, error) {
+	ctx, span := tracer.Start(c, "GetPublicKeys")
+	defer span.End()
 	fmt.Println("GetPublicKeys RAN")
-	return nil, nil
+	keys, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Sid(subject))).All(ctx)
+	if err != nil {
+		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
+	}
+	jwks := []jose.JSONWebKey{}
+	for _, key := range keys {
+		jwk := &jose.JSONWebKey{}
+		err = json.Unmarshal([]byte(key.Key), jwk)
+		if err != nil {
+			return nil, err
+		}
+		jwks = append(jwks, *jwk)
+	}
+	jwkSet := &jose.JSONWebKeySet{Keys: jwks}
+
+	return jwkSet, nil
 }
 
-func (o *OIDCStorage) GetPublicKeyScopes(ctx context.Context, issuer string, subject string, keyId string) ([]string, error) {
+func (o *OIDCStorage) GetPublicKeyScopes(c context.Context, issuer string, subject string, keyId string) ([]string, error) {
+	ctx, span := tracer.Start(c, "GetPublicKeyScopes")
+	defer span.End()
 	fmt.Println("GetPublicKeyScopes RAN")
-	return nil, nil
+	key, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Kid(keyId), publicjwk.Sid(subject))).Only(ctx)
+	if err != nil {
+		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
+	}
+
+	return key.Scopes, nil
 }
 
-func (o *OIDCStorage) IsJWTUsed(ctx context.Context, jti string) (bool, error) {
+func (o *OIDCStorage) IsJWTUsed(c context.Context, jti string) (bool, error) {
 	fmt.Println("IsJWTUsed RAN")
+	ctx, span := tracer.Start(c, "IsJWTUsed")
+	defer span.End()
+
+	err := o.ClientAssertionJWTValid(ctx, jti)
+	if err != nil {
+		return true, nil
+	}
+
 	return false, nil
 }
 
 func (o *OIDCStorage) MarkJWTUsedForTime(ctx context.Context, jti string, exp time.Time) error {
 	fmt.Println("MarkJWTUsedForTime RAN")
-	return nil
+	return o.SetClientAssertionJWT(ctx, jti, exp)
 }
+
+// TODO? PARSESSIONTHINGS?
 
 // CreatePARSession stores the pushed authorization request context. The requestURI is used to derive the key.
-func (o *OIDCStorage) CreatePARSession(ctx context.Context, requestURI string, request fosite.AuthorizeRequester) error {
-	fmt.Println("CreatePARSession RAN")
-	fmt.Printf("%#v", request)
-	return nil
-}
+// func (o *OIDCStorage) CreatePARSession(ctx context.Context, requestURI string, request fosite.AuthorizeRequester) error {
+// 	fmt.Println("CreatePARSession RAN")
+// 	fmt.Printf("%#v", request)
+// 	return nil
+// }
 
-// GetPARSession gets the push authorization request context. If the request is nil, a new request object
-// is created. Otherwise, the same object is updated.
-func (o *OIDCStorage) GetPARSession(ctx context.Context, requestURI string) (fosite.AuthorizeRequester, error) {
-	fmt.Println("GetPARSession RAN")
-	return nil, nil
-}
+// // GetPARSession gets the push authorization request context. If the request is nil, a new request object
+// // is created. Otherwise, the same object is updated.
+// func (o *OIDCStorage) GetPARSession(ctx context.Context, requestURI string) (fosite.AuthorizeRequester, error) {
+// 	fmt.Println("GetPARSession RAN")
+// 	return nil, nil
+// }
 
-// DeletePARSession deletes the context.
-func (o *OIDCStorage) DeletePARSession(ctx context.Context, requestURI string) (err error) {
-	fmt.Println("DeletePARSession RAN")
-	return nil
-}
+// // DeletePARSession deletes the context.
+// func (o *OIDCStorage) DeletePARSession(ctx context.Context, requestURI string) (err error) {
+// 	fmt.Println("DeletePARSession RAN")
+// 	return nil
+// }

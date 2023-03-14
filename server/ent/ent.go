@@ -20,6 +20,8 @@ import (
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
+	"github.com/koalatea/authserver/server/ent/publicjwkset"
 	"github.com/koalatea/authserver/server/ent/user"
 )
 
@@ -51,6 +53,8 @@ func columnChecker(table string) func(string) error {
 		oauthsession.Table:      oauthsession.ValidColumn,
 		oidcauthcode.Table:      oidcauthcode.ValidColumn,
 		pkce.Table:              pkce.ValidColumn,
+		publicjwk.Table:         publicjwk.ValidColumn,
+		publicjwkset.Table:      publicjwkset.ValidColumn,
 		user.Table:              user.ValidColumn,
 	}
 	check, ok := checks[table]

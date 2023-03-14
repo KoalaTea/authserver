@@ -19,6 +19,7 @@ import (
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
 	"github.com/koalatea/authserver/server/ent/pkce"
 	"github.com/koalatea/authserver/server/ent/predicate"
+	"github.com/koalatea/authserver/server/ent/publicjwk"
 	"github.com/koalatea/authserver/server/ent/user"
 
 	"entgo.io/ent"
@@ -43,6 +44,8 @@ const (
 	TypeOAuthSession      = "OAuthSession"
 	TypeOIDCAuthCode      = "OIDCAuthCode"
 	TypePKCE              = "PKCE"
+	TypePublicJWK         = "PublicJWK"
+	TypePublicJWKSet      = "PublicJWKSet"
 	TypeUser              = "User"
 )
 
@@ -4597,6 +4600,798 @@ func (m *PKCEMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown PKCE edge %s", name)
+}
+
+// PublicJWKMutation represents an operation that mutates the PublicJWK nodes in the graph.
+type PublicJWKMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	sid           *string
+	kid           *string
+	key           *string
+	issuer        *string
+	scopes        *[]string
+	appendscopes  []string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*PublicJWK, error)
+	predicates    []predicate.PublicJWK
+}
+
+var _ ent.Mutation = (*PublicJWKMutation)(nil)
+
+// publicjwkOption allows management of the mutation configuration using functional options.
+type publicjwkOption func(*PublicJWKMutation)
+
+// newPublicJWKMutation creates new mutation for the PublicJWK entity.
+func newPublicJWKMutation(c config, op Op, opts ...publicjwkOption) *PublicJWKMutation {
+	m := &PublicJWKMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePublicJWK,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPublicJWKID sets the ID field of the mutation.
+func withPublicJWKID(id int) publicjwkOption {
+	return func(m *PublicJWKMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PublicJWK
+		)
+		m.oldValue = func(ctx context.Context) (*PublicJWK, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PublicJWK.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPublicJWK sets the old PublicJWK of the mutation.
+func withPublicJWK(node *PublicJWK) publicjwkOption {
+	return func(m *PublicJWKMutation) {
+		m.oldValue = func(context.Context) (*PublicJWK, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PublicJWKMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PublicJWKMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PublicJWKMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PublicJWKMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PublicJWK.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetSid sets the "sid" field.
+func (m *PublicJWKMutation) SetSid(s string) {
+	m.sid = &s
+}
+
+// Sid returns the value of the "sid" field in the mutation.
+func (m *PublicJWKMutation) Sid() (r string, exists bool) {
+	v := m.sid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSid returns the old "sid" field's value of the PublicJWK entity.
+// If the PublicJWK object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicJWKMutation) OldSid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSid: %w", err)
+	}
+	return oldValue.Sid, nil
+}
+
+// ResetSid resets all changes to the "sid" field.
+func (m *PublicJWKMutation) ResetSid() {
+	m.sid = nil
+}
+
+// SetKid sets the "kid" field.
+func (m *PublicJWKMutation) SetKid(s string) {
+	m.kid = &s
+}
+
+// Kid returns the value of the "kid" field in the mutation.
+func (m *PublicJWKMutation) Kid() (r string, exists bool) {
+	v := m.kid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKid returns the old "kid" field's value of the PublicJWK entity.
+// If the PublicJWK object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicJWKMutation) OldKid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKid: %w", err)
+	}
+	return oldValue.Kid, nil
+}
+
+// ResetKid resets all changes to the "kid" field.
+func (m *PublicJWKMutation) ResetKid() {
+	m.kid = nil
+}
+
+// SetKey sets the "key" field.
+func (m *PublicJWKMutation) SetKey(s string) {
+	m.key = &s
+}
+
+// Key returns the value of the "key" field in the mutation.
+func (m *PublicJWKMutation) Key() (r string, exists bool) {
+	v := m.key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKey returns the old "key" field's value of the PublicJWK entity.
+// If the PublicJWK object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicJWKMutation) OldKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKey: %w", err)
+	}
+	return oldValue.Key, nil
+}
+
+// ResetKey resets all changes to the "key" field.
+func (m *PublicJWKMutation) ResetKey() {
+	m.key = nil
+}
+
+// SetIssuer sets the "issuer" field.
+func (m *PublicJWKMutation) SetIssuer(s string) {
+	m.issuer = &s
+}
+
+// Issuer returns the value of the "issuer" field in the mutation.
+func (m *PublicJWKMutation) Issuer() (r string, exists bool) {
+	v := m.issuer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIssuer returns the old "issuer" field's value of the PublicJWK entity.
+// If the PublicJWK object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicJWKMutation) OldIssuer(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIssuer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIssuer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIssuer: %w", err)
+	}
+	return oldValue.Issuer, nil
+}
+
+// ResetIssuer resets all changes to the "issuer" field.
+func (m *PublicJWKMutation) ResetIssuer() {
+	m.issuer = nil
+}
+
+// SetScopes sets the "scopes" field.
+func (m *PublicJWKMutation) SetScopes(s []string) {
+	m.scopes = &s
+	m.appendscopes = nil
+}
+
+// Scopes returns the value of the "scopes" field in the mutation.
+func (m *PublicJWKMutation) Scopes() (r []string, exists bool) {
+	v := m.scopes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopes returns the old "scopes" field's value of the PublicJWK entity.
+// If the PublicJWK object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicJWKMutation) OldScopes(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopes: %w", err)
+	}
+	return oldValue.Scopes, nil
+}
+
+// AppendScopes adds s to the "scopes" field.
+func (m *PublicJWKMutation) AppendScopes(s []string) {
+	m.appendscopes = append(m.appendscopes, s...)
+}
+
+// AppendedScopes returns the list of values that were appended to the "scopes" field in this mutation.
+func (m *PublicJWKMutation) AppendedScopes() ([]string, bool) {
+	if len(m.appendscopes) == 0 {
+		return nil, false
+	}
+	return m.appendscopes, true
+}
+
+// ResetScopes resets all changes to the "scopes" field.
+func (m *PublicJWKMutation) ResetScopes() {
+	m.scopes = nil
+	m.appendscopes = nil
+}
+
+// Where appends a list predicates to the PublicJWKMutation builder.
+func (m *PublicJWKMutation) Where(ps ...predicate.PublicJWK) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *PublicJWKMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (PublicJWK).
+func (m *PublicJWKMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PublicJWKMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.sid != nil {
+		fields = append(fields, publicjwk.FieldSid)
+	}
+	if m.kid != nil {
+		fields = append(fields, publicjwk.FieldKid)
+	}
+	if m.key != nil {
+		fields = append(fields, publicjwk.FieldKey)
+	}
+	if m.issuer != nil {
+		fields = append(fields, publicjwk.FieldIssuer)
+	}
+	if m.scopes != nil {
+		fields = append(fields, publicjwk.FieldScopes)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PublicJWKMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case publicjwk.FieldSid:
+		return m.Sid()
+	case publicjwk.FieldKid:
+		return m.Kid()
+	case publicjwk.FieldKey:
+		return m.Key()
+	case publicjwk.FieldIssuer:
+		return m.Issuer()
+	case publicjwk.FieldScopes:
+		return m.Scopes()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PublicJWKMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case publicjwk.FieldSid:
+		return m.OldSid(ctx)
+	case publicjwk.FieldKid:
+		return m.OldKid(ctx)
+	case publicjwk.FieldKey:
+		return m.OldKey(ctx)
+	case publicjwk.FieldIssuer:
+		return m.OldIssuer(ctx)
+	case publicjwk.FieldScopes:
+		return m.OldScopes(ctx)
+	}
+	return nil, fmt.Errorf("unknown PublicJWK field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicJWKMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case publicjwk.FieldSid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSid(v)
+		return nil
+	case publicjwk.FieldKid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKid(v)
+		return nil
+	case publicjwk.FieldKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKey(v)
+		return nil
+	case publicjwk.FieldIssuer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIssuer(v)
+		return nil
+	case publicjwk.FieldScopes:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PublicJWK field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PublicJWKMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PublicJWKMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicJWKMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PublicJWK numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PublicJWKMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PublicJWKMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PublicJWKMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown PublicJWK nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PublicJWKMutation) ResetField(name string) error {
+	switch name {
+	case publicjwk.FieldSid:
+		m.ResetSid()
+		return nil
+	case publicjwk.FieldKid:
+		m.ResetKid()
+		return nil
+	case publicjwk.FieldKey:
+		m.ResetKey()
+		return nil
+	case publicjwk.FieldIssuer:
+		m.ResetIssuer()
+		return nil
+	case publicjwk.FieldScopes:
+		m.ResetScopes()
+		return nil
+	}
+	return fmt.Errorf("unknown PublicJWK field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PublicJWKMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PublicJWKMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PublicJWKMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PublicJWKMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PublicJWKMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PublicJWKMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PublicJWKMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PublicJWK unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PublicJWKMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PublicJWK edge %s", name)
+}
+
+// PublicJWKSetMutation represents an operation that mutates the PublicJWKSet nodes in the graph.
+type PublicJWKSetMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*PublicJWKSet, error)
+	predicates    []predicate.PublicJWKSet
+}
+
+var _ ent.Mutation = (*PublicJWKSetMutation)(nil)
+
+// publicjwksetOption allows management of the mutation configuration using functional options.
+type publicjwksetOption func(*PublicJWKSetMutation)
+
+// newPublicJWKSetMutation creates new mutation for the PublicJWKSet entity.
+func newPublicJWKSetMutation(c config, op Op, opts ...publicjwksetOption) *PublicJWKSetMutation {
+	m := &PublicJWKSetMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePublicJWKSet,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPublicJWKSetID sets the ID field of the mutation.
+func withPublicJWKSetID(id int) publicjwksetOption {
+	return func(m *PublicJWKSetMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PublicJWKSet
+		)
+		m.oldValue = func(ctx context.Context) (*PublicJWKSet, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PublicJWKSet.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPublicJWKSet sets the old PublicJWKSet of the mutation.
+func withPublicJWKSet(node *PublicJWKSet) publicjwksetOption {
+	return func(m *PublicJWKSetMutation) {
+		m.oldValue = func(context.Context) (*PublicJWKSet, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PublicJWKSetMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PublicJWKSetMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PublicJWKSetMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PublicJWKSetMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PublicJWKSet.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// Where appends a list predicates to the PublicJWKSetMutation builder.
+func (m *PublicJWKSetMutation) Where(ps ...predicate.PublicJWKSet) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *PublicJWKSetMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (PublicJWKSet).
+func (m *PublicJWKSetMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PublicJWKSetMutation) Fields() []string {
+	fields := make([]string, 0, 0)
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PublicJWKSetMutation) Field(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PublicJWKSetMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, fmt.Errorf("unknown PublicJWKSet field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicJWKSetMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PublicJWKSet field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PublicJWKSetMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PublicJWKSetMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicJWKSetMutation) AddField(name string, value ent.Value) error {
+	return fmt.Errorf("unknown PublicJWKSet numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PublicJWKSetMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PublicJWKSetMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PublicJWKSetMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown PublicJWKSet nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PublicJWKSetMutation) ResetField(name string) error {
+	return fmt.Errorf("unknown PublicJWKSet field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PublicJWKSetMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PublicJWKSetMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PublicJWKSetMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PublicJWKSetMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PublicJWKSetMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PublicJWKSetMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PublicJWKSetMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PublicJWKSet unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PublicJWKSetMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PublicJWKSet edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.
