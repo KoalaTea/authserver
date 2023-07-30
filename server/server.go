@@ -6,9 +6,12 @@ import (
 	"net/http"
 
 	"entgo.io/contrib/entgql"
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/XSAM/otelsql"
 	"github.com/koalatea/authserver/server/auth"
 	"github.com/koalatea/authserver/server/certificates"
 	"github.com/koalatea/authserver/server/ent"
@@ -36,18 +39,19 @@ func (srv *Server) Run(ctx context.Context) error {
 	router := http.NewServeMux()
 	// can I register a router in a nother router? can I middleware the router?
 
-	// db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// drv := entsql.OpenDB(dialect.SQLite, db)
-	// graph := ent.NewClient(ent.Driver(drv))
-
-	graph, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1") // TODO real graph db setup
+	// Do not know if this actually does some tracing stuff or not. XSAM/otelsql though
+	db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	if err != nil {
-		return err
+		panic(err)
 	}
+
+	drv := entsql.OpenDB(dialect.SQLite, db)
+	graph := ent.NewClient(ent.Driver(drv))
+
+	// graph, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1") // TODO real graph db setup
+	// if err != nil {
+	// 	return err
+	// }
 	if err = graph.Schema.Create(
 		context.Background(),
 		migrate.WithGlobalUniqueID(true),
