@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/koalatea/authserver/server/auth"
 	"github.com/koalatea/authserver/server/ent/enttest"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ory/fosite"
@@ -32,7 +33,8 @@ func TestGettingIDToken(t *testing.T) {
 
 	provider := NewOIDCProvider(graph)
 	router := http.NewServeMux()
-	provider.RegisterHandlers(router)
+	graph.User.Create().SetName("koalateahardcoded").SetSessionToken("123").SetOAuthID("abc").Save(context.Background())
+	provider.RegisterHandlers(router, auth.HandleUser(graph))
 	w := httptest.NewRecorder()
 
 	// these values are hardcoded for testing

@@ -7,7 +7,7 @@ func TestClientCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	err = provider.CreateCertificate()
+	_, err = provider.CreateCertificate()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

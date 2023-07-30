@@ -6,14 +6,13 @@ package graphql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/koalatea/authserver/server/graphql/generated"
 )
 
 // RequestCert is the resolver for the requestCert field.
 func (r *mutationResolver) RequestCert(ctx context.Context, target string, pubKey string) (string, error) {
-	panic(fmt.Errorf("not implemented: RequestCert - requestCert"))
+	return r.certProvider.CreateCertificate()
 }
 
 // Mutation returns generated.MutationResolver implementation.

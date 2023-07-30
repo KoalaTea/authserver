@@ -3,9 +3,13 @@ package auth
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/koalatea/authserver/server/ent"
+	"github.com/koalatea/authserver/server/ent/user"
 )
+
+// TODO: add unauthenticated handler to force admin user
 
 // ErrInvalidViewer occurs when an invalid type of viewer is retrieved from the context.
 // ErrNoViewer occurs when no viewer can be retrieved from the context.
@@ -43,4 +47,23 @@ func UserFromContext(ctx context.Context) (*ent.User, error) {
 // NewContext returns a copy of parent context with the given Viewer attached with it.
 func NewContext(parent context.Context, v Viewer) context.Context {
 	return context.WithValue(parent, ctxKey{}, v)
+}
+
+func HandleUser(client *ent.Client) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// sess := r.Header.Get("session")
+			sess := "123"
+			u, err := client.User.Query().Where(user.SessionToken(sess)).Only(r.Context())
+			if err != nil { // user doesnt exist
+				fmt.Printf("NO USER\n")
+				fmt.Printf("error getting user %s\n", err)
+				next.ServeHTTP(w, r)
+				return
+			}
+			fmt.Printf("USER\n")
+			rWithUser := r.WithContext(NewContext(r.Context(), u))
+			next.ServeHTTP(w, rWithUser)
+		})
+	}
 }

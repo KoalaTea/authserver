@@ -171,19 +171,18 @@ func (o *OIDCStorage) GetClient(c context.Context, id string) (fosite.Client, er
 	_, span := tracer.Start(c, "GetClient")
 	defer span.End()
 	return &fosite.DefaultClient{
-		ID:             id,
-		Secret:         []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`),            // = "foobar"
-		RotatedSecrets: [][]byte{[]byte(`$2y$10$X51gLxUQJ.hGw1epgHTE5u0bt64xM0COU7K9iAp.OFg8p2pUd.1zC `)}, // = "foobaz",
-		RedirectURIs:   []string{"http://localhost:8080/callback"},
-		ResponseTypes:  []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
-		GrantTypes:     []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
-		Scopes:         []string{"fosite", "openid", "photos", "offline"},
+		ID:     id,
+		Secret: []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`), // = "foobar"
+		// RotatedSecrets: [][]byte{[]byte(`$2y$10$X51gLxUQJ.hGw1epgHTE5u0bt64xM0COU7K9iAp.OFg8p2pUd.1zC `)}, // = "foobaz",
+		RedirectURIs:  []string{"http://localhost:8080/callback"},
+		ResponseTypes: []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
+		GrantTypes:    []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
+		Scopes:        []string{"fosite", "openid", "photos", "offline"},
 	}, nil
 }
 
-// TODO? Doesnt seem to be in hydra
-
 func (o *OIDCStorage) SetTokenLifespans(clientID string, lifespans *fosite.ClientLifespanConfig) error {
+	// TODO? Doesnt seem to be in hydra
 	fmt.Println("SetTokenLifespans RAN")
 	fmt.Printf("%#v", lifespans)
 	return fosite.ErrNotFound
@@ -235,12 +234,11 @@ func (o *OIDCStorage) CreateAuthorizeCodeSession(c context.Context, code string,
 	fmt.Println("CreateAuthorizeCodeSession RAN")
 	ctx, span := tracer.Start(c, "CreateAuthorizeCodeSession")
 	defer span.End()
-	fmt.Printf("%s\n", code)
 
-	session := req.GetSession().(*openid.DefaultSession)
-	fmt.Printf("%#v\n", session)
-	fmt.Printf("%#v\n", session.Claims)
-	fmt.Printf("%#v\n", session.Headers)
+	// session := req.GetSession().(*openid.DefaultSession)
+	// fmt.Printf("%#v\n", session)
+	// fmt.Printf("%#v\n", session.Claims)
+	// fmt.Printf("%#v\n", session.Headers)
 	// AccessTokenHash:"", AuthenticationContextClassReference:"", AuthenticationMethodsReferences:[]string(nil), CodeHash:"", Extra:map[string]interface {}(nil)}
 	// JTI:"", Nonce:"",
 	// session.headers: &jwt.Headers{Extra:map[string]interface {}{}}
@@ -255,7 +253,6 @@ func (o *OIDCStorage) CreateAuthorizeCodeSession(c context.Context, code string,
 		SetSession(OAuthSession).
 		Save(ctx)
 	if err != nil {
-		//fmtf("%s\n", err)
 		return err
 	}
 	return nil
@@ -470,14 +467,16 @@ func (o *OIDCStorage) DeleteRefreshTokenSession(c context.Context, signature str
 // TODO? Don't know that this is actually necessary seems like a sort of injection of a potentially useful function though not directly related to
 // correctly doing oidc/oauth
 
-func (o *OIDCStorage) Authenticate(_ context.Context, name string, secret string) error {
+func (o *OIDCStorage) Authenticate(c context.Context, name string, secret string) error {
+	_, span := tracer.Start(c, "Authenticate")
+	defer span.End()
 	fmt.Println("Authenticate RAN")
 	return nil
 }
 
 func (o *OIDCStorage) RevokeRefreshToken(c context.Context, requestID string) error {
 	fmt.Println("RevokeRefreshToken RAN")
-	ctx, span := tracer.Start(c, "RevokeRefreshTokenn")
+	ctx, span := tracer.Start(c, "RevokeRefreshToken")
 	defer span.End()
 	// remove authorizecode from the db
 	stored_refresh_token, err := o.client.OAuthRefreshToken.Query().Where(oauthrefreshtoken.HasSessionWith(oauthsession.Request(requestID))).Only(ctx)
@@ -566,9 +565,9 @@ func (o *OIDCStorage) GetPublicKeyScopes(c context.Context, issuer string, subje
 }
 
 func (o *OIDCStorage) IsJWTUsed(c context.Context, jti string) (bool, error) {
-	fmt.Println("IsJWTUsed RAN")
 	ctx, span := tracer.Start(c, "IsJWTUsed")
 	defer span.End()
+	fmt.Println("IsJWTUsed RAN")
 
 	err := o.ClientAssertionJWTValid(ctx, jti)
 	if err != nil {
@@ -578,7 +577,9 @@ func (o *OIDCStorage) IsJWTUsed(c context.Context, jti string) (bool, error) {
 	return false, nil
 }
 
-func (o *OIDCStorage) MarkJWTUsedForTime(ctx context.Context, jti string, exp time.Time) error {
+func (o *OIDCStorage) MarkJWTUsedForTime(c context.Context, jti string, exp time.Time) error {
+	ctx, span := tracer.Start(c, "MarkJWTUsedForTime")
+	defer span.End()
 	fmt.Println("MarkJWTUsedForTime RAN")
 	return o.SetClientAssertionJWT(ctx, jti, exp)
 }

@@ -8,15 +8,17 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"os"
 	"time"
 )
 
-type CAProvider struct {
+type CertProvider struct {
 	ca  *x509.Certificate
 	key *rsa.PrivateKey
 }
 
-func NewCertProvider() (*CAProvider, error) {
+// TODO put certs in common dir or load certs from configuration
+func NewCertProvider() (*CertProvider, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -53,18 +55,20 @@ func NewCertProvider() (*CAProvider, error) {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
+	os.WriteFile("authserverCA.pem", caPEM.Bytes(), 0644)
 
 	caPrivKeyPEM := new(bytes.Buffer)
 	pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	})
+	os.WriteFile("authserverCAPrivKey.pem", caPrivKeyPEM.Bytes(), 0644)
 
-	provider := &CAProvider{ca: ca, key: caPrivKey}
+	provider := &CertProvider{ca: ca, key: caPrivKey}
 	return provider, nil
 }
 
-func (p *CAProvider) CreateCertificate() error {
+func (p *CertProvider) CreateCertificate() (string, error) {
 	// create cert to sign
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
@@ -81,13 +85,13 @@ func (p *CAProvider) CreateCertificate() error {
 	// Create private key for cert
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// sign cert with the CA
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, &certPrivKey.PublicKey, p.key)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// PEMENCODE Cert
@@ -103,7 +107,7 @@ func (p *CAProvider) CreateCertificate() error {
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	})
 
-	return nil
+	return certPEM.String(), nil
 }
 
 // Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine

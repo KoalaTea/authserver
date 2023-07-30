@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/koalatea/authserver/server/auth"
 	"github.com/ory/fosite"
 )
 
@@ -98,6 +99,11 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Now that the user is authorized, we set up a session:
 	mySessionData := newSession("peter")
+	user, err := auth.UserFromContext(req.Context())
+	if err == nil {
+		fmt.Printf("%+v\n\n", user)
+		mySessionData.Username = user.Name
+	}
 
 	// If you're using the JWT strategy, there's currently no distinction between access token and authorize code claims.
 	// Therefore, you both access token and authorize code will have the same "exp" claim. If this is something you

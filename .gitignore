@@ -15,3 +15,9 @@ build/**
 
 # metrics output for testing
 traces.txt
+server/server
+!server/nopush/README.md
+server/nopush
+authServerCA.pem
+authServerCAPrivKey.pem
+cmd/devtools/bootstrap/bootstrap

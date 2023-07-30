@@ -23,14 +23,14 @@ type OIDCProvider struct {
 	oauth2      fosite.OAuth2Provider
 }
 
-func (o *OIDCProvider) RegisterHandlers(router *http.ServeMux) {
+func (o *OIDCProvider) RegisterHandlers(router *http.ServeMux, chain func(http.Handler) http.Handler) {
 	// Set up oauth2 endpoints. You could also use gorilla/mux or any other router.
-	router.Handle("/oidc/auth", otelhttp.NewHandler(http.HandlerFunc(o.authEndpoint), "/oidc/auth"))
-	router.Handle("/oidc/token", otelhttp.NewHandler(http.HandlerFunc(o.tokenEndpoint), "/oidc/token"))
+	router.Handle("/oidc/auth", otelhttp.NewHandler(chain(http.HandlerFunc(o.authEndpoint)), "/oidc/auth"))
+	router.Handle("/oidc/token", otelhttp.NewHandler(chain(http.HandlerFunc(o.tokenEndpoint)), "/oidc/token"))
 
 	// revoke tokens
-	router.Handle("/oidc/revoke", otelhttp.NewHandler(http.HandlerFunc(o.revokeEndpoint), "/oidc/revoke"))
-	router.Handle("/oidc/introspect", otelhttp.NewHandler(http.HandlerFunc(o.introspectionEndpoint), "/oidc/introspect"))
+	router.Handle("/oidc/revoke", otelhttp.NewHandler(chain(http.HandlerFunc(o.revokeEndpoint)), "/oidc/revoke"))
+	router.Handle("/oidc/introspect", otelhttp.NewHandler(chain(http.HandlerFunc(o.introspectionEndpoint)), "/oidc/introspect"))
 
 	// Helper functions for manual testing that things work
 	o.RegisterTestHandlers(router)
