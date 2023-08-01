@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type config struct {
+type FileConfig struct {
 	Certificates struct {
 		CA        string `json:"ca"`
 		CAPrivKey string `json:"ca_priv_key"`
@@ -18,14 +18,14 @@ type config struct {
 	} `json:"oauth"`
 }
 
-type Config {
-	CA string
+type Config struct {
+	CA        string
 	CAPrivKey string
-	ClientID string
+	ClientID  string
 	SecretKey string
 }
 
-func get_config(fileName string) *Config {
+func getConfig(fileName string) *Config {
 	f, err := os.Open(fileName)
 	if err != nil {
 		fmt.Errorf("%w", err)
@@ -37,13 +37,13 @@ func get_config(fileName string) *Config {
 		fmt.Errorf("%w", err)
 	}
 
-	cfg := &Config{}
+	cfg := &FileConfig{}
 	err = json.Unmarshal(jsonBytes, cfg)
 	if err != nil {
 		fmt.Errorf("%w", err)
 	}
 
-	f, err = os.Open(cfg.Oauth.ClientID)
+	f, err = os.Open(cfg.OAuth.ClientID)
 	if err != nil {
 		fmt.Errorf("%w", err)
 	}
@@ -54,7 +54,7 @@ func get_config(fileName string) *Config {
 	}
 	clientID := string(clientIDBytes)
 
-	f, err = os.Open(cfg.Oauth.SecretKey)
+	f, err = os.Open(cfg.OAuth.SecretKey)
 	if err != nil {
 		fmt.Errorf("%w", err)
 	}

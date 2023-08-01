@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 	"net/http"
 
@@ -17,8 +19,11 @@ import (
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/koalatea/authserver/server/ent/migrate"
 	"github.com/koalatea/authserver/server/graphql"
+	"github.com/koalatea/authserver/server/oauthclient"
 	"github.com/koalatea/authserver/server/oidc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 type Server struct {
@@ -36,7 +41,7 @@ func newServer(ctx context.Context, options ...func(*Server)) *Server {
 func (srv *Server) Run(ctx context.Context) error {
 	//https://github.com/ory/hydra/blob/c3af131e131e0e5f5584708a45c5c7e91d31bac9/persistence/sql/persister_oauth2.go#L210 look at this for some inspiration
 	// largely wondering why seperate right now
-	cfg := get_config("server/nopush/config.json")
+	cfg := getConfig("server/nopush/config.json")
 	router := http.NewServeMux()
 	// can I register a router in a nother router? can I middleware the router?
 
@@ -79,10 +84,9 @@ func (srv *Server) Run(ctx context.Context) error {
 			server.ServeHTTP(w, req)
 		}), "/graphql")))
 
-	
 	oauth := oauth2.Config{
-		ClientID:     cfg.OAuth.ClientID,
-		ClientSecret: cfg.OAuth.SecretKey,
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.SecretKey,
 		RedirectURL:  "http://localhost:8080/oauth/authorize",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.profile",

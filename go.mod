@@ -24,6 +24,8 @@ require (
 
 require (
 	ariga.io/atlas v0.7.3-0.20221011160332-3ca609863edd // indirect
+	cloud.google.com/go/compute v1.19.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
