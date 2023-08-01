@@ -32,8 +32,13 @@ User management from the ui
 
 Networking control
 - setup authenticated network access
-    - https://www.wi-fiplanet.com/how-to-use-freeradius-for-wi-fi-authentication-part-1/
+    - https://turunen.ee/setting-up-radius-on-a-raspberry-pi/
     - freeradius
 - setup system tracking with certs
 - setup network policies for controlling access to each system
     - istio as the control plane and envoy as the proxy istio passes configuration info to the proxies
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/assembly_setting-up-an-802-1x-network-authentication-service-for-lan-clients-using-hostapd-with-freeradius-backend_configuring-and-managing-networking
+- https://networkradius.com/articles/2021/10/25/EAP-production-certificates.html
+
+
+- setup nas to have the certificate, for the user to download, custom proxy code envoy + basic webserver. Send from the auth server on the HSM pi.

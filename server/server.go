@@ -36,6 +36,7 @@ func newServer(ctx context.Context, options ...func(*Server)) *Server {
 func (srv *Server) Run(ctx context.Context) error {
 	//https://github.com/ory/hydra/blob/c3af131e131e0e5f5584708a45c5c7e91d31bac9/persistence/sql/persister_oauth2.go#L210 look at this for some inspiration
 	// largely wondering why seperate right now
+	cfg := get_config("server/nopush/config.json")
 	router := http.NewServeMux()
 	// can I register a router in a nother router? can I middleware the router?
 
@@ -77,6 +78,20 @@ func (srv *Server) Run(ctx context.Context) error {
 			w.Header().Set("Access-Control-Allow-Headers", "*")
 			server.ServeHTTP(w, req)
 		}), "/graphql")))
+
+	
+	oauth := oauth2.Config{
+		ClientID:     cfg.OAuth.ClientID,
+		ClientSecret: cfg.OAuth.SecretKey,
+		RedirectURL:  "http://localhost:8080/oauth/authorize",
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+		Endpoint: google.Endpoint,
+	}
+	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+	router.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey))
+	router.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"))
 
 	oidcProvider := oidc.NewOIDCProvider(graph)
 	oidcProvider.RegisterHandlers(router, auth.HandleUser(graph))
