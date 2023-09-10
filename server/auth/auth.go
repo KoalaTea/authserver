@@ -7,6 +7,7 @@ import (
 
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/koalatea/authserver/server/ent/user"
+	"github.com/koalatea/authserver/server/oauthclient"
 )
 
 // TODO: add unauthenticated handler to force admin user
@@ -52,8 +53,12 @@ func NewContext(parent context.Context, v Viewer) context.Context {
 func HandleUser(client *ent.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// sess := r.Header.Get("session")
-			sess := "123"
+			sessCookie, err := r.Cookie(oauthclient.SessionCookieName)
+			if err != nil {
+				fmt.Printf("Errored getting the auth cookie from request: %s\n", err)
+			}
+			sess := sessCookie.Value
+			// sess := "123"
 			u, err := client.User.Query().Where(user.SessionToken(sess)).Only(r.Context())
 			if err != nil { // user doesnt exist
 				fmt.Printf("NO USER\n")

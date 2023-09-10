@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 )
@@ -14,7 +15,7 @@ type FileConfig struct {
 	} `json:"certificates"`
 	OAuth struct {
 		ClientID  string `json:"client_id"`
-		SecretKey string `json:"secret_key`
+		SecretKey string `json:"secret_key"`
 	} `json:"oauth"`
 }
 
@@ -48,7 +49,7 @@ func getConfig(fileName string) *Config {
 		fmt.Errorf("%w", err)
 	}
 	defer f.Close()
-	clientIDBytes, err := ioutil.ReadAll(f)
+	clientIDBytes, err := io.ReadAll(f)
 	if err != nil {
 		fmt.Errorf("%w", err)
 	}
@@ -59,7 +60,7 @@ func getConfig(fileName string) *Config {
 		fmt.Errorf("%w", err)
 	}
 	defer f.Close()
-	secretKeyBytes, err := ioutil.ReadAll(f)
+	secretKeyBytes, err := io.ReadAll(f)
 	if err != nil {
 		fmt.Errorf("%w", err)
 	}

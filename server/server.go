@@ -64,10 +64,10 @@ func (srv *Server) Run(ctx context.Context) error {
 	); err != nil {
 		fmt.Printf("failed to initialize graph schema: %w", err)
 	}
-	_, err = graph.User.Create().SetName("koalateahardcoded").SetOAuthID("idc").SetSessionToken("123").Save(context.Background()) // TODO real default user/setup
-	if err != nil {
-		fmt.Printf("Failed to create default user: %s", err)
-	}
+	// _, err = graph.User.Create().SetName("koalateahardcoded").SetOAuthID("idc").SetSessionToken("123").Save(context.Background()) // TODO real default user/setup
+	// if err != nil {
+	// 	fmt.Printf("Failed to create default user: %s", err)
+	// }
 	certProvider, err := certificates.NewCertProvider()
 	if err != nil {
 		fmt.Printf("failed to initialize certProvider")
@@ -94,6 +94,9 @@ func (srv *Server) Run(ctx context.Context) error {
 		Endpoint: google.Endpoint,
 	}
 	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		fmt.Printf("Failed to generate keys for usage in oauth flow: %s", err)
+	}
 	router.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey))
 	router.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"))
 
