@@ -46,7 +46,9 @@ func (srv *Server) Run(ctx context.Context) error {
 	// can I register a router in a nother router? can I middleware the router?
 
 	// Do not know if this actually does some tracing stuff or not. XSAM/otelsql though
-	db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	// db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	db, err := otelsql.Open("sqlite3", "file:server/nopush/db.sql?_fk=1")
+
 	if err != nil {
 		panic(err)
 	}
@@ -64,10 +66,6 @@ func (srv *Server) Run(ctx context.Context) error {
 	); err != nil {
 		fmt.Printf("failed to initialize graph schema: %w", err)
 	}
-	// _, err = graph.User.Create().SetName("koalateahardcoded").SetOAuthID("idc").SetSessionToken("123").Save(context.Background()) // TODO real default user/setup
-	// if err != nil {
-	// 	fmt.Printf("Failed to create default user: %s", err)
-	// }
 	certProvider, err := certificates.NewCertProvider()
 	if err != nil {
 		fmt.Printf("failed to initialize certProvider")

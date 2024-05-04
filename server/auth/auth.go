@@ -56,6 +56,9 @@ func HandleUser(client *ent.Client) func(http.Handler) http.Handler {
 			sessCookie, err := r.Cookie(oauthclient.SessionCookieName)
 			if err != nil {
 				fmt.Printf("Errored getting the auth cookie from request: %s\n", err)
+				// TODO return 401 here? redirect to auth maybe with a way back?
+				next.ServeHTTP(w, r)
+				return
 			}
 			sess := sessCookie.Value
 			// sess := "123"

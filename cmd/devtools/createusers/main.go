@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// client, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	client, err := ent.Open("sqlite3", "file:test.sql?_fk=1")
+	client, err := ent.Open("sqlite3", "file:server/nopush/db.sql?_fk=1")
 	if err != nil {
 		log.Fatalf("failed opening connection to sqlite: %v", err)
 	}
@@ -31,8 +31,10 @@ func main() {
 func createUser(ctx context.Context, client *ent.Client) (*ent.User, error) {
 	u, err := client.User.
 		Create().
-		SetUsername("a8m").
-		SetPassword("a8m").
+		SetName("koalatea").
+		SetOAuthID("koalatea").
+		SetSessionToken("abc").
+		SetIsActivated(true).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating user: %v", err)

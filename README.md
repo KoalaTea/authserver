@@ -42,3 +42,7 @@ Networking control
 
 
 - setup nas to have the certificate, for the user to download, custom proxy code envoy + basic webserver. Send from the auth server on the HSM pi.
+
+# zymbit
+https://docs.zymbit.com/getting-started/zymkey4/quickstart/
+Probably want seperate instances of certificate/secrets managers

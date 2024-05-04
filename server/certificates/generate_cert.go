@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"time"
@@ -112,3 +114,29 @@ func (p *CertProvider) CreateCertificate() (string, error) {
 
 // Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine
 // other fields may also need to be filled out correctly for the same reason it all depends on what is using it
+
+// TODO maybe options instead
+
+func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvider, error) {
+	cf, e := ioutil.ReadFile(caCertLoc)
+	if e != nil {
+		return nil, fmt.Errorf("cfload: %w", e)
+	}
+
+	kf, e := ioutil.ReadFile(caPrivKeyLoc)
+	if e != nil {
+		fmt.Println("kfload: %w", e)
+	}
+	cpb, _ := pem.Decode(cf)
+	kpb, _ := pem.Decode(kf)
+	crt, e := x509.ParseCertificate(cpb.Bytes)
+
+	if e != nil {
+		return nil, fmt.Errorf("parsex509: %w", e)
+	}
+	key, e := x509.ParsePKCS1PrivateKey(kpb.Bytes)
+	if e != nil {
+		return nil, fmt.Errorf("parsekey: %w", e)
+	}
+	return &CertProvider{key: key, ca: crt}, nil
+}
