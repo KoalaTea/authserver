@@ -46,3 +46,6 @@ Networking control
 # zymbit
 https://docs.zymbit.com/getting-started/zymkey4/quickstart/
 Probably want seperate instances of certificate/secrets managers
+
+# syft
+`syft scan .`

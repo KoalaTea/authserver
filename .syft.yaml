@@ -1,0 +1,10 @@
+output:
+  - spdx-json=sbom.spdx.json
+
+exclude:
+  - ./server/internal/www/node_modules
+  - ./nopush
+  - ./.git
+
+source:
+  name: "koalatea/authserver"
