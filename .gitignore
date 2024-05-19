@@ -23,3 +23,4 @@ authServerCAPrivKey.pem
 cmd/devtools/bootstrap/bootstrap
 node_modules
 nopush
+result
