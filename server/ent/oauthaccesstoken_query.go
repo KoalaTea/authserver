@@ -18,11 +18,9 @@ import (
 // OAuthAccessTokenQuery is the builder for querying OAuthAccessToken entities.
 type OAuthAccessTokenQuery struct {
 	config
-	limit       *int
-	offset      *int
-	unique      *bool
-	order       []OrderFunc
-	fields      []string
+	ctx         *QueryContext
+	order       []oauthaccesstoken.OrderOption
+	inters      []Interceptor
 	predicates  []predicate.OAuthAccessToken
 	withSession *OAuthSessionQuery
 	withFKs     bool
@@ -39,34 +37,34 @@ func (oatq *OAuthAccessTokenQuery) Where(ps ...predicate.OAuthAccessToken) *OAut
 	return oatq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (oatq *OAuthAccessTokenQuery) Limit(limit int) *OAuthAccessTokenQuery {
-	oatq.limit = &limit
+	oatq.ctx.Limit = &limit
 	return oatq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (oatq *OAuthAccessTokenQuery) Offset(offset int) *OAuthAccessTokenQuery {
-	oatq.offset = &offset
+	oatq.ctx.Offset = &offset
 	return oatq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (oatq *OAuthAccessTokenQuery) Unique(unique bool) *OAuthAccessTokenQuery {
-	oatq.unique = &unique
+	oatq.ctx.Unique = &unique
 	return oatq
 }
 
-// Order adds an order step to the query.
-func (oatq *OAuthAccessTokenQuery) Order(o ...OrderFunc) *OAuthAccessTokenQuery {
+// Order specifies how the records should be ordered.
+func (oatq *OAuthAccessTokenQuery) Order(o ...oauthaccesstoken.OrderOption) *OAuthAccessTokenQuery {
 	oatq.order = append(oatq.order, o...)
 	return oatq
 }
 
 // QuerySession chains the current query on the "session" edge.
 func (oatq *OAuthAccessTokenQuery) QuerySession() *OAuthSessionQuery {
-	query := &OAuthSessionQuery{config: oatq.config}
+	query := (&OAuthSessionClient{config: oatq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := oatq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -89,7 +87,7 @@ func (oatq *OAuthAccessTokenQuery) QuerySession() *OAuthSessionQuery {
 // First returns the first OAuthAccessToken entity from the query.
 // Returns a *NotFoundError when no OAuthAccessToken was found.
 func (oatq *OAuthAccessTokenQuery) First(ctx context.Context) (*OAuthAccessToken, error) {
-	nodes, err := oatq.Limit(1).All(ctx)
+	nodes, err := oatq.Limit(1).All(setContextOp(ctx, oatq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +110,7 @@ func (oatq *OAuthAccessTokenQuery) FirstX(ctx context.Context) *OAuthAccessToken
 // Returns a *NotFoundError when no OAuthAccessToken ID was found.
 func (oatq *OAuthAccessTokenQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oatq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = oatq.Limit(1).IDs(setContextOp(ctx, oatq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +133,7 @@ func (oatq *OAuthAccessTokenQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OAuthAccessToken entity is found.
 // Returns a *NotFoundError when no OAuthAccessToken entities are found.
 func (oatq *OAuthAccessTokenQuery) Only(ctx context.Context) (*OAuthAccessToken, error) {
-	nodes, err := oatq.Limit(2).All(ctx)
+	nodes, err := oatq.Limit(2).All(setContextOp(ctx, oatq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +161,7 @@ func (oatq *OAuthAccessTokenQuery) OnlyX(ctx context.Context) *OAuthAccessToken 
 // Returns a *NotFoundError when no entities are found.
 func (oatq *OAuthAccessTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oatq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = oatq.Limit(2).IDs(setContextOp(ctx, oatq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,10 +186,12 @@ func (oatq *OAuthAccessTokenQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OAuthAccessTokens.
 func (oatq *OAuthAccessTokenQuery) All(ctx context.Context) ([]*OAuthAccessToken, error) {
+	ctx = setContextOp(ctx, oatq.ctx, "All")
 	if err := oatq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return oatq.sqlAll(ctx)
+	qr := querierAll[[]*OAuthAccessToken, *OAuthAccessTokenQuery]()
+	return withInterceptors[[]*OAuthAccessToken](ctx, oatq, qr, oatq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -204,9 +204,12 @@ func (oatq *OAuthAccessTokenQuery) AllX(ctx context.Context) []*OAuthAccessToken
 }
 
 // IDs executes the query and returns a list of OAuthAccessToken IDs.
-func (oatq *OAuthAccessTokenQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := oatq.Select(oauthaccesstoken.FieldID).Scan(ctx, &ids); err != nil {
+func (oatq *OAuthAccessTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if oatq.ctx.Unique == nil && oatq.path != nil {
+		oatq.Unique(true)
+	}
+	ctx = setContextOp(ctx, oatq.ctx, "IDs")
+	if err = oatq.Select(oauthaccesstoken.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -223,10 +226,11 @@ func (oatq *OAuthAccessTokenQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (oatq *OAuthAccessTokenQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, oatq.ctx, "Count")
 	if err := oatq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return oatq.sqlCount(ctx)
+	return withInterceptors[int](ctx, oatq, querierCount[*OAuthAccessTokenQuery](), oatq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -240,10 +244,15 @@ func (oatq *OAuthAccessTokenQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (oatq *OAuthAccessTokenQuery) Exist(ctx context.Context) (bool, error) {
-	if err := oatq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, oatq.ctx, "Exist")
+	switch _, err := oatq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return oatq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -263,22 +272,21 @@ func (oatq *OAuthAccessTokenQuery) Clone() *OAuthAccessTokenQuery {
 	}
 	return &OAuthAccessTokenQuery{
 		config:      oatq.config,
-		limit:       oatq.limit,
-		offset:      oatq.offset,
-		order:       append([]OrderFunc{}, oatq.order...),
+		ctx:         oatq.ctx.Clone(),
+		order:       append([]oauthaccesstoken.OrderOption{}, oatq.order...),
+		inters:      append([]Interceptor{}, oatq.inters...),
 		predicates:  append([]predicate.OAuthAccessToken{}, oatq.predicates...),
 		withSession: oatq.withSession.Clone(),
 		// clone intermediate query.
-		sql:    oatq.sql.Clone(),
-		path:   oatq.path,
-		unique: oatq.unique,
+		sql:  oatq.sql.Clone(),
+		path: oatq.path,
 	}
 }
 
 // WithSession tells the query-builder to eager-load the nodes that are connected to
 // the "session" edge. The optional arguments are used to configure the query builder of the edge.
 func (oatq *OAuthAccessTokenQuery) WithSession(opts ...func(*OAuthSessionQuery)) *OAuthAccessTokenQuery {
-	query := &OAuthSessionQuery{config: oatq.config}
+	query := (&OAuthSessionClient{config: oatq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -301,16 +309,11 @@ func (oatq *OAuthAccessTokenQuery) WithSession(opts ...func(*OAuthSessionQuery))
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (oatq *OAuthAccessTokenQuery) GroupBy(field string, fields ...string) *OAuthAccessTokenGroupBy {
-	grbuild := &OAuthAccessTokenGroupBy{config: oatq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := oatq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return oatq.sqlQuery(ctx), nil
-	}
+	oatq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OAuthAccessTokenGroupBy{build: oatq}
+	grbuild.flds = &oatq.ctx.Fields
 	grbuild.label = oauthaccesstoken.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,11 +330,11 @@ func (oatq *OAuthAccessTokenQuery) GroupBy(field string, fields ...string) *OAut
 //		Select(oauthaccesstoken.FieldSignature).
 //		Scan(ctx, &v)
 func (oatq *OAuthAccessTokenQuery) Select(fields ...string) *OAuthAccessTokenSelect {
-	oatq.fields = append(oatq.fields, fields...)
-	selbuild := &OAuthAccessTokenSelect{OAuthAccessTokenQuery: oatq}
-	selbuild.label = oauthaccesstoken.Label
-	selbuild.flds, selbuild.scan = &oatq.fields, selbuild.Scan
-	return selbuild
+	oatq.ctx.Fields = append(oatq.ctx.Fields, fields...)
+	sbuild := &OAuthAccessTokenSelect{OAuthAccessTokenQuery: oatq}
+	sbuild.label = oauthaccesstoken.Label
+	sbuild.flds, sbuild.scan = &oatq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OAuthAccessTokenSelect configured with the given aggregations.
@@ -340,7 +343,17 @@ func (oatq *OAuthAccessTokenQuery) Aggregate(fns ...AggregateFunc) *OAuthAccessT
 }
 
 func (oatq *OAuthAccessTokenQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range oatq.fields {
+	for _, inter := range oatq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, oatq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range oatq.ctx.Fields {
 		if !oauthaccesstoken.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -418,6 +431,9 @@ func (oatq *OAuthAccessTokenQuery) loadSession(ctx context.Context, query *OAuth
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(oauthsession.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -440,41 +456,22 @@ func (oatq *OAuthAccessTokenQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(oatq.modifiers) > 0 {
 		_spec.Modifiers = oatq.modifiers
 	}
-	_spec.Node.Columns = oatq.fields
-	if len(oatq.fields) > 0 {
-		_spec.Unique = oatq.unique != nil && *oatq.unique
+	_spec.Node.Columns = oatq.ctx.Fields
+	if len(oatq.ctx.Fields) > 0 {
+		_spec.Unique = oatq.ctx.Unique != nil && *oatq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, oatq.driver, _spec)
 }
 
-func (oatq *OAuthAccessTokenQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := oatq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (oatq *OAuthAccessTokenQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthaccesstoken.Table,
-			Columns: oauthaccesstoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthaccesstoken.FieldID,
-			},
-		},
-		From:   oatq.sql,
-		Unique: true,
-	}
-	if unique := oatq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oauthaccesstoken.Table, oauthaccesstoken.Columns, sqlgraph.NewFieldSpec(oauthaccesstoken.FieldID, field.TypeInt))
+	_spec.From = oatq.sql
+	if unique := oatq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if oatq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := oatq.fields; len(fields) > 0 {
+	if fields := oatq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oauthaccesstoken.FieldID)
 		for i := range fields {
@@ -490,10 +487,10 @@ func (oatq *OAuthAccessTokenQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := oatq.limit; limit != nil {
+	if limit := oatq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := oatq.offset; offset != nil {
+	if offset := oatq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := oatq.order; len(ps) > 0 {
@@ -509,7 +506,7 @@ func (oatq *OAuthAccessTokenQuery) querySpec() *sqlgraph.QuerySpec {
 func (oatq *OAuthAccessTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(oatq.driver.Dialect())
 	t1 := builder.Table(oauthaccesstoken.Table)
-	columns := oatq.fields
+	columns := oatq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oauthaccesstoken.Columns
 	}
@@ -518,7 +515,7 @@ func (oatq *OAuthAccessTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = oatq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if oatq.unique != nil && *oatq.unique {
+	if oatq.ctx.Unique != nil && *oatq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range oatq.predicates {
@@ -527,12 +524,12 @@ func (oatq *OAuthAccessTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range oatq.order {
 		p(selector)
 	}
-	if offset := oatq.offset; offset != nil {
+	if offset := oatq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := oatq.limit; limit != nil {
+	if limit := oatq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -540,13 +537,8 @@ func (oatq *OAuthAccessTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // OAuthAccessTokenGroupBy is the group-by builder for OAuthAccessToken entities.
 type OAuthAccessTokenGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OAuthAccessTokenQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -555,58 +547,46 @@ func (oatgb *OAuthAccessTokenGroupBy) Aggregate(fns ...AggregateFunc) *OAuthAcce
 	return oatgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (oatgb *OAuthAccessTokenGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := oatgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, oatgb.build.ctx, "GroupBy")
+	if err := oatgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oatgb.sql = query
-	return oatgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthAccessTokenQuery, *OAuthAccessTokenGroupBy](ctx, oatgb.build, oatgb, oatgb.build.inters, v)
 }
 
-func (oatgb *OAuthAccessTokenGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range oatgb.fields {
-		if !oauthaccesstoken.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (oatgb *OAuthAccessTokenGroupBy) sqlScan(ctx context.Context, root *OAuthAccessTokenQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(oatgb.fns))
+	for _, fn := range oatgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := oatgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*oatgb.flds)+len(oatgb.fns))
+		for _, f := range *oatgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*oatgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := oatgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := oatgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (oatgb *OAuthAccessTokenGroupBy) sqlQuery() *sql.Selector {
-	selector := oatgb.sql.Select()
-	aggregation := make([]string, 0, len(oatgb.fns))
-	for _, fn := range oatgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(oatgb.fields)+len(oatgb.fns))
-		for _, f := range oatgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(oatgb.fields...)...)
-}
-
 // OAuthAccessTokenSelect is the builder for selecting fields of OAuthAccessToken entities.
 type OAuthAccessTokenSelect struct {
 	*OAuthAccessTokenQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -617,26 +597,27 @@ func (oats *OAuthAccessTokenSelect) Aggregate(fns ...AggregateFunc) *OAuthAccess
 
 // Scan applies the selector query and scans the result into the given value.
 func (oats *OAuthAccessTokenSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, oats.ctx, "Select")
 	if err := oats.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oats.sql = oats.OAuthAccessTokenQuery.sqlQuery(ctx)
-	return oats.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthAccessTokenQuery, *OAuthAccessTokenSelect](ctx, oats.OAuthAccessTokenQuery, oats, oats.inters, v)
 }
 
-func (oats *OAuthAccessTokenSelect) sqlScan(ctx context.Context, v any) error {
+func (oats *OAuthAccessTokenSelect) sqlScan(ctx context.Context, root *OAuthAccessTokenQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(oats.fns))
 	for _, fn := range oats.fns {
-		aggregation = append(aggregation, fn(oats.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*oats.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		oats.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		oats.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := oats.sql.Query()
+	query, args := selector.Query()
 	if err := oats.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

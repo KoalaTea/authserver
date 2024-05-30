@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthparrequest"
 )
@@ -16,7 +17,8 @@ type OAuthPARRequest struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// Request holds the value of the "request" field.
-	Request string `json:"request,omitempty"`
+	Request      string `json:"request,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -29,7 +31,7 @@ func (*OAuthPARRequest) scanValues(columns []string) ([]any, error) {
 		case oauthparrequest.FieldRequest:
 			values[i] = new(sql.NullString)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OAuthPARRequest", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -55,16 +57,24 @@ func (opr *OAuthPARRequest) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				opr.Request = value.String
 			}
+		default:
+			opr.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the OAuthPARRequest.
+// This includes values selected through modifiers, order, etc.
+func (opr *OAuthPARRequest) Value(name string) (ent.Value, error) {
+	return opr.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this OAuthPARRequest.
 // Note that you need to call OAuthPARRequest.Unwrap() before calling this method if this OAuthPARRequest
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (opr *OAuthPARRequest) Update() *OAuthPARRequestUpdateOne {
-	return (&OAuthPARRequestClient{config: opr.config}).UpdateOne(opr)
+	return NewOAuthPARRequestClient(opr.config).UpdateOne(opr)
 }
 
 // Unwrap unwraps the OAuthPARRequest entity that was returned from a transaction after it was closed,
@@ -91,9 +101,3 @@ func (opr *OAuthPARRequest) String() string {
 
 // OAuthPARRequests is a parsable slice of OAuthPARRequest.
 type OAuthPARRequests []*OAuthPARRequest
-
-func (opr OAuthPARRequests) config(cfg config) {
-	for _i := range opr {
-		opr[_i].config = cfg
-	}
-}

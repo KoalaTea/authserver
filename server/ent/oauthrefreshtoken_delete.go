@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (ortd *OAuthRefreshTokenDelete) Where(ps ...predicate.OAuthRefreshToken) *O
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ortd *OAuthRefreshTokenDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ortd.hooks) == 0 {
-		affected, err = ortd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthRefreshTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ortd.mutation = mutation
-			affected, err = ortd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ortd.hooks) - 1; i >= 0; i-- {
-			if ortd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ortd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ortd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ortd.sqlExec, ortd.mutation, ortd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (ortd *OAuthRefreshTokenDelete) ExecX(ctx context.Context) int {
 }
 
 func (ortd *OAuthRefreshTokenDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: oauthrefreshtoken.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthrefreshtoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(oauthrefreshtoken.Table, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
 	if ps := ortd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (ortd *OAuthRefreshTokenDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	ortd.mutation.done = true
 	return affected, err
 }
 
 // OAuthRefreshTokenDeleteOne is the builder for deleting a single OAuthRefreshToken entity.
 type OAuthRefreshTokenDeleteOne struct {
 	ortd *OAuthRefreshTokenDelete
+}
+
+// Where appends a list predicates to the OAuthRefreshTokenDelete builder.
+func (ortdo *OAuthRefreshTokenDeleteOne) Where(ps ...predicate.OAuthRefreshToken) *OAuthRefreshTokenDeleteOne {
+	ortdo.ortd.mutation.Where(ps...)
+	return ortdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (ortdo *OAuthRefreshTokenDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ortdo *OAuthRefreshTokenDeleteOne) ExecX(ctx context.Context) {
-	ortdo.ortd.ExecX(ctx)
+	if err := ortdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

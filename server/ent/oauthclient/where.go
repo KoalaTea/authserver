@@ -9,315 +9,200 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.OAuthClient(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.OAuthClient(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthClient(sql.FieldLTE(FieldID, id))
 }
 
 // ClientID applies equality check predicate on the "client_id" field. It's identical to ClientIDEQ.
 func ClientID(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldClientID, v))
 }
 
 // Secret applies equality check predicate on the "secret" field. It's identical to SecretEQ.
 func Secret(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldSecret, v))
 }
 
 // ClientIDEQ applies the EQ predicate on the "client_id" field.
 func ClientIDEQ(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldClientID, v))
 }
 
 // ClientIDNEQ applies the NEQ predicate on the "client_id" field.
 func ClientIDNEQ(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldNEQ(FieldClientID, v))
 }
 
 // ClientIDIn applies the In predicate on the "client_id" field.
 func ClientIDIn(vs ...string) predicate.OAuthClient {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldClientID), v...))
-	})
+	return predicate.OAuthClient(sql.FieldIn(FieldClientID, vs...))
 }
 
 // ClientIDNotIn applies the NotIn predicate on the "client_id" field.
 func ClientIDNotIn(vs ...string) predicate.OAuthClient {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldClientID), v...))
-	})
+	return predicate.OAuthClient(sql.FieldNotIn(FieldClientID, vs...))
 }
 
 // ClientIDGT applies the GT predicate on the "client_id" field.
 func ClientIDGT(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldGT(FieldClientID, v))
 }
 
 // ClientIDGTE applies the GTE predicate on the "client_id" field.
 func ClientIDGTE(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldGTE(FieldClientID, v))
 }
 
 // ClientIDLT applies the LT predicate on the "client_id" field.
 func ClientIDLT(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldLT(FieldClientID, v))
 }
 
 // ClientIDLTE applies the LTE predicate on the "client_id" field.
 func ClientIDLTE(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldLTE(FieldClientID, v))
 }
 
 // ClientIDContains applies the Contains predicate on the "client_id" field.
 func ClientIDContains(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldContains(FieldClientID, v))
 }
 
 // ClientIDHasPrefix applies the HasPrefix predicate on the "client_id" field.
 func ClientIDHasPrefix(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldHasPrefix(FieldClientID, v))
 }
 
 // ClientIDHasSuffix applies the HasSuffix predicate on the "client_id" field.
 func ClientIDHasSuffix(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldHasSuffix(FieldClientID, v))
 }
 
 // ClientIDEqualFold applies the EqualFold predicate on the "client_id" field.
 func ClientIDEqualFold(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldEqualFold(FieldClientID, v))
 }
 
 // ClientIDContainsFold applies the ContainsFold predicate on the "client_id" field.
 func ClientIDContainsFold(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldClientID), v))
-	})
+	return predicate.OAuthClient(sql.FieldContainsFold(FieldClientID, v))
 }
 
 // SecretEQ applies the EQ predicate on the "secret" field.
 func SecretEQ(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldEQ(FieldSecret, v))
 }
 
 // SecretNEQ applies the NEQ predicate on the "secret" field.
 func SecretNEQ(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldNEQ(FieldSecret, v))
 }
 
 // SecretIn applies the In predicate on the "secret" field.
 func SecretIn(vs ...string) predicate.OAuthClient {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldSecret), v...))
-	})
+	return predicate.OAuthClient(sql.FieldIn(FieldSecret, vs...))
 }
 
 // SecretNotIn applies the NotIn predicate on the "secret" field.
 func SecretNotIn(vs ...string) predicate.OAuthClient {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldSecret), v...))
-	})
+	return predicate.OAuthClient(sql.FieldNotIn(FieldSecret, vs...))
 }
 
 // SecretGT applies the GT predicate on the "secret" field.
 func SecretGT(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldGT(FieldSecret, v))
 }
 
 // SecretGTE applies the GTE predicate on the "secret" field.
 func SecretGTE(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldGTE(FieldSecret, v))
 }
 
 // SecretLT applies the LT predicate on the "secret" field.
 func SecretLT(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldLT(FieldSecret, v))
 }
 
 // SecretLTE applies the LTE predicate on the "secret" field.
 func SecretLTE(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldLTE(FieldSecret, v))
 }
 
 // SecretContains applies the Contains predicate on the "secret" field.
 func SecretContains(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldContains(FieldSecret, v))
 }
 
 // SecretHasPrefix applies the HasPrefix predicate on the "secret" field.
 func SecretHasPrefix(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldHasPrefix(FieldSecret, v))
 }
 
 // SecretHasSuffix applies the HasSuffix predicate on the "secret" field.
 func SecretHasSuffix(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldHasSuffix(FieldSecret, v))
 }
 
 // SecretEqualFold applies the EqualFold predicate on the "secret" field.
 func SecretEqualFold(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldEqualFold(FieldSecret, v))
 }
 
 // SecretContainsFold applies the ContainsFold predicate on the "secret" field.
 func SecretContainsFold(v string) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldSecret), v))
-	})
+	return predicate.OAuthClient(sql.FieldContainsFold(FieldSecret, v))
 }
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.OAuthClient) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthClient(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.OAuthClient) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthClient(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.OAuthClient) predicate.OAuthClient {
-	return predicate.OAuthClient(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.OAuthClient(sql.NotPredicates(p))
 }

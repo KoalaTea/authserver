@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
@@ -16,6 +17,7 @@ import (
 // NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
 func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 	return &executableSchema{
+		schema:     cfg.Schema,
 		resolvers:  cfg.Resolvers,
 		directives: cfg.Directives,
 		complexity: cfg.Complexity,
@@ -23,6 +25,7 @@ func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 }
 
 type Config struct {
+	Schema     *ast.Schema
 	Resolvers  ResolverRoot
 	Directives DirectiveRoot
 	Complexity ComplexityRoot
@@ -148,17 +151,21 @@ type ComplexityRoot struct {
 }
 
 type executableSchema struct {
+	schema     *ast.Schema
 	resolvers  ResolverRoot
 	directives DirectiveRoot
 	complexity ComplexityRoot
 }
 
 func (e *executableSchema) Schema() *ast.Schema {
+	if e.schema != nil {
+		return e.schema
+	}
 	return parsedSchema
 }
 
 func (e *executableSchema) Complexity(typeName, field string, childComplexity int, rawArgs map[string]interface{}) (int, bool) {
-	ec := executionContext{nil, e}
+	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
 
@@ -610,7 +617,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
-	ec := executionContext{rc, e}
+	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAuthCodeWhereInput,
 		ec.unmarshalInputCertWhereInput,
@@ -632,18 +639,33 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	switch rc.Operation.Operation {
 	case ast.Query:
 		return func(ctx context.Context) *graphql.Response {
-			if !first {
-				return nil
+			var response graphql.Response
+			var data graphql.Marshaler
+			if first {
+				first = false
+				ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+				data = ec._Query(ctx, rc.Operation.SelectionSet)
+			} else {
+				if atomic.LoadInt32(&ec.pendingDeferred) > 0 {
+					result := <-ec.deferredResults
+					atomic.AddInt32(&ec.pendingDeferred, -1)
+					data = result.Result
+					response.Path = result.Path
+					response.Label = result.Label
+					response.Errors = result.Errors
+				} else {
+					return nil
+				}
 			}
-			first = false
-			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
-			data := ec._Query(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
-
-			return &graphql.Response{
-				Data: buf.Bytes(),
+			response.Data = buf.Bytes()
+			if atomic.LoadInt32(&ec.deferred) > 0 {
+				hasNext := atomic.LoadInt32(&ec.pendingDeferred) > 0
+				response.HasNext = &hasNext
 			}
+
+			return &response
 		}
 	case ast.Mutation:
 		return func(ctx context.Context) *graphql.Response {
@@ -669,29 +691,54 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 type executionContext struct {
 	*graphql.OperationContext
 	*executableSchema
+	deferred        int32
+	pendingDeferred int32
+	deferredResults chan graphql.DeferredResult
+}
+
+func (ec *executionContext) processDeferredGroup(dg graphql.DeferredGroup) {
+	atomic.AddInt32(&ec.pendingDeferred, 1)
+	go func() {
+		ctx := graphql.WithFreshResponseContext(dg.Context)
+		dg.FieldSet.Dispatch(ctx)
+		ds := graphql.DeferredResult{
+			Path:   dg.Path,
+			Label:  dg.Label,
+			Result: dg.FieldSet,
+			Errors: graphql.GetErrors(ctx),
+		}
+		// null fields should bubble up
+		if dg.FieldSet.Invalids > 0 {
+			ds.Result = graphql.Null
+		}
+		ec.deferredResults <- ds
+	}()
 }
 
 func (ec *executionContext) introspectSchema() (*introspection.Schema, error) {
 	if ec.DisableIntrospection {
 		return nil, errors.New("introspection disabled")
 	}
-	return introspection.WrapSchema(parsedSchema), nil
+	return introspection.WrapSchema(ec.Schema()), nil
 }
 
 func (ec *executionContext) introspectType(name string) (*introspection.Type, error) {
 	if ec.DisableIntrospection {
 		return nil, errors.New("introspection disabled")
 	}
-	return introspection.WrapTypeFromDef(parsedSchema, parsedSchema.Types[name]), nil
+	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema/query.graphql", Input: `directive @goField(forceResolver: Boolean, name: String) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
+	{Name: "../schema/query.graphql", Input: `directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+directive @goModel(model: String, models: [String!], forceGenerate: Boolean) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 type AuthCode implements Node {
   id: ID!
   code: String!
   active: Boolean!
+  """
+  information about the request
+  """
   session: OAuthSession
 }
 """
@@ -702,7 +749,9 @@ input AuthCodeWhereInput {
   not: AuthCodeWhereInput
   and: [AuthCodeWhereInput!]
   or: [AuthCodeWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -711,7 +760,9 @@ input AuthCodeWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """code field predicates"""
+  """
+  code field predicates
+  """
   code: String
   codeNEQ: String
   codeIn: [String!]
@@ -725,10 +776,14 @@ input AuthCodeWhereInput {
   codeHasSuffix: String
   codeEqualFold: String
   codeContainsFold: String
-  """active field predicates"""
+  """
+  active field predicates
+  """
   active: Boolean
   activeNEQ: Boolean
-  """session edge predicates"""
+  """
+  session edge predicates
+  """
   hasSession: Boolean
   hasSessionWith: [OAuthSessionWhereInput!]
 }
@@ -743,7 +798,9 @@ input CertWhereInput {
   not: CertWhereInput
   and: [CertWhereInput!]
   or: [CertWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -771,7 +828,9 @@ input DenyListedJTIWhereInput {
   not: DenyListedJTIWhereInput
   and: [DenyListedJTIWhereInput!]
   or: [DenyListedJTIWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -780,7 +839,9 @@ input DenyListedJTIWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """jti field predicates"""
+  """
+  jti field predicates
+  """
   jti: String
   jtiNEQ: String
   jtiIn: [String!]
@@ -794,7 +855,9 @@ input DenyListedJTIWhereInput {
   jtiHasSuffix: String
   jtiEqualFold: String
   jtiContainsFold: String
-  """expiration field predicates"""
+  """
+  expiration field predicates
+  """
   expiration: Time
   expirationNEQ: Time
   expirationIn: [Time!]
@@ -809,12 +872,17 @@ An object with an ID.
 Follows the [Relay Global Object Identification Specification](https://relay.dev/graphql/objectidentification.htm)
 """
 interface Node @goModel(model: "github.com/koalatea/authserver/server/ent.Noder") {
-  """The id of the object."""
+  """
+  The id of the object.
+  """
   id: ID!
 }
 type OAuthAccessToken implements Node {
   id: ID!
   signature: String!
+  """
+  information about the request
+  """
   session: OAuthSession
 }
 """
@@ -825,7 +893,9 @@ input OAuthAccessTokenWhereInput {
   not: OAuthAccessTokenWhereInput
   and: [OAuthAccessTokenWhereInput!]
   or: [OAuthAccessTokenWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -834,7 +904,9 @@ input OAuthAccessTokenWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """signature field predicates"""
+  """
+  signature field predicates
+  """
   signature: String
   signatureNEQ: String
   signatureIn: [String!]
@@ -848,7 +920,9 @@ input OAuthAccessTokenWhereInput {
   signatureHasSuffix: String
   signatureEqualFold: String
   signatureContainsFold: String
-  """session edge predicates"""
+  """
+  session edge predicates
+  """
   hasSession: Boolean
   hasSessionWith: [OAuthSessionWhereInput!]
 }
@@ -869,7 +943,9 @@ input OAuthClientWhereInput {
   not: OAuthClientWhereInput
   and: [OAuthClientWhereInput!]
   or: [OAuthClientWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -878,7 +954,9 @@ input OAuthClientWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """client_id field predicates"""
+  """
+  client_id field predicates
+  """
   clientID: String
   clientIDNEQ: String
   clientIDIn: [String!]
@@ -892,7 +970,9 @@ input OAuthClientWhereInput {
   clientIDHasSuffix: String
   clientIDEqualFold: String
   clientIDContainsFold: String
-  """secret field predicates"""
+  """
+  secret field predicates
+  """
   secret: String
   secretNEQ: String
   secretIn: [String!]
@@ -919,7 +999,9 @@ input OAuthPARRequestWhereInput {
   not: OAuthPARRequestWhereInput
   and: [OAuthPARRequestWhereInput!]
   or: [OAuthPARRequestWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -928,7 +1010,9 @@ input OAuthPARRequestWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """request field predicates"""
+  """
+  request field predicates
+  """
   request: String
   requestNEQ: String
   requestIn: [String!]
@@ -946,6 +1030,9 @@ input OAuthPARRequestWhereInput {
 type OAuthRefreshToken implements Node {
   id: ID!
   signature: String!
+  """
+  information about the request
+  """
   session: OAuthSession
 }
 """
@@ -956,7 +1043,9 @@ input OAuthRefreshTokenWhereInput {
   not: OAuthRefreshTokenWhereInput
   and: [OAuthRefreshTokenWhereInput!]
   or: [OAuthRefreshTokenWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -965,7 +1054,9 @@ input OAuthRefreshTokenWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """signature field predicates"""
+  """
+  signature field predicates
+  """
   signature: String
   signatureNEQ: String
   signatureIn: [String!]
@@ -979,7 +1070,9 @@ input OAuthRefreshTokenWhereInput {
   signatureHasSuffix: String
   signatureEqualFold: String
   signatureContainsFold: String
-  """session edge predicates"""
+  """
+  session edge predicates
+  """
   hasSession: Boolean
   hasSessionWith: [OAuthSessionWhereInput!]
 }
@@ -1007,7 +1100,9 @@ input OAuthSessionWhereInput {
   not: OAuthSessionWhereInput
   and: [OAuthSessionWhereInput!]
   or: [OAuthSessionWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1016,7 +1111,9 @@ input OAuthSessionWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """issuer field predicates"""
+  """
+  issuer field predicates
+  """
   issuer: String
   issuerNEQ: String
   issuerIn: [String!]
@@ -1030,7 +1127,9 @@ input OAuthSessionWhereInput {
   issuerHasSuffix: String
   issuerEqualFold: String
   issuerContainsFold: String
-  """subject field predicates"""
+  """
+  subject field predicates
+  """
   subject: String
   subjectNEQ: String
   subjectIn: [String!]
@@ -1044,7 +1143,9 @@ input OAuthSessionWhereInput {
   subjectHasSuffix: String
   subjectEqualFold: String
   subjectContainsFold: String
-  """expires_at field predicates"""
+  """
+  expires_at field predicates
+  """
   expiresAt: Time
   expiresAtNEQ: Time
   expiresAtIn: [Time!]
@@ -1053,7 +1154,9 @@ input OAuthSessionWhereInput {
   expiresAtGTE: Time
   expiresAtLT: Time
   expiresAtLTE: Time
-  """issued_at field predicates"""
+  """
+  issued_at field predicates
+  """
   issuedAt: Time
   issuedAtNEQ: Time
   issuedAtIn: [Time!]
@@ -1062,7 +1165,9 @@ input OAuthSessionWhereInput {
   issuedAtGTE: Time
   issuedAtLT: Time
   issuedAtLTE: Time
-  """requested_at field predicates"""
+  """
+  requested_at field predicates
+  """
   requestedAt: Time
   requestedAtNEQ: Time
   requestedAtIn: [Time!]
@@ -1071,7 +1176,9 @@ input OAuthSessionWhereInput {
   requestedAtGTE: Time
   requestedAtLT: Time
   requestedAtLTE: Time
-  """auth_time field predicates"""
+  """
+  auth_time field predicates
+  """
   authTime: Time
   authTimeNEQ: Time
   authTimeIn: [Time!]
@@ -1080,7 +1187,9 @@ input OAuthSessionWhereInput {
   authTimeGTE: Time
   authTimeLT: Time
   authTimeLTE: Time
-  """request field predicates"""
+  """
+  request field predicates
+  """
   request: String
   requestNEQ: String
   requestIn: [String!]
@@ -1094,7 +1203,9 @@ input OAuthSessionWhereInput {
   requestHasSuffix: String
   requestEqualFold: String
   requestContainsFold: String
-  """form field predicates"""
+  """
+  form field predicates
+  """
   form: String
   formNEQ: String
   formIn: [String!]
@@ -1112,6 +1223,9 @@ input OAuthSessionWhereInput {
 type OIDCAuthCode implements Node {
   id: ID!
   authorizationCode: String!
+  """
+  information about the request
+  """
   session: OAuthSession
 }
 """
@@ -1122,7 +1236,9 @@ input OIDCAuthCodeWhereInput {
   not: OIDCAuthCodeWhereInput
   and: [OIDCAuthCodeWhereInput!]
   or: [OIDCAuthCodeWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1131,7 +1247,9 @@ input OIDCAuthCodeWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """authorization_code field predicates"""
+  """
+  authorization_code field predicates
+  """
   authorizationCode: String
   authorizationCodeNEQ: String
   authorizationCodeIn: [String!]
@@ -1145,20 +1263,31 @@ input OIDCAuthCodeWhereInput {
   authorizationCodeHasSuffix: String
   authorizationCodeEqualFold: String
   authorizationCodeContainsFold: String
-  """session edge predicates"""
+  """
+  session edge predicates
+  """
   hasSession: Boolean
   hasSessionWith: [OAuthSessionWhereInput!]
 }
-"""Possible directions in which to order a list of items when provided an ` + "`" + `orderBy` + "`" + ` argument."""
+"""
+Possible directions in which to order a list of items when provided an ` + "`" + `orderBy` + "`" + ` argument.
+"""
 enum OrderDirection {
-  """Specifies an ascending order for a given ` + "`" + `orderBy` + "`" + ` argument."""
+  """
+  Specifies an ascending order for a given ` + "`" + `orderBy` + "`" + ` argument.
+  """
   ASC
-  """Specifies a descending order for a given ` + "`" + `orderBy` + "`" + ` argument."""
+  """
+  Specifies a descending order for a given ` + "`" + `orderBy` + "`" + ` argument.
+  """
   DESC
 }
 type PKCE implements Node {
   id: ID!
   code: String!
+  """
+  information about the request
+  """
   session: OAuthSession
 }
 """
@@ -1169,7 +1298,9 @@ input PKCEWhereInput {
   not: PKCEWhereInput
   and: [PKCEWhereInput!]
   or: [PKCEWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1178,7 +1309,9 @@ input PKCEWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """code field predicates"""
+  """
+  code field predicates
+  """
   code: String
   codeNEQ: String
   codeIn: [String!]
@@ -1192,7 +1325,9 @@ input PKCEWhereInput {
   codeHasSuffix: String
   codeEqualFold: String
   codeContainsFold: String
-  """session edge predicates"""
+  """
+  session edge predicates
+  """
   hasSession: Boolean
   hasSessionWith: [OAuthSessionWhereInput!]
 }
@@ -1201,13 +1336,21 @@ Information about pagination in a connection.
 https://relay.dev/graphql/connections.htm#sec-undefined.PageInfo
 """
 type PageInfo {
-  """When paginating forwards, are there more items?"""
+  """
+  When paginating forwards, are there more items?
+  """
   hasNextPage: Boolean!
-  """When paginating backwards, are there more items?"""
+  """
+  When paginating backwards, are there more items?
+  """
   hasPreviousPage: Boolean!
-  """When paginating backwards, the cursor to continue."""
+  """
+  When paginating backwards, the cursor to continue.
+  """
   startCursor: Cursor
-  """When paginating forwards, the cursor to continue."""
+  """
+  When paginating forwards, the cursor to continue.
+  """
   endCursor: Cursor
 }
 type PublicJWK implements Node {
@@ -1229,7 +1372,9 @@ input PublicJWKSetWhereInput {
   not: PublicJWKSetWhereInput
   and: [PublicJWKSetWhereInput!]
   or: [PublicJWKSetWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1247,7 +1392,9 @@ input PublicJWKWhereInput {
   not: PublicJWKWhereInput
   and: [PublicJWKWhereInput!]
   or: [PublicJWKWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1256,7 +1403,9 @@ input PublicJWKWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """sid field predicates"""
+  """
+  sid field predicates
+  """
   sid: String
   sidNEQ: String
   sidIn: [String!]
@@ -1270,7 +1419,9 @@ input PublicJWKWhereInput {
   sidHasSuffix: String
   sidEqualFold: String
   sidContainsFold: String
-  """kid field predicates"""
+  """
+  kid field predicates
+  """
   kid: String
   kidNEQ: String
   kidIn: [String!]
@@ -1284,7 +1435,9 @@ input PublicJWKWhereInput {
   kidHasSuffix: String
   kidEqualFold: String
   kidContainsFold: String
-  """key field predicates"""
+  """
+  key field predicates
+  """
   key: String
   keyNEQ: String
   keyIn: [String!]
@@ -1298,7 +1451,9 @@ input PublicJWKWhereInput {
   keyHasSuffix: String
   keyEqualFold: String
   keyContainsFold: String
-  """issuer field predicates"""
+  """
+  issuer field predicates
+  """
   issuer: String
   issuerNEQ: String
   issuerIn: [String!]
@@ -1314,14 +1469,22 @@ input PublicJWKWhereInput {
   issuerContainsFold: String
 }
 type Query {
-  """Fetches an object given its ID."""
+  """
+  Fetches an object given its ID.
+  """
   node(
-    """ID of the object."""
+    """
+    ID of the object.
+    """
     id: ID!
   ): Node
-  """Lookup nodes by a list of IDs."""
+  """
+  Lookup nodes by a list of IDs.
+  """
   nodes(
-    """The list of node IDs."""
+    """
+    The list of node IDs.
+    """
     ids: [ID!]!
   ): [Node]!
   users: [User!]!
@@ -1331,16 +1494,24 @@ UpdateUserInput is used for update User object.
 Input was generated by ent.
 """
 input UpdateUserInput {
-  """The name displayed for the user"""
+  """
+  The name displayed for the user
+  """
   name: String
-  """True if the user is active and able to authenticate"""
+  """
+  True if the user is active and able to authenticate
+  """
   isactivated: Boolean
 }
 type User implements Node {
   id: ID!
-  """The name displayed for the user"""
+  """
+  The name displayed for the user
+  """
   name: String!
-  """True if the user is active and able to authenticate"""
+  """
+  True if the user is active and able to authenticate
+  """
   isactivated: Boolean! @goField(name: "IsActivated", forceResolver: false)
 }
 """
@@ -1351,7 +1522,9 @@ input UserWhereInput {
   not: UserWhereInput
   and: [UserWhereInput!]
   or: [UserWhereInput!]
-  """id field predicates"""
+  """
+  id field predicates
+  """
   id: ID
   idNEQ: ID
   idIn: [ID!]
@@ -1360,7 +1533,9 @@ input UserWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
-  """Name field predicates"""
+  """
+  Name field predicates
+  """
   name: String
   nameNEQ: String
   nameIn: [String!]
@@ -1374,7 +1549,9 @@ input UserWhereInput {
   nameHasSuffix: String
   nameEqualFold: String
   nameContainsFold: String
-  """IsActivated field predicates"""
+  """
+  IsActivated field predicates
+  """
   isactivated: Boolean
   isactivatedNEQ: Boolean
 }

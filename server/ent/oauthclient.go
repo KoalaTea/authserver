@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthclient"
 )
@@ -27,7 +28,8 @@ type OAuthClient struct {
 	// GrantTypes holds the value of the "grant_types" field.
 	GrantTypes []string `json:"grant_types,omitempty"`
 	// Scopes holds the value of the "scopes" field.
-	Scopes []string `json:"scopes,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -42,7 +44,7 @@ func (*OAuthClient) scanValues(columns []string) ([]any, error) {
 		case oauthclient.FieldClientID, oauthclient.FieldSecret:
 			values[i] = new(sql.NullString)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OAuthClient", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -106,16 +108,24 @@ func (oc *OAuthClient) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field scopes: %w", err)
 				}
 			}
+		default:
+			oc.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the OAuthClient.
+// This includes values selected through modifiers, order, etc.
+func (oc *OAuthClient) Value(name string) (ent.Value, error) {
+	return oc.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this OAuthClient.
 // Note that you need to call OAuthClient.Unwrap() before calling this method if this OAuthClient
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (oc *OAuthClient) Update() *OAuthClientUpdateOne {
-	return (&OAuthClientClient{config: oc.config}).UpdateOne(oc)
+	return NewOAuthClientClient(oc.config).UpdateOne(oc)
 }
 
 // Unwrap unwraps the OAuthClient entity that was returned from a transaction after it was closed,
@@ -157,9 +167,3 @@ func (oc *OAuthClient) String() string {
 
 // OAuthClients is a parsable slice of OAuthClient.
 type OAuthClients []*OAuthClient
-
-func (oc OAuthClients) config(cfg config) {
-	for _i := range oc {
-		oc[_i].config = cfg
-	}
-}

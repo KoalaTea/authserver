@@ -34,6 +34,14 @@ func (oatu *OAuthAccessTokenUpdate) SetSignature(s string) *OAuthAccessTokenUpda
 	return oatu
 }
 
+// SetNillableSignature sets the "signature" field if the given value is not nil.
+func (oatu *OAuthAccessTokenUpdate) SetNillableSignature(s *string) *OAuthAccessTokenUpdate {
+	if s != nil {
+		oatu.SetSignature(*s)
+	}
+	return oatu
+}
+
 // SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (oatu *OAuthAccessTokenUpdate) SetSessionID(id int) *OAuthAccessTokenUpdate {
 	oatu.mutation.SetSessionID(id)
@@ -66,34 +74,7 @@ func (oatu *OAuthAccessTokenUpdate) ClearSession() *OAuthAccessTokenUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (oatu *OAuthAccessTokenUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(oatu.hooks) == 0 {
-		affected, err = oatu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthAccessTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oatu.mutation = mutation
-			affected, err = oatu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(oatu.hooks) - 1; i >= 0; i-- {
-			if oatu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oatu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, oatu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, oatu.sqlSave, oatu.mutation, oatu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -119,16 +100,7 @@ func (oatu *OAuthAccessTokenUpdate) ExecX(ctx context.Context) {
 }
 
 func (oatu *OAuthAccessTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthaccesstoken.Table,
-			Columns: oauthaccesstoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthaccesstoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthaccesstoken.Table, oauthaccesstoken.Columns, sqlgraph.NewFieldSpec(oauthaccesstoken.FieldID, field.TypeInt))
 	if ps := oatu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -147,10 +119,7 @@ func (oatu *OAuthAccessTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 			Columns: []string{oauthaccesstoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -163,10 +132,7 @@ func (oatu *OAuthAccessTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 			Columns: []string{oauthaccesstoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -182,6 +148,7 @@ func (oatu *OAuthAccessTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		return 0, err
 	}
+	oatu.mutation.done = true
 	return n, nil
 }
 
@@ -196,6 +163,14 @@ type OAuthAccessTokenUpdateOne struct {
 // SetSignature sets the "signature" field.
 func (oatuo *OAuthAccessTokenUpdateOne) SetSignature(s string) *OAuthAccessTokenUpdateOne {
 	oatuo.mutation.SetSignature(s)
+	return oatuo
+}
+
+// SetNillableSignature sets the "signature" field if the given value is not nil.
+func (oatuo *OAuthAccessTokenUpdateOne) SetNillableSignature(s *string) *OAuthAccessTokenUpdateOne {
+	if s != nil {
+		oatuo.SetSignature(*s)
+	}
 	return oatuo
 }
 
@@ -229,6 +204,12 @@ func (oatuo *OAuthAccessTokenUpdateOne) ClearSession() *OAuthAccessTokenUpdateOn
 	return oatuo
 }
 
+// Where appends a list predicates to the OAuthAccessTokenUpdate builder.
+func (oatuo *OAuthAccessTokenUpdateOne) Where(ps ...predicate.OAuthAccessToken) *OAuthAccessTokenUpdateOne {
+	oatuo.mutation.Where(ps...)
+	return oatuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (oatuo *OAuthAccessTokenUpdateOne) Select(field string, fields ...string) *OAuthAccessTokenUpdateOne {
@@ -238,40 +219,7 @@ func (oatuo *OAuthAccessTokenUpdateOne) Select(field string, fields ...string) *
 
 // Save executes the query and returns the updated OAuthAccessToken entity.
 func (oatuo *OAuthAccessTokenUpdateOne) Save(ctx context.Context) (*OAuthAccessToken, error) {
-	var (
-		err  error
-		node *OAuthAccessToken
-	)
-	if len(oatuo.hooks) == 0 {
-		node, err = oatuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthAccessTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oatuo.mutation = mutation
-			node, err = oatuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(oatuo.hooks) - 1; i >= 0; i-- {
-			if oatuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oatuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, oatuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthAccessToken)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthAccessTokenMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, oatuo.sqlSave, oatuo.mutation, oatuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -297,16 +245,7 @@ func (oatuo *OAuthAccessTokenUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (oatuo *OAuthAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAuthAccessToken, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthaccesstoken.Table,
-			Columns: oauthaccesstoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthaccesstoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthaccesstoken.Table, oauthaccesstoken.Columns, sqlgraph.NewFieldSpec(oauthaccesstoken.FieldID, field.TypeInt))
 	id, ok := oatuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OAuthAccessToken.id" for update`)}
@@ -342,10 +281,7 @@ func (oatuo *OAuthAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAu
 			Columns: []string{oauthaccesstoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -358,10 +294,7 @@ func (oatuo *OAuthAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAu
 			Columns: []string{oauthaccesstoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -380,5 +313,6 @@ func (oatuo *OAuthAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAu
 		}
 		return nil, err
 	}
+	oatuo.mutation.done = true
 	return _node, nil
 }

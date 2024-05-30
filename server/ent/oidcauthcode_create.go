@@ -52,49 +52,7 @@ func (oacc *OIDCAuthCodeCreate) Mutation() *OIDCAuthCodeMutation {
 
 // Save creates the OIDCAuthCode in the database.
 func (oacc *OIDCAuthCodeCreate) Save(ctx context.Context) (*OIDCAuthCode, error) {
-	var (
-		err  error
-		node *OIDCAuthCode
-	)
-	if len(oacc.hooks) == 0 {
-		if err = oacc.check(); err != nil {
-			return nil, err
-		}
-		node, err = oacc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OIDCAuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = oacc.check(); err != nil {
-				return nil, err
-			}
-			oacc.mutation = mutation
-			if node, err = oacc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(oacc.hooks) - 1; i >= 0; i-- {
-			if oacc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oacc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, oacc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OIDCAuthCode)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OIDCAuthCodeMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, oacc.sqlSave, oacc.mutation, oacc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -128,6 +86,9 @@ func (oacc *OIDCAuthCodeCreate) check() error {
 }
 
 func (oacc *OIDCAuthCodeCreate) sqlSave(ctx context.Context) (*OIDCAuthCode, error) {
+	if err := oacc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := oacc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, oacc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -137,19 +98,15 @@ func (oacc *OIDCAuthCodeCreate) sqlSave(ctx context.Context) (*OIDCAuthCode, err
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	oacc.mutation.id = &_node.ID
+	oacc.mutation.done = true
 	return _node, nil
 }
 
 func (oacc *OIDCAuthCodeCreate) createSpec() (*OIDCAuthCode, *sqlgraph.CreateSpec) {
 	var (
 		_node = &OIDCAuthCode{config: oacc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: oidcauthcode.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oidcauthcode.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(oidcauthcode.Table, sqlgraph.NewFieldSpec(oidcauthcode.FieldID, field.TypeInt))
 	)
 	if value, ok := oacc.mutation.AuthorizationCode(); ok {
 		_spec.SetField(oidcauthcode.FieldAuthorizationCode, field.TypeString, value)
@@ -163,10 +120,7 @@ func (oacc *OIDCAuthCodeCreate) createSpec() (*OIDCAuthCode, *sqlgraph.CreateSpe
 			Columns: []string{oidcauthcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -181,11 +135,15 @@ func (oacc *OIDCAuthCodeCreate) createSpec() (*OIDCAuthCode, *sqlgraph.CreateSpe
 // OIDCAuthCodeCreateBulk is the builder for creating many OIDCAuthCode entities in bulk.
 type OIDCAuthCodeCreateBulk struct {
 	config
+	err      error
 	builders []*OIDCAuthCodeCreate
 }
 
 // Save creates the OIDCAuthCode entities in the database.
 func (oaccb *OIDCAuthCodeCreateBulk) Save(ctx context.Context) ([]*OIDCAuthCode, error) {
+	if oaccb.err != nil {
+		return nil, oaccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(oaccb.builders))
 	nodes := make([]*OIDCAuthCode, len(oaccb.builders))
 	mutators := make([]Mutator, len(oaccb.builders))
@@ -201,8 +159,8 @@ func (oaccb *OIDCAuthCodeCreateBulk) Save(ctx context.Context) ([]*OIDCAuthCode,
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, oaccb.builders[i+1].mutation)
 				} else {

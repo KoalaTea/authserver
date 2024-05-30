@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (dljd *DenyListedJTIDelete) Where(ps ...predicate.DenyListedJTI) *DenyListe
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (dljd *DenyListedJTIDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(dljd.hooks) == 0 {
-		affected, err = dljd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DenyListedJTIMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			dljd.mutation = mutation
-			affected, err = dljd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(dljd.hooks) - 1; i >= 0; i-- {
-			if dljd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dljd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, dljd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, dljd.sqlExec, dljd.mutation, dljd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (dljd *DenyListedJTIDelete) ExecX(ctx context.Context) int {
 }
 
 func (dljd *DenyListedJTIDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: denylistedjti.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: denylistedjti.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(denylistedjti.Table, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
 	if ps := dljd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (dljd *DenyListedJTIDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	dljd.mutation.done = true
 	return affected, err
 }
 
 // DenyListedJTIDeleteOne is the builder for deleting a single DenyListedJTI entity.
 type DenyListedJTIDeleteOne struct {
 	dljd *DenyListedJTIDelete
+}
+
+// Where appends a list predicates to the DenyListedJTIDelete builder.
+func (dljdo *DenyListedJTIDeleteOne) Where(ps ...predicate.DenyListedJTI) *DenyListedJTIDeleteOne {
+	dljdo.dljd.mutation.Where(ps...)
+	return dljdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (dljdo *DenyListedJTIDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (dljdo *DenyListedJTIDeleteOne) ExecX(ctx context.Context) {
-	dljdo.dljd.ExecX(ctx)
+	if err := dljdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

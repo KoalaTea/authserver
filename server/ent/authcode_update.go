@@ -34,9 +34,25 @@ func (acu *AuthCodeUpdate) SetCode(s string) *AuthCodeUpdate {
 	return acu
 }
 
+// SetNillableCode sets the "code" field if the given value is not nil.
+func (acu *AuthCodeUpdate) SetNillableCode(s *string) *AuthCodeUpdate {
+	if s != nil {
+		acu.SetCode(*s)
+	}
+	return acu
+}
+
 // SetActive sets the "active" field.
 func (acu *AuthCodeUpdate) SetActive(b bool) *AuthCodeUpdate {
 	acu.mutation.SetActive(b)
+	return acu
+}
+
+// SetNillableActive sets the "active" field if the given value is not nil.
+func (acu *AuthCodeUpdate) SetNillableActive(b *bool) *AuthCodeUpdate {
+	if b != nil {
+		acu.SetActive(*b)
+	}
 	return acu
 }
 
@@ -72,34 +88,7 @@ func (acu *AuthCodeUpdate) ClearSession() *AuthCodeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (acu *AuthCodeUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(acu.hooks) == 0 {
-		affected, err = acu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			acu.mutation = mutation
-			affected, err = acu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(acu.hooks) - 1; i >= 0; i-- {
-			if acu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = acu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, acu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, acu.sqlSave, acu.mutation, acu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -125,16 +114,7 @@ func (acu *AuthCodeUpdate) ExecX(ctx context.Context) {
 }
 
 func (acu *AuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   authcode.Table,
-			Columns: authcode.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: authcode.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(authcode.Table, authcode.Columns, sqlgraph.NewFieldSpec(authcode.FieldID, field.TypeInt))
 	if ps := acu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -156,10 +136,7 @@ func (acu *AuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -172,10 +149,7 @@ func (acu *AuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{authcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -191,6 +165,7 @@ func (acu *AuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	acu.mutation.done = true
 	return n, nil
 }
 
@@ -208,9 +183,25 @@ func (acuo *AuthCodeUpdateOne) SetCode(s string) *AuthCodeUpdateOne {
 	return acuo
 }
 
+// SetNillableCode sets the "code" field if the given value is not nil.
+func (acuo *AuthCodeUpdateOne) SetNillableCode(s *string) *AuthCodeUpdateOne {
+	if s != nil {
+		acuo.SetCode(*s)
+	}
+	return acuo
+}
+
 // SetActive sets the "active" field.
 func (acuo *AuthCodeUpdateOne) SetActive(b bool) *AuthCodeUpdateOne {
 	acuo.mutation.SetActive(b)
+	return acuo
+}
+
+// SetNillableActive sets the "active" field if the given value is not nil.
+func (acuo *AuthCodeUpdateOne) SetNillableActive(b *bool) *AuthCodeUpdateOne {
+	if b != nil {
+		acuo.SetActive(*b)
+	}
 	return acuo
 }
 
@@ -244,6 +235,12 @@ func (acuo *AuthCodeUpdateOne) ClearSession() *AuthCodeUpdateOne {
 	return acuo
 }
 
+// Where appends a list predicates to the AuthCodeUpdate builder.
+func (acuo *AuthCodeUpdateOne) Where(ps ...predicate.AuthCode) *AuthCodeUpdateOne {
+	acuo.mutation.Where(ps...)
+	return acuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (acuo *AuthCodeUpdateOne) Select(field string, fields ...string) *AuthCodeUpdateOne {
@@ -253,40 +250,7 @@ func (acuo *AuthCodeUpdateOne) Select(field string, fields ...string) *AuthCodeU
 
 // Save executes the query and returns the updated AuthCode entity.
 func (acuo *AuthCodeUpdateOne) Save(ctx context.Context) (*AuthCode, error) {
-	var (
-		err  error
-		node *AuthCode
-	)
-	if len(acuo.hooks) == 0 {
-		node, err = acuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			acuo.mutation = mutation
-			node, err = acuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(acuo.hooks) - 1; i >= 0; i-- {
-			if acuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = acuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, acuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*AuthCode)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from AuthCodeMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, acuo.sqlSave, acuo.mutation, acuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -312,16 +276,7 @@ func (acuo *AuthCodeUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (acuo *AuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *AuthCode, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   authcode.Table,
-			Columns: authcode.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: authcode.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(authcode.Table, authcode.Columns, sqlgraph.NewFieldSpec(authcode.FieldID, field.TypeInt))
 	id, ok := acuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "AuthCode.id" for update`)}
@@ -360,10 +315,7 @@ func (acuo *AuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *AuthCode, er
 			Columns: []string{authcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -376,10 +328,7 @@ func (acuo *AuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *AuthCode, er
 			Columns: []string{authcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -398,5 +347,6 @@ func (acuo *AuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *AuthCode, er
 		}
 		return nil, err
 	}
+	acuo.mutation.done = true
 	return _node, nil
 }

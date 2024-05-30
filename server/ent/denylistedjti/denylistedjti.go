@@ -2,6 +2,10 @@
 
 package denylistedjti
 
+import (
+	"entgo.io/ent/dialect/sql"
+)
+
 const (
 	// Label holds the string label denoting the denylistedjti type in the database.
 	Label = "deny_listed_jti"
@@ -30,4 +34,22 @@ func ValidColumn(column string) bool {
 		}
 	}
 	return false
+}
+
+// OrderOption defines the ordering options for the DenyListedJTI queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByJti orders the results by the jti field.
+func ByJti(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldJti, opts...).ToFunc()
+}
+
+// ByExpiration orders the results by the expiration field.
+func ByExpiration(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpiration, opts...).ToFunc()
 }

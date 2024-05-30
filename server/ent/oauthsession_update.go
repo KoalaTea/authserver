@@ -35,9 +35,25 @@ func (osu *OAuthSessionUpdate) SetIssuer(s string) *OAuthSessionUpdate {
 	return osu
 }
 
+// SetNillableIssuer sets the "issuer" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableIssuer(s *string) *OAuthSessionUpdate {
+	if s != nil {
+		osu.SetIssuer(*s)
+	}
+	return osu
+}
+
 // SetSubject sets the "subject" field.
 func (osu *OAuthSessionUpdate) SetSubject(s string) *OAuthSessionUpdate {
 	osu.mutation.SetSubject(s)
+	return osu
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableSubject(s *string) *OAuthSessionUpdate {
+	if s != nil {
+		osu.SetSubject(*s)
+	}
 	return osu
 }
 
@@ -59,9 +75,25 @@ func (osu *OAuthSessionUpdate) SetExpiresAt(t time.Time) *OAuthSessionUpdate {
 	return osu
 }
 
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableExpiresAt(t *time.Time) *OAuthSessionUpdate {
+	if t != nil {
+		osu.SetExpiresAt(*t)
+	}
+	return osu
+}
+
 // SetIssuedAt sets the "issued_at" field.
 func (osu *OAuthSessionUpdate) SetIssuedAt(t time.Time) *OAuthSessionUpdate {
 	osu.mutation.SetIssuedAt(t)
+	return osu
+}
+
+// SetNillableIssuedAt sets the "issued_at" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableIssuedAt(t *time.Time) *OAuthSessionUpdate {
+	if t != nil {
+		osu.SetIssuedAt(*t)
+	}
 	return osu
 }
 
@@ -71,9 +103,25 @@ func (osu *OAuthSessionUpdate) SetRequestedAt(t time.Time) *OAuthSessionUpdate {
 	return osu
 }
 
+// SetNillableRequestedAt sets the "requested_at" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableRequestedAt(t *time.Time) *OAuthSessionUpdate {
+	if t != nil {
+		osu.SetRequestedAt(*t)
+	}
+	return osu
+}
+
 // SetAuthTime sets the "auth_time" field.
 func (osu *OAuthSessionUpdate) SetAuthTime(t time.Time) *OAuthSessionUpdate {
 	osu.mutation.SetAuthTime(t)
+	return osu
+}
+
+// SetNillableAuthTime sets the "auth_time" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableAuthTime(t *time.Time) *OAuthSessionUpdate {
+	if t != nil {
+		osu.SetAuthTime(*t)
+	}
 	return osu
 }
 
@@ -131,9 +179,25 @@ func (osu *OAuthSessionUpdate) SetRequest(s string) *OAuthSessionUpdate {
 	return osu
 }
 
+// SetNillableRequest sets the "request" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableRequest(s *string) *OAuthSessionUpdate {
+	if s != nil {
+		osu.SetRequest(*s)
+	}
+	return osu
+}
+
 // SetForm sets the "form" field.
 func (osu *OAuthSessionUpdate) SetForm(s string) *OAuthSessionUpdate {
 	osu.mutation.SetForm(s)
+	return osu
+}
+
+// SetNillableForm sets the "form" field if the given value is not nil.
+func (osu *OAuthSessionUpdate) SetNillableForm(s *string) *OAuthSessionUpdate {
+	if s != nil {
+		osu.SetForm(*s)
+	}
 	return osu
 }
 
@@ -144,34 +208,7 @@ func (osu *OAuthSessionUpdate) Mutation() *OAuthSessionMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (osu *OAuthSessionUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(osu.hooks) == 0 {
-		affected, err = osu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthSessionMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			osu.mutation = mutation
-			affected, err = osu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(osu.hooks) - 1; i >= 0; i-- {
-			if osu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = osu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, osu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, osu.sqlSave, osu.mutation, osu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -197,16 +234,7 @@ func (osu *OAuthSessionUpdate) ExecX(ctx context.Context) {
 }
 
 func (osu *OAuthSessionUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthsession.Table,
-			Columns: oauthsession.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthsession.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthsession.Table, oauthsession.Columns, sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt))
 	if ps := osu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -286,6 +314,7 @@ func (osu *OAuthSessionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	osu.mutation.done = true
 	return n, nil
 }
 
@@ -303,9 +332,25 @@ func (osuo *OAuthSessionUpdateOne) SetIssuer(s string) *OAuthSessionUpdateOne {
 	return osuo
 }
 
+// SetNillableIssuer sets the "issuer" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableIssuer(s *string) *OAuthSessionUpdateOne {
+	if s != nil {
+		osuo.SetIssuer(*s)
+	}
+	return osuo
+}
+
 // SetSubject sets the "subject" field.
 func (osuo *OAuthSessionUpdateOne) SetSubject(s string) *OAuthSessionUpdateOne {
 	osuo.mutation.SetSubject(s)
+	return osuo
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableSubject(s *string) *OAuthSessionUpdateOne {
+	if s != nil {
+		osuo.SetSubject(*s)
+	}
 	return osuo
 }
 
@@ -327,9 +372,25 @@ func (osuo *OAuthSessionUpdateOne) SetExpiresAt(t time.Time) *OAuthSessionUpdate
 	return osuo
 }
 
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableExpiresAt(t *time.Time) *OAuthSessionUpdateOne {
+	if t != nil {
+		osuo.SetExpiresAt(*t)
+	}
+	return osuo
+}
+
 // SetIssuedAt sets the "issued_at" field.
 func (osuo *OAuthSessionUpdateOne) SetIssuedAt(t time.Time) *OAuthSessionUpdateOne {
 	osuo.mutation.SetIssuedAt(t)
+	return osuo
+}
+
+// SetNillableIssuedAt sets the "issued_at" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableIssuedAt(t *time.Time) *OAuthSessionUpdateOne {
+	if t != nil {
+		osuo.SetIssuedAt(*t)
+	}
 	return osuo
 }
 
@@ -339,9 +400,25 @@ func (osuo *OAuthSessionUpdateOne) SetRequestedAt(t time.Time) *OAuthSessionUpda
 	return osuo
 }
 
+// SetNillableRequestedAt sets the "requested_at" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableRequestedAt(t *time.Time) *OAuthSessionUpdateOne {
+	if t != nil {
+		osuo.SetRequestedAt(*t)
+	}
+	return osuo
+}
+
 // SetAuthTime sets the "auth_time" field.
 func (osuo *OAuthSessionUpdateOne) SetAuthTime(t time.Time) *OAuthSessionUpdateOne {
 	osuo.mutation.SetAuthTime(t)
+	return osuo
+}
+
+// SetNillableAuthTime sets the "auth_time" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableAuthTime(t *time.Time) *OAuthSessionUpdateOne {
+	if t != nil {
+		osuo.SetAuthTime(*t)
+	}
 	return osuo
 }
 
@@ -399,15 +476,37 @@ func (osuo *OAuthSessionUpdateOne) SetRequest(s string) *OAuthSessionUpdateOne {
 	return osuo
 }
 
+// SetNillableRequest sets the "request" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableRequest(s *string) *OAuthSessionUpdateOne {
+	if s != nil {
+		osuo.SetRequest(*s)
+	}
+	return osuo
+}
+
 // SetForm sets the "form" field.
 func (osuo *OAuthSessionUpdateOne) SetForm(s string) *OAuthSessionUpdateOne {
 	osuo.mutation.SetForm(s)
 	return osuo
 }
 
+// SetNillableForm sets the "form" field if the given value is not nil.
+func (osuo *OAuthSessionUpdateOne) SetNillableForm(s *string) *OAuthSessionUpdateOne {
+	if s != nil {
+		osuo.SetForm(*s)
+	}
+	return osuo
+}
+
 // Mutation returns the OAuthSessionMutation object of the builder.
 func (osuo *OAuthSessionUpdateOne) Mutation() *OAuthSessionMutation {
 	return osuo.mutation
+}
+
+// Where appends a list predicates to the OAuthSessionUpdate builder.
+func (osuo *OAuthSessionUpdateOne) Where(ps ...predicate.OAuthSession) *OAuthSessionUpdateOne {
+	osuo.mutation.Where(ps...)
+	return osuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -419,40 +518,7 @@ func (osuo *OAuthSessionUpdateOne) Select(field string, fields ...string) *OAuth
 
 // Save executes the query and returns the updated OAuthSession entity.
 func (osuo *OAuthSessionUpdateOne) Save(ctx context.Context) (*OAuthSession, error) {
-	var (
-		err  error
-		node *OAuthSession
-	)
-	if len(osuo.hooks) == 0 {
-		node, err = osuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthSessionMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			osuo.mutation = mutation
-			node, err = osuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(osuo.hooks) - 1; i >= 0; i-- {
-			if osuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = osuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, osuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthSession)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthSessionMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, osuo.sqlSave, osuo.mutation, osuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -478,16 +544,7 @@ func (osuo *OAuthSessionUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (osuo *OAuthSessionUpdateOne) sqlSave(ctx context.Context) (_node *OAuthSession, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthsession.Table,
-			Columns: oauthsession.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthsession.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthsession.Table, oauthsession.Columns, sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt))
 	id, ok := osuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OAuthSession.id" for update`)}
@@ -587,5 +644,6 @@ func (osuo *OAuthSessionUpdateOne) sqlSave(ctx context.Context) (_node *OAuthSes
 		}
 		return nil, err
 	}
+	osuo.mutation.done = true
 	return _node, nil
 }

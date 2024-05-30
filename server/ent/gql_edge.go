@@ -2,7 +2,9 @@
 
 package ent
 
-import "context"
+import (
+	"context"
+)
 
 func (ac *AuthCode) Session(ctx context.Context) (*OAuthSession, error) {
 	result, err := ac.Edges.SessionOrErr()

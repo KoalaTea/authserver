@@ -18,11 +18,9 @@ import (
 // OIDCAuthCodeQuery is the builder for querying OIDCAuthCode entities.
 type OIDCAuthCodeQuery struct {
 	config
-	limit       *int
-	offset      *int
-	unique      *bool
-	order       []OrderFunc
-	fields      []string
+	ctx         *QueryContext
+	order       []oidcauthcode.OrderOption
+	inters      []Interceptor
 	predicates  []predicate.OIDCAuthCode
 	withSession *OAuthSessionQuery
 	withFKs     bool
@@ -39,34 +37,34 @@ func (oacq *OIDCAuthCodeQuery) Where(ps ...predicate.OIDCAuthCode) *OIDCAuthCode
 	return oacq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (oacq *OIDCAuthCodeQuery) Limit(limit int) *OIDCAuthCodeQuery {
-	oacq.limit = &limit
+	oacq.ctx.Limit = &limit
 	return oacq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (oacq *OIDCAuthCodeQuery) Offset(offset int) *OIDCAuthCodeQuery {
-	oacq.offset = &offset
+	oacq.ctx.Offset = &offset
 	return oacq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (oacq *OIDCAuthCodeQuery) Unique(unique bool) *OIDCAuthCodeQuery {
-	oacq.unique = &unique
+	oacq.ctx.Unique = &unique
 	return oacq
 }
 
-// Order adds an order step to the query.
-func (oacq *OIDCAuthCodeQuery) Order(o ...OrderFunc) *OIDCAuthCodeQuery {
+// Order specifies how the records should be ordered.
+func (oacq *OIDCAuthCodeQuery) Order(o ...oidcauthcode.OrderOption) *OIDCAuthCodeQuery {
 	oacq.order = append(oacq.order, o...)
 	return oacq
 }
 
 // QuerySession chains the current query on the "session" edge.
 func (oacq *OIDCAuthCodeQuery) QuerySession() *OAuthSessionQuery {
-	query := &OAuthSessionQuery{config: oacq.config}
+	query := (&OAuthSessionClient{config: oacq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := oacq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -89,7 +87,7 @@ func (oacq *OIDCAuthCodeQuery) QuerySession() *OAuthSessionQuery {
 // First returns the first OIDCAuthCode entity from the query.
 // Returns a *NotFoundError when no OIDCAuthCode was found.
 func (oacq *OIDCAuthCodeQuery) First(ctx context.Context) (*OIDCAuthCode, error) {
-	nodes, err := oacq.Limit(1).All(ctx)
+	nodes, err := oacq.Limit(1).All(setContextOp(ctx, oacq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +110,7 @@ func (oacq *OIDCAuthCodeQuery) FirstX(ctx context.Context) *OIDCAuthCode {
 // Returns a *NotFoundError when no OIDCAuthCode ID was found.
 func (oacq *OIDCAuthCodeQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oacq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = oacq.Limit(1).IDs(setContextOp(ctx, oacq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +133,7 @@ func (oacq *OIDCAuthCodeQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OIDCAuthCode entity is found.
 // Returns a *NotFoundError when no OIDCAuthCode entities are found.
 func (oacq *OIDCAuthCodeQuery) Only(ctx context.Context) (*OIDCAuthCode, error) {
-	nodes, err := oacq.Limit(2).All(ctx)
+	nodes, err := oacq.Limit(2).All(setContextOp(ctx, oacq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +161,7 @@ func (oacq *OIDCAuthCodeQuery) OnlyX(ctx context.Context) *OIDCAuthCode {
 // Returns a *NotFoundError when no entities are found.
 func (oacq *OIDCAuthCodeQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oacq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = oacq.Limit(2).IDs(setContextOp(ctx, oacq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,10 +186,12 @@ func (oacq *OIDCAuthCodeQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OIDCAuthCodes.
 func (oacq *OIDCAuthCodeQuery) All(ctx context.Context) ([]*OIDCAuthCode, error) {
+	ctx = setContextOp(ctx, oacq.ctx, "All")
 	if err := oacq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return oacq.sqlAll(ctx)
+	qr := querierAll[[]*OIDCAuthCode, *OIDCAuthCodeQuery]()
+	return withInterceptors[[]*OIDCAuthCode](ctx, oacq, qr, oacq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -204,9 +204,12 @@ func (oacq *OIDCAuthCodeQuery) AllX(ctx context.Context) []*OIDCAuthCode {
 }
 
 // IDs executes the query and returns a list of OIDCAuthCode IDs.
-func (oacq *OIDCAuthCodeQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := oacq.Select(oidcauthcode.FieldID).Scan(ctx, &ids); err != nil {
+func (oacq *OIDCAuthCodeQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if oacq.ctx.Unique == nil && oacq.path != nil {
+		oacq.Unique(true)
+	}
+	ctx = setContextOp(ctx, oacq.ctx, "IDs")
+	if err = oacq.Select(oidcauthcode.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -223,10 +226,11 @@ func (oacq *OIDCAuthCodeQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (oacq *OIDCAuthCodeQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, oacq.ctx, "Count")
 	if err := oacq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return oacq.sqlCount(ctx)
+	return withInterceptors[int](ctx, oacq, querierCount[*OIDCAuthCodeQuery](), oacq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -240,10 +244,15 @@ func (oacq *OIDCAuthCodeQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (oacq *OIDCAuthCodeQuery) Exist(ctx context.Context) (bool, error) {
-	if err := oacq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, oacq.ctx, "Exist")
+	switch _, err := oacq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return oacq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -263,22 +272,21 @@ func (oacq *OIDCAuthCodeQuery) Clone() *OIDCAuthCodeQuery {
 	}
 	return &OIDCAuthCodeQuery{
 		config:      oacq.config,
-		limit:       oacq.limit,
-		offset:      oacq.offset,
-		order:       append([]OrderFunc{}, oacq.order...),
+		ctx:         oacq.ctx.Clone(),
+		order:       append([]oidcauthcode.OrderOption{}, oacq.order...),
+		inters:      append([]Interceptor{}, oacq.inters...),
 		predicates:  append([]predicate.OIDCAuthCode{}, oacq.predicates...),
 		withSession: oacq.withSession.Clone(),
 		// clone intermediate query.
-		sql:    oacq.sql.Clone(),
-		path:   oacq.path,
-		unique: oacq.unique,
+		sql:  oacq.sql.Clone(),
+		path: oacq.path,
 	}
 }
 
 // WithSession tells the query-builder to eager-load the nodes that are connected to
 // the "session" edge. The optional arguments are used to configure the query builder of the edge.
 func (oacq *OIDCAuthCodeQuery) WithSession(opts ...func(*OAuthSessionQuery)) *OIDCAuthCodeQuery {
-	query := &OAuthSessionQuery{config: oacq.config}
+	query := (&OAuthSessionClient{config: oacq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -301,16 +309,11 @@ func (oacq *OIDCAuthCodeQuery) WithSession(opts ...func(*OAuthSessionQuery)) *OI
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (oacq *OIDCAuthCodeQuery) GroupBy(field string, fields ...string) *OIDCAuthCodeGroupBy {
-	grbuild := &OIDCAuthCodeGroupBy{config: oacq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := oacq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return oacq.sqlQuery(ctx), nil
-	}
+	oacq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OIDCAuthCodeGroupBy{build: oacq}
+	grbuild.flds = &oacq.ctx.Fields
 	grbuild.label = oidcauthcode.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,11 +330,11 @@ func (oacq *OIDCAuthCodeQuery) GroupBy(field string, fields ...string) *OIDCAuth
 //		Select(oidcauthcode.FieldAuthorizationCode).
 //		Scan(ctx, &v)
 func (oacq *OIDCAuthCodeQuery) Select(fields ...string) *OIDCAuthCodeSelect {
-	oacq.fields = append(oacq.fields, fields...)
-	selbuild := &OIDCAuthCodeSelect{OIDCAuthCodeQuery: oacq}
-	selbuild.label = oidcauthcode.Label
-	selbuild.flds, selbuild.scan = &oacq.fields, selbuild.Scan
-	return selbuild
+	oacq.ctx.Fields = append(oacq.ctx.Fields, fields...)
+	sbuild := &OIDCAuthCodeSelect{OIDCAuthCodeQuery: oacq}
+	sbuild.label = oidcauthcode.Label
+	sbuild.flds, sbuild.scan = &oacq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OIDCAuthCodeSelect configured with the given aggregations.
@@ -340,7 +343,17 @@ func (oacq *OIDCAuthCodeQuery) Aggregate(fns ...AggregateFunc) *OIDCAuthCodeSele
 }
 
 func (oacq *OIDCAuthCodeQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range oacq.fields {
+	for _, inter := range oacq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, oacq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range oacq.ctx.Fields {
 		if !oidcauthcode.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -418,6 +431,9 @@ func (oacq *OIDCAuthCodeQuery) loadSession(ctx context.Context, query *OAuthSess
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(oauthsession.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -440,41 +456,22 @@ func (oacq *OIDCAuthCodeQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(oacq.modifiers) > 0 {
 		_spec.Modifiers = oacq.modifiers
 	}
-	_spec.Node.Columns = oacq.fields
-	if len(oacq.fields) > 0 {
-		_spec.Unique = oacq.unique != nil && *oacq.unique
+	_spec.Node.Columns = oacq.ctx.Fields
+	if len(oacq.ctx.Fields) > 0 {
+		_spec.Unique = oacq.ctx.Unique != nil && *oacq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, oacq.driver, _spec)
 }
 
-func (oacq *OIDCAuthCodeQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := oacq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (oacq *OIDCAuthCodeQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oidcauthcode.Table,
-			Columns: oidcauthcode.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oidcauthcode.FieldID,
-			},
-		},
-		From:   oacq.sql,
-		Unique: true,
-	}
-	if unique := oacq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oidcauthcode.Table, oidcauthcode.Columns, sqlgraph.NewFieldSpec(oidcauthcode.FieldID, field.TypeInt))
+	_spec.From = oacq.sql
+	if unique := oacq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if oacq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := oacq.fields; len(fields) > 0 {
+	if fields := oacq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oidcauthcode.FieldID)
 		for i := range fields {
@@ -490,10 +487,10 @@ func (oacq *OIDCAuthCodeQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := oacq.limit; limit != nil {
+	if limit := oacq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := oacq.offset; offset != nil {
+	if offset := oacq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := oacq.order; len(ps) > 0 {
@@ -509,7 +506,7 @@ func (oacq *OIDCAuthCodeQuery) querySpec() *sqlgraph.QuerySpec {
 func (oacq *OIDCAuthCodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(oacq.driver.Dialect())
 	t1 := builder.Table(oidcauthcode.Table)
-	columns := oacq.fields
+	columns := oacq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oidcauthcode.Columns
 	}
@@ -518,7 +515,7 @@ func (oacq *OIDCAuthCodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = oacq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if oacq.unique != nil && *oacq.unique {
+	if oacq.ctx.Unique != nil && *oacq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range oacq.predicates {
@@ -527,12 +524,12 @@ func (oacq *OIDCAuthCodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range oacq.order {
 		p(selector)
 	}
-	if offset := oacq.offset; offset != nil {
+	if offset := oacq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := oacq.limit; limit != nil {
+	if limit := oacq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -540,13 +537,8 @@ func (oacq *OIDCAuthCodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // OIDCAuthCodeGroupBy is the group-by builder for OIDCAuthCode entities.
 type OIDCAuthCodeGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OIDCAuthCodeQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -555,58 +547,46 @@ func (oacgb *OIDCAuthCodeGroupBy) Aggregate(fns ...AggregateFunc) *OIDCAuthCodeG
 	return oacgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (oacgb *OIDCAuthCodeGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := oacgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, oacgb.build.ctx, "GroupBy")
+	if err := oacgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oacgb.sql = query
-	return oacgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OIDCAuthCodeQuery, *OIDCAuthCodeGroupBy](ctx, oacgb.build, oacgb, oacgb.build.inters, v)
 }
 
-func (oacgb *OIDCAuthCodeGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range oacgb.fields {
-		if !oidcauthcode.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (oacgb *OIDCAuthCodeGroupBy) sqlScan(ctx context.Context, root *OIDCAuthCodeQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(oacgb.fns))
+	for _, fn := range oacgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := oacgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*oacgb.flds)+len(oacgb.fns))
+		for _, f := range *oacgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*oacgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := oacgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := oacgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (oacgb *OIDCAuthCodeGroupBy) sqlQuery() *sql.Selector {
-	selector := oacgb.sql.Select()
-	aggregation := make([]string, 0, len(oacgb.fns))
-	for _, fn := range oacgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(oacgb.fields)+len(oacgb.fns))
-		for _, f := range oacgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(oacgb.fields...)...)
-}
-
 // OIDCAuthCodeSelect is the builder for selecting fields of OIDCAuthCode entities.
 type OIDCAuthCodeSelect struct {
 	*OIDCAuthCodeQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -617,26 +597,27 @@ func (oacs *OIDCAuthCodeSelect) Aggregate(fns ...AggregateFunc) *OIDCAuthCodeSel
 
 // Scan applies the selector query and scans the result into the given value.
 func (oacs *OIDCAuthCodeSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, oacs.ctx, "Select")
 	if err := oacs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oacs.sql = oacs.OIDCAuthCodeQuery.sqlQuery(ctx)
-	return oacs.sqlScan(ctx, v)
+	return scanWithInterceptors[*OIDCAuthCodeQuery, *OIDCAuthCodeSelect](ctx, oacs.OIDCAuthCodeQuery, oacs, oacs.inters, v)
 }
 
-func (oacs *OIDCAuthCodeSelect) sqlScan(ctx context.Context, v any) error {
+func (oacs *OIDCAuthCodeSelect) sqlScan(ctx context.Context, root *OIDCAuthCodeQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(oacs.fns))
 	for _, fn := range oacs.fns {
-		aggregation = append(aggregation, fn(oacs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*oacs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		oacs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		oacs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := oacs.sql.Query()
+	query, args := selector.Query()
 	if err := oacs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

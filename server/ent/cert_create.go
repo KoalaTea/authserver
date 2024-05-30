@@ -25,49 +25,7 @@ func (cc *CertCreate) Mutation() *CertMutation {
 
 // Save creates the Cert in the database.
 func (cc *CertCreate) Save(ctx context.Context) (*Cert, error) {
-	var (
-		err  error
-		node *Cert
-	)
-	if len(cc.hooks) == 0 {
-		if err = cc.check(); err != nil {
-			return nil, err
-		}
-		node, err = cc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CertMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = cc.check(); err != nil {
-				return nil, err
-			}
-			cc.mutation = mutation
-			if node, err = cc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cc.hooks) - 1; i >= 0; i-- {
-			if cc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Cert)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from CertMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -98,6 +56,9 @@ func (cc *CertCreate) check() error {
 }
 
 func (cc *CertCreate) sqlSave(ctx context.Context) (*Cert, error) {
+	if err := cc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := cc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, cc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -107,19 +68,15 @@ func (cc *CertCreate) sqlSave(ctx context.Context) (*Cert, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	cc.mutation.id = &_node.ID
+	cc.mutation.done = true
 	return _node, nil
 }
 
 func (cc *CertCreate) createSpec() (*Cert, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Cert{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: cert.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: cert.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(cert.Table, sqlgraph.NewFieldSpec(cert.FieldID, field.TypeInt))
 	)
 	return _node, _spec
 }
@@ -127,11 +84,15 @@ func (cc *CertCreate) createSpec() (*Cert, *sqlgraph.CreateSpec) {
 // CertCreateBulk is the builder for creating many Cert entities in bulk.
 type CertCreateBulk struct {
 	config
+	err      error
 	builders []*CertCreate
 }
 
 // Save creates the Cert entities in the database.
 func (ccb *CertCreateBulk) Save(ctx context.Context) ([]*Cert, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Cert, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))
@@ -147,8 +108,8 @@ func (ccb *CertCreateBulk) Save(ctx context.Context) ([]*Cert, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ccb.builders[i+1].mutation)
 				} else {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/publicjwk"
 )
@@ -25,7 +26,8 @@ type PublicJWK struct {
 	// Issuer holds the value of the "issuer" field.
 	Issuer string `json:"issuer,omitempty"`
 	// Scopes holds the value of the "scopes" field.
-	Scopes []string `json:"scopes,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -40,7 +42,7 @@ func (*PublicJWK) scanValues(columns []string) ([]any, error) {
 		case publicjwk.FieldSid, publicjwk.FieldKid, publicjwk.FieldKey, publicjwk.FieldIssuer:
 			values[i] = new(sql.NullString)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type PublicJWK", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -92,16 +94,24 @@ func (pj *PublicJWK) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field scopes: %w", err)
 				}
 			}
+		default:
+			pj.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the PublicJWK.
+// This includes values selected through modifiers, order, etc.
+func (pj *PublicJWK) Value(name string) (ent.Value, error) {
+	return pj.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this PublicJWK.
 // Note that you need to call PublicJWK.Unwrap() before calling this method if this PublicJWK
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pj *PublicJWK) Update() *PublicJWKUpdateOne {
-	return (&PublicJWKClient{config: pj.config}).UpdateOne(pj)
+	return NewPublicJWKClient(pj.config).UpdateOne(pj)
 }
 
 // Unwrap unwraps the PublicJWK entity that was returned from a transaction after it was closed,
@@ -140,9 +150,3 @@ func (pj *PublicJWK) String() string {
 
 // PublicJWKs is a parsable slice of PublicJWK.
 type PublicJWKs []*PublicJWK
-
-func (pj PublicJWKs) config(cfg config) {
-	for _i := range pj {
-		pj[_i].config = cfg
-	}
-}

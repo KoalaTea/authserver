@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/oidcauthcode"
@@ -22,6 +23,7 @@ type OIDCAuthCode struct {
 	// The values are being populated by the OIDCAuthCodeQuery when eager-loading is set.
 	Edges                  OIDCAuthCodeEdges `json:"edges"`
 	oidc_auth_code_session *int
+	selectValues           sql.SelectValues
 }
 
 // OIDCAuthCodeEdges holds the relations/edges for other nodes in the graph.
@@ -38,12 +40,10 @@ type OIDCAuthCodeEdges struct {
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e OIDCAuthCodeEdges) SessionOrErr() (*OAuthSession, error) {
-	if e.loadedTypes[0] {
-		if e.Session == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oauthsession.Label}
-		}
+	if e.Session != nil {
 		return e.Session, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthsession.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
 }
@@ -60,7 +60,7 @@ func (*OIDCAuthCode) scanValues(columns []string) ([]any, error) {
 		case oidcauthcode.ForeignKeys[0]: // oidc_auth_code_session
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OIDCAuthCode", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -93,21 +93,29 @@ func (oac *OIDCAuthCode) assignValues(columns []string, values []any) error {
 				oac.oidc_auth_code_session = new(int)
 				*oac.oidc_auth_code_session = int(value.Int64)
 			}
+		default:
+			oac.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the OIDCAuthCode.
+// This includes values selected through modifiers, order, etc.
+func (oac *OIDCAuthCode) Value(name string) (ent.Value, error) {
+	return oac.selectValues.Get(name)
+}
+
 // QuerySession queries the "session" edge of the OIDCAuthCode entity.
 func (oac *OIDCAuthCode) QuerySession() *OAuthSessionQuery {
-	return (&OIDCAuthCodeClient{config: oac.config}).QuerySession(oac)
+	return NewOIDCAuthCodeClient(oac.config).QuerySession(oac)
 }
 
 // Update returns a builder for updating this OIDCAuthCode.
 // Note that you need to call OIDCAuthCode.Unwrap() before calling this method if this OIDCAuthCode
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (oac *OIDCAuthCode) Update() *OIDCAuthCodeUpdateOne {
-	return (&OIDCAuthCodeClient{config: oac.config}).UpdateOne(oac)
+	return NewOIDCAuthCodeClient(oac.config).UpdateOne(oac)
 }
 
 // Unwrap unwraps the OIDCAuthCode entity that was returned from a transaction after it was closed,
@@ -134,9 +142,3 @@ func (oac *OIDCAuthCode) String() string {
 
 // OIDCAuthCodes is a parsable slice of OIDCAuthCode.
 type OIDCAuthCodes []*OIDCAuthCode
-
-func (oac OIDCAuthCodes) config(cfg config) {
-	for _i := range oac {
-		oac[_i].config = cfg
-	}
-}

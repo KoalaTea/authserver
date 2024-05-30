@@ -56,49 +56,7 @@ func (pjc *PublicJWKCreate) Mutation() *PublicJWKMutation {
 
 // Save creates the PublicJWK in the database.
 func (pjc *PublicJWKCreate) Save(ctx context.Context) (*PublicJWK, error) {
-	var (
-		err  error
-		node *PublicJWK
-	)
-	if len(pjc.hooks) == 0 {
-		if err = pjc.check(); err != nil {
-			return nil, err
-		}
-		node, err = pjc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pjc.check(); err != nil {
-				return nil, err
-			}
-			pjc.mutation = mutation
-			if node, err = pjc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pjc.hooks) - 1; i >= 0; i-- {
-			if pjc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pjc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pjc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PublicJWK)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PublicJWKMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pjc.sqlSave, pjc.mutation, pjc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -144,6 +102,9 @@ func (pjc *PublicJWKCreate) check() error {
 }
 
 func (pjc *PublicJWKCreate) sqlSave(ctx context.Context) (*PublicJWK, error) {
+	if err := pjc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := pjc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, pjc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -153,19 +114,15 @@ func (pjc *PublicJWKCreate) sqlSave(ctx context.Context) (*PublicJWK, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	pjc.mutation.id = &_node.ID
+	pjc.mutation.done = true
 	return _node, nil
 }
 
 func (pjc *PublicJWKCreate) createSpec() (*PublicJWK, *sqlgraph.CreateSpec) {
 	var (
 		_node = &PublicJWK{config: pjc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: publicjwk.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwk.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(publicjwk.Table, sqlgraph.NewFieldSpec(publicjwk.FieldID, field.TypeInt))
 	)
 	if value, ok := pjc.mutation.Sid(); ok {
 		_spec.SetField(publicjwk.FieldSid, field.TypeString, value)
@@ -193,11 +150,15 @@ func (pjc *PublicJWKCreate) createSpec() (*PublicJWK, *sqlgraph.CreateSpec) {
 // PublicJWKCreateBulk is the builder for creating many PublicJWK entities in bulk.
 type PublicJWKCreateBulk struct {
 	config
+	err      error
 	builders []*PublicJWKCreate
 }
 
 // Save creates the PublicJWK entities in the database.
 func (pjcb *PublicJWKCreateBulk) Save(ctx context.Context) ([]*PublicJWK, error) {
+	if pjcb.err != nil {
+		return nil, pjcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pjcb.builders))
 	nodes := make([]*PublicJWK, len(pjcb.builders))
 	mutators := make([]Mutator, len(pjcb.builders))
@@ -213,8 +174,8 @@ func (pjcb *PublicJWKCreateBulk) Save(ctx context.Context) ([]*PublicJWK, error)
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pjcb.builders[i+1].mutation)
 				} else {

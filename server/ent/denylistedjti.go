@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
 )
@@ -19,7 +20,8 @@ type DenyListedJTI struct {
 	// Jti holds the value of the "jti" field.
 	Jti string `json:"jti,omitempty"`
 	// Expiration holds the value of the "expiration" field.
-	Expiration time.Time `json:"expiration,omitempty"`
+	Expiration   time.Time `json:"expiration,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -34,7 +36,7 @@ func (*DenyListedJTI) scanValues(columns []string) ([]any, error) {
 		case denylistedjti.FieldExpiration:
 			values[i] = new(sql.NullTime)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type DenyListedJTI", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -66,16 +68,24 @@ func (dlj *DenyListedJTI) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				dlj.Expiration = value.Time
 			}
+		default:
+			dlj.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the DenyListedJTI.
+// This includes values selected through modifiers, order, etc.
+func (dlj *DenyListedJTI) Value(name string) (ent.Value, error) {
+	return dlj.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this DenyListedJTI.
 // Note that you need to call DenyListedJTI.Unwrap() before calling this method if this DenyListedJTI
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (dlj *DenyListedJTI) Update() *DenyListedJTIUpdateOne {
-	return (&DenyListedJTIClient{config: dlj.config}).UpdateOne(dlj)
+	return NewDenyListedJTIClient(dlj.config).UpdateOne(dlj)
 }
 
 // Unwrap unwraps the DenyListedJTI entity that was returned from a transaction after it was closed,
@@ -105,9 +115,3 @@ func (dlj *DenyListedJTI) String() string {
 
 // DenyListedJTIs is a parsable slice of DenyListedJTI.
 type DenyListedJTIs []*DenyListedJTI
-
-func (dlj DenyListedJTIs) config(cfg config) {
-	for _i := range dlj {
-		dlj[_i].config = cfg
-	}
-}

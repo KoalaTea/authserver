@@ -32,49 +32,7 @@ func (oprc *OAuthPARRequestCreate) Mutation() *OAuthPARRequestMutation {
 
 // Save creates the OAuthPARRequest in the database.
 func (oprc *OAuthPARRequestCreate) Save(ctx context.Context) (*OAuthPARRequest, error) {
-	var (
-		err  error
-		node *OAuthPARRequest
-	)
-	if len(oprc.hooks) == 0 {
-		if err = oprc.check(); err != nil {
-			return nil, err
-		}
-		node, err = oprc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthPARRequestMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = oprc.check(); err != nil {
-				return nil, err
-			}
-			oprc.mutation = mutation
-			if node, err = oprc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(oprc.hooks) - 1; i >= 0; i-- {
-			if oprc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oprc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, oprc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthPARRequest)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthPARRequestMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, oprc.sqlSave, oprc.mutation, oprc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -108,6 +66,9 @@ func (oprc *OAuthPARRequestCreate) check() error {
 }
 
 func (oprc *OAuthPARRequestCreate) sqlSave(ctx context.Context) (*OAuthPARRequest, error) {
+	if err := oprc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := oprc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, oprc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -117,19 +78,15 @@ func (oprc *OAuthPARRequestCreate) sqlSave(ctx context.Context) (*OAuthPARReques
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	oprc.mutation.id = &_node.ID
+	oprc.mutation.done = true
 	return _node, nil
 }
 
 func (oprc *OAuthPARRequestCreate) createSpec() (*OAuthPARRequest, *sqlgraph.CreateSpec) {
 	var (
 		_node = &OAuthPARRequest{config: oprc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: oauthparrequest.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthparrequest.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(oauthparrequest.Table, sqlgraph.NewFieldSpec(oauthparrequest.FieldID, field.TypeInt))
 	)
 	if value, ok := oprc.mutation.Request(); ok {
 		_spec.SetField(oauthparrequest.FieldRequest, field.TypeString, value)
@@ -141,11 +98,15 @@ func (oprc *OAuthPARRequestCreate) createSpec() (*OAuthPARRequest, *sqlgraph.Cre
 // OAuthPARRequestCreateBulk is the builder for creating many OAuthPARRequest entities in bulk.
 type OAuthPARRequestCreateBulk struct {
 	config
+	err      error
 	builders []*OAuthPARRequestCreate
 }
 
 // Save creates the OAuthPARRequest entities in the database.
 func (oprcb *OAuthPARRequestCreateBulk) Save(ctx context.Context) ([]*OAuthPARRequest, error) {
+	if oprcb.err != nil {
+		return nil, oprcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(oprcb.builders))
 	nodes := make([]*OAuthPARRequest, len(oprcb.builders))
 	mutators := make([]Mutator, len(oprcb.builders))
@@ -161,8 +122,8 @@ func (oprcb *OAuthPARRequestCreateBulk) Save(ctx context.Context) ([]*OAuthPARRe
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, oprcb.builders[i+1].mutation)
 				} else {

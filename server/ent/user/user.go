@@ -2,6 +2,10 @@
 
 package user
 
+import (
+	"entgo.io/ent/dialect/sql"
+)
+
 const (
 	// Label holds the string label denoting the user type in the database.
 	Label = "user"
@@ -48,3 +52,31 @@ var (
 	// DefaultIsActivated holds the default value on creation for the "IsActivated" field.
 	DefaultIsActivated bool
 )
+
+// OrderOption defines the ordering options for the User queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByName orders the results by the Name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByOAuthID orders the results by the OAuthID field.
+func ByOAuthID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOAuthID, opts...).ToFunc()
+}
+
+// BySessionToken orders the results by the SessionToken field.
+func BySessionToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSessionToken, opts...).ToFunc()
+}
+
+// ByIsActivated orders the results by the IsActivated field.
+func ByIsActivated(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsActivated, opts...).ToFunc()
+}

@@ -11,811 +11,520 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldID, id))
 }
 
 // Issuer applies equality check predicate on the "issuer" field. It's identical to IssuerEQ.
 func Issuer(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldIssuer, v))
 }
 
 // Subject applies equality check predicate on the "subject" field. It's identical to SubjectEQ.
 func Subject(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldSubject, v))
 }
 
 // ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
 func ExpiresAt(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldExpiresAt, v))
 }
 
 // IssuedAt applies equality check predicate on the "issued_at" field. It's identical to IssuedAtEQ.
 func IssuedAt(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldIssuedAt, v))
 }
 
 // RequestedAt applies equality check predicate on the "requested_at" field. It's identical to RequestedAtEQ.
 func RequestedAt(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldRequestedAt, v))
 }
 
 // AuthTime applies equality check predicate on the "auth_time" field. It's identical to AuthTimeEQ.
 func AuthTime(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldAuthTime, v))
 }
 
 // Request applies equality check predicate on the "request" field. It's identical to RequestEQ.
 func Request(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldRequest, v))
 }
 
 // Form applies equality check predicate on the "form" field. It's identical to FormEQ.
 func Form(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldForm, v))
 }
 
 // IssuerEQ applies the EQ predicate on the "issuer" field.
 func IssuerEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldIssuer, v))
 }
 
 // IssuerNEQ applies the NEQ predicate on the "issuer" field.
 func IssuerNEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldIssuer, v))
 }
 
 // IssuerIn applies the In predicate on the "issuer" field.
 func IssuerIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldIssuer), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldIssuer, vs...))
 }
 
 // IssuerNotIn applies the NotIn predicate on the "issuer" field.
 func IssuerNotIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldIssuer), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldIssuer, vs...))
 }
 
 // IssuerGT applies the GT predicate on the "issuer" field.
 func IssuerGT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldIssuer, v))
 }
 
 // IssuerGTE applies the GTE predicate on the "issuer" field.
 func IssuerGTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldIssuer, v))
 }
 
 // IssuerLT applies the LT predicate on the "issuer" field.
 func IssuerLT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldIssuer, v))
 }
 
 // IssuerLTE applies the LTE predicate on the "issuer" field.
 func IssuerLTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldIssuer, v))
 }
 
 // IssuerContains applies the Contains predicate on the "issuer" field.
 func IssuerContains(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldContains(FieldIssuer, v))
 }
 
 // IssuerHasPrefix applies the HasPrefix predicate on the "issuer" field.
 func IssuerHasPrefix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasPrefix(FieldIssuer, v))
 }
 
 // IssuerHasSuffix applies the HasSuffix predicate on the "issuer" field.
 func IssuerHasSuffix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasSuffix(FieldIssuer, v))
 }
 
 // IssuerEqualFold applies the EqualFold predicate on the "issuer" field.
 func IssuerEqualFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldEqualFold(FieldIssuer, v))
 }
 
 // IssuerContainsFold applies the ContainsFold predicate on the "issuer" field.
 func IssuerContainsFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldIssuer), v))
-	})
+	return predicate.OAuthSession(sql.FieldContainsFold(FieldIssuer, v))
 }
 
 // SubjectEQ applies the EQ predicate on the "subject" field.
 func SubjectEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldSubject, v))
 }
 
 // SubjectNEQ applies the NEQ predicate on the "subject" field.
 func SubjectNEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldSubject, v))
 }
 
 // SubjectIn applies the In predicate on the "subject" field.
 func SubjectIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldSubject), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldSubject, vs...))
 }
 
 // SubjectNotIn applies the NotIn predicate on the "subject" field.
 func SubjectNotIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldSubject), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldSubject, vs...))
 }
 
 // SubjectGT applies the GT predicate on the "subject" field.
 func SubjectGT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldSubject, v))
 }
 
 // SubjectGTE applies the GTE predicate on the "subject" field.
 func SubjectGTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldSubject, v))
 }
 
 // SubjectLT applies the LT predicate on the "subject" field.
 func SubjectLT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldSubject, v))
 }
 
 // SubjectLTE applies the LTE predicate on the "subject" field.
 func SubjectLTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldSubject, v))
 }
 
 // SubjectContains applies the Contains predicate on the "subject" field.
 func SubjectContains(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldContains(FieldSubject, v))
 }
 
 // SubjectHasPrefix applies the HasPrefix predicate on the "subject" field.
 func SubjectHasPrefix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasPrefix(FieldSubject, v))
 }
 
 // SubjectHasSuffix applies the HasSuffix predicate on the "subject" field.
 func SubjectHasSuffix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasSuffix(FieldSubject, v))
 }
 
 // SubjectEqualFold applies the EqualFold predicate on the "subject" field.
 func SubjectEqualFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldEqualFold(FieldSubject, v))
 }
 
 // SubjectContainsFold applies the ContainsFold predicate on the "subject" field.
 func SubjectContainsFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldSubject), v))
-	})
+	return predicate.OAuthSession(sql.FieldContainsFold(FieldSubject, v))
 }
 
 // ExpiresAtEQ applies the EQ predicate on the "expires_at" field.
 func ExpiresAtEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldExpiresAt, v))
 }
 
 // ExpiresAtNEQ applies the NEQ predicate on the "expires_at" field.
 func ExpiresAtNEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldExpiresAt, v))
 }
 
 // ExpiresAtIn applies the In predicate on the "expires_at" field.
 func ExpiresAtIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldExpiresAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldExpiresAt, vs...))
 }
 
 // ExpiresAtNotIn applies the NotIn predicate on the "expires_at" field.
 func ExpiresAtNotIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldExpiresAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldExpiresAt, vs...))
 }
 
 // ExpiresAtGT applies the GT predicate on the "expires_at" field.
 func ExpiresAtGT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldExpiresAt, v))
 }
 
 // ExpiresAtGTE applies the GTE predicate on the "expires_at" field.
 func ExpiresAtGTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldExpiresAt, v))
 }
 
 // ExpiresAtLT applies the LT predicate on the "expires_at" field.
 func ExpiresAtLT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldExpiresAt, v))
 }
 
 // ExpiresAtLTE applies the LTE predicate on the "expires_at" field.
 func ExpiresAtLTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldExpiresAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldExpiresAt, v))
 }
 
 // IssuedAtEQ applies the EQ predicate on the "issued_at" field.
 func IssuedAtEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldIssuedAt, v))
 }
 
 // IssuedAtNEQ applies the NEQ predicate on the "issued_at" field.
 func IssuedAtNEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldIssuedAt, v))
 }
 
 // IssuedAtIn applies the In predicate on the "issued_at" field.
 func IssuedAtIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldIssuedAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldIssuedAt, vs...))
 }
 
 // IssuedAtNotIn applies the NotIn predicate on the "issued_at" field.
 func IssuedAtNotIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldIssuedAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldIssuedAt, vs...))
 }
 
 // IssuedAtGT applies the GT predicate on the "issued_at" field.
 func IssuedAtGT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldIssuedAt, v))
 }
 
 // IssuedAtGTE applies the GTE predicate on the "issued_at" field.
 func IssuedAtGTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldIssuedAt, v))
 }
 
 // IssuedAtLT applies the LT predicate on the "issued_at" field.
 func IssuedAtLT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldIssuedAt, v))
 }
 
 // IssuedAtLTE applies the LTE predicate on the "issued_at" field.
 func IssuedAtLTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldIssuedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldIssuedAt, v))
 }
 
 // RequestedAtEQ applies the EQ predicate on the "requested_at" field.
 func RequestedAtEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldRequestedAt, v))
 }
 
 // RequestedAtNEQ applies the NEQ predicate on the "requested_at" field.
 func RequestedAtNEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldRequestedAt, v))
 }
 
 // RequestedAtIn applies the In predicate on the "requested_at" field.
 func RequestedAtIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRequestedAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldRequestedAt, vs...))
 }
 
 // RequestedAtNotIn applies the NotIn predicate on the "requested_at" field.
 func RequestedAtNotIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRequestedAt), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldRequestedAt, vs...))
 }
 
 // RequestedAtGT applies the GT predicate on the "requested_at" field.
 func RequestedAtGT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldRequestedAt, v))
 }
 
 // RequestedAtGTE applies the GTE predicate on the "requested_at" field.
 func RequestedAtGTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldRequestedAt, v))
 }
 
 // RequestedAtLT applies the LT predicate on the "requested_at" field.
 func RequestedAtLT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldRequestedAt, v))
 }
 
 // RequestedAtLTE applies the LTE predicate on the "requested_at" field.
 func RequestedAtLTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRequestedAt), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldRequestedAt, v))
 }
 
 // AuthTimeEQ applies the EQ predicate on the "auth_time" field.
 func AuthTimeEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldAuthTime, v))
 }
 
 // AuthTimeNEQ applies the NEQ predicate on the "auth_time" field.
 func AuthTimeNEQ(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldAuthTime, v))
 }
 
 // AuthTimeIn applies the In predicate on the "auth_time" field.
 func AuthTimeIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldAuthTime), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldAuthTime, vs...))
 }
 
 // AuthTimeNotIn applies the NotIn predicate on the "auth_time" field.
 func AuthTimeNotIn(vs ...time.Time) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldAuthTime), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldAuthTime, vs...))
 }
 
 // AuthTimeGT applies the GT predicate on the "auth_time" field.
 func AuthTimeGT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldAuthTime, v))
 }
 
 // AuthTimeGTE applies the GTE predicate on the "auth_time" field.
 func AuthTimeGTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldAuthTime, v))
 }
 
 // AuthTimeLT applies the LT predicate on the "auth_time" field.
 func AuthTimeLT(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldAuthTime, v))
 }
 
 // AuthTimeLTE applies the LTE predicate on the "auth_time" field.
 func AuthTimeLTE(v time.Time) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldAuthTime), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldAuthTime, v))
 }
 
 // RequestEQ applies the EQ predicate on the "request" field.
 func RequestEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldRequest, v))
 }
 
 // RequestNEQ applies the NEQ predicate on the "request" field.
 func RequestNEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldRequest, v))
 }
 
 // RequestIn applies the In predicate on the "request" field.
 func RequestIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRequest), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldRequest, vs...))
 }
 
 // RequestNotIn applies the NotIn predicate on the "request" field.
 func RequestNotIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRequest), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldRequest, vs...))
 }
 
 // RequestGT applies the GT predicate on the "request" field.
 func RequestGT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldRequest, v))
 }
 
 // RequestGTE applies the GTE predicate on the "request" field.
 func RequestGTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldRequest, v))
 }
 
 // RequestLT applies the LT predicate on the "request" field.
 func RequestLT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldRequest, v))
 }
 
 // RequestLTE applies the LTE predicate on the "request" field.
 func RequestLTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldRequest, v))
 }
 
 // RequestContains applies the Contains predicate on the "request" field.
 func RequestContains(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldContains(FieldRequest, v))
 }
 
 // RequestHasPrefix applies the HasPrefix predicate on the "request" field.
 func RequestHasPrefix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasPrefix(FieldRequest, v))
 }
 
 // RequestHasSuffix applies the HasSuffix predicate on the "request" field.
 func RequestHasSuffix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasSuffix(FieldRequest, v))
 }
 
 // RequestEqualFold applies the EqualFold predicate on the "request" field.
 func RequestEqualFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldEqualFold(FieldRequest, v))
 }
 
 // RequestContainsFold applies the ContainsFold predicate on the "request" field.
 func RequestContainsFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthSession(sql.FieldContainsFold(FieldRequest, v))
 }
 
 // FormEQ applies the EQ predicate on the "form" field.
 func FormEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldEQ(FieldForm, v))
 }
 
 // FormNEQ applies the NEQ predicate on the "form" field.
 func FormNEQ(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldNEQ(FieldForm, v))
 }
 
 // FormIn applies the In predicate on the "form" field.
 func FormIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldForm), v...))
-	})
+	return predicate.OAuthSession(sql.FieldIn(FieldForm, vs...))
 }
 
 // FormNotIn applies the NotIn predicate on the "form" field.
 func FormNotIn(vs ...string) predicate.OAuthSession {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldForm), v...))
-	})
+	return predicate.OAuthSession(sql.FieldNotIn(FieldForm, vs...))
 }
 
 // FormGT applies the GT predicate on the "form" field.
 func FormGT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldGT(FieldForm, v))
 }
 
 // FormGTE applies the GTE predicate on the "form" field.
 func FormGTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldGTE(FieldForm, v))
 }
 
 // FormLT applies the LT predicate on the "form" field.
 func FormLT(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldLT(FieldForm, v))
 }
 
 // FormLTE applies the LTE predicate on the "form" field.
 func FormLTE(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldLTE(FieldForm, v))
 }
 
 // FormContains applies the Contains predicate on the "form" field.
 func FormContains(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldContains(FieldForm, v))
 }
 
 // FormHasPrefix applies the HasPrefix predicate on the "form" field.
 func FormHasPrefix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasPrefix(FieldForm, v))
 }
 
 // FormHasSuffix applies the HasSuffix predicate on the "form" field.
 func FormHasSuffix(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldHasSuffix(FieldForm, v))
 }
 
 // FormEqualFold applies the EqualFold predicate on the "form" field.
 func FormEqualFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldEqualFold(FieldForm, v))
 }
 
 // FormContainsFold applies the ContainsFold predicate on the "form" field.
 func FormContainsFold(v string) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldForm), v))
-	})
+	return predicate.OAuthSession(sql.FieldContainsFold(FieldForm, v))
 }
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.OAuthSession) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthSession(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.OAuthSession) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthSession(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.OAuthSession) predicate.OAuthSession {
-	return predicate.OAuthSession(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.OAuthSession(sql.NotPredicates(p))
 }

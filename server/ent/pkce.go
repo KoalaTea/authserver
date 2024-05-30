@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 	"github.com/koalatea/authserver/server/ent/pkce"
@@ -22,6 +23,7 @@ type PKCE struct {
 	// The values are being populated by the PKCEQuery when eager-loading is set.
 	Edges        PKCEEdges `json:"edges"`
 	pkce_session *int
+	selectValues sql.SelectValues
 }
 
 // PKCEEdges holds the relations/edges for other nodes in the graph.
@@ -38,12 +40,10 @@ type PKCEEdges struct {
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e PKCEEdges) SessionOrErr() (*OAuthSession, error) {
-	if e.loadedTypes[0] {
-		if e.Session == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oauthsession.Label}
-		}
+	if e.Session != nil {
 		return e.Session, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthsession.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
 }
@@ -60,7 +60,7 @@ func (*PKCE) scanValues(columns []string) ([]any, error) {
 		case pkce.ForeignKeys[0]: // pkce_session
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type PKCE", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -93,21 +93,29 @@ func (pk *PKCE) assignValues(columns []string, values []any) error {
 				pk.pkce_session = new(int)
 				*pk.pkce_session = int(value.Int64)
 			}
+		default:
+			pk.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the PKCE.
+// This includes values selected through modifiers, order, etc.
+func (pk *PKCE) Value(name string) (ent.Value, error) {
+	return pk.selectValues.Get(name)
+}
+
 // QuerySession queries the "session" edge of the PKCE entity.
 func (pk *PKCE) QuerySession() *OAuthSessionQuery {
-	return (&PKCEClient{config: pk.config}).QuerySession(pk)
+	return NewPKCEClient(pk.config).QuerySession(pk)
 }
 
 // Update returns a builder for updating this PKCE.
 // Note that you need to call PKCE.Unwrap() before calling this method if this PKCE
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pk *PKCE) Update() *PKCEUpdateOne {
-	return (&PKCEClient{config: pk.config}).UpdateOne(pk)
+	return NewPKCEClient(pk.config).UpdateOne(pk)
 }
 
 // Unwrap unwraps the PKCE entity that was returned from a transaction after it was closed,
@@ -134,9 +142,3 @@ func (pk *PKCE) String() string {
 
 // PKCEs is a parsable slice of PKCE.
 type PKCEs []*PKCE
-
-func (pk PKCEs) config(cfg config) {
-	for _i := range pk {
-		pk[_i].config = cfg
-	}
-}

@@ -34,9 +34,25 @@ func (pju *PublicJWKUpdate) SetSid(s string) *PublicJWKUpdate {
 	return pju
 }
 
+// SetNillableSid sets the "sid" field if the given value is not nil.
+func (pju *PublicJWKUpdate) SetNillableSid(s *string) *PublicJWKUpdate {
+	if s != nil {
+		pju.SetSid(*s)
+	}
+	return pju
+}
+
 // SetKid sets the "kid" field.
 func (pju *PublicJWKUpdate) SetKid(s string) *PublicJWKUpdate {
 	pju.mutation.SetKid(s)
+	return pju
+}
+
+// SetNillableKid sets the "kid" field if the given value is not nil.
+func (pju *PublicJWKUpdate) SetNillableKid(s *string) *PublicJWKUpdate {
+	if s != nil {
+		pju.SetKid(*s)
+	}
 	return pju
 }
 
@@ -46,9 +62,25 @@ func (pju *PublicJWKUpdate) SetKey(s string) *PublicJWKUpdate {
 	return pju
 }
 
+// SetNillableKey sets the "key" field if the given value is not nil.
+func (pju *PublicJWKUpdate) SetNillableKey(s *string) *PublicJWKUpdate {
+	if s != nil {
+		pju.SetKey(*s)
+	}
+	return pju
+}
+
 // SetIssuer sets the "issuer" field.
 func (pju *PublicJWKUpdate) SetIssuer(s string) *PublicJWKUpdate {
 	pju.mutation.SetIssuer(s)
+	return pju
+}
+
+// SetNillableIssuer sets the "issuer" field if the given value is not nil.
+func (pju *PublicJWKUpdate) SetNillableIssuer(s *string) *PublicJWKUpdate {
+	if s != nil {
+		pju.SetIssuer(*s)
+	}
 	return pju
 }
 
@@ -71,34 +103,7 @@ func (pju *PublicJWKUpdate) Mutation() *PublicJWKMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pju *PublicJWKUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pju.hooks) == 0 {
-		affected, err = pju.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pju.mutation = mutation
-			affected, err = pju.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pju.hooks) - 1; i >= 0; i-- {
-			if pju.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pju.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pju.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, pju.sqlSave, pju.mutation, pju.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -124,16 +129,7 @@ func (pju *PublicJWKUpdate) ExecX(ctx context.Context) {
 }
 
 func (pju *PublicJWKUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   publicjwk.Table,
-			Columns: publicjwk.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwk.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(publicjwk.Table, publicjwk.Columns, sqlgraph.NewFieldSpec(publicjwk.FieldID, field.TypeInt))
 	if ps := pju.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -169,6 +165,7 @@ func (pju *PublicJWKUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	pju.mutation.done = true
 	return n, nil
 }
 
@@ -186,9 +183,25 @@ func (pjuo *PublicJWKUpdateOne) SetSid(s string) *PublicJWKUpdateOne {
 	return pjuo
 }
 
+// SetNillableSid sets the "sid" field if the given value is not nil.
+func (pjuo *PublicJWKUpdateOne) SetNillableSid(s *string) *PublicJWKUpdateOne {
+	if s != nil {
+		pjuo.SetSid(*s)
+	}
+	return pjuo
+}
+
 // SetKid sets the "kid" field.
 func (pjuo *PublicJWKUpdateOne) SetKid(s string) *PublicJWKUpdateOne {
 	pjuo.mutation.SetKid(s)
+	return pjuo
+}
+
+// SetNillableKid sets the "kid" field if the given value is not nil.
+func (pjuo *PublicJWKUpdateOne) SetNillableKid(s *string) *PublicJWKUpdateOne {
+	if s != nil {
+		pjuo.SetKid(*s)
+	}
 	return pjuo
 }
 
@@ -198,9 +211,25 @@ func (pjuo *PublicJWKUpdateOne) SetKey(s string) *PublicJWKUpdateOne {
 	return pjuo
 }
 
+// SetNillableKey sets the "key" field if the given value is not nil.
+func (pjuo *PublicJWKUpdateOne) SetNillableKey(s *string) *PublicJWKUpdateOne {
+	if s != nil {
+		pjuo.SetKey(*s)
+	}
+	return pjuo
+}
+
 // SetIssuer sets the "issuer" field.
 func (pjuo *PublicJWKUpdateOne) SetIssuer(s string) *PublicJWKUpdateOne {
 	pjuo.mutation.SetIssuer(s)
+	return pjuo
+}
+
+// SetNillableIssuer sets the "issuer" field if the given value is not nil.
+func (pjuo *PublicJWKUpdateOne) SetNillableIssuer(s *string) *PublicJWKUpdateOne {
+	if s != nil {
+		pjuo.SetIssuer(*s)
+	}
 	return pjuo
 }
 
@@ -221,6 +250,12 @@ func (pjuo *PublicJWKUpdateOne) Mutation() *PublicJWKMutation {
 	return pjuo.mutation
 }
 
+// Where appends a list predicates to the PublicJWKUpdate builder.
+func (pjuo *PublicJWKUpdateOne) Where(ps ...predicate.PublicJWK) *PublicJWKUpdateOne {
+	pjuo.mutation.Where(ps...)
+	return pjuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (pjuo *PublicJWKUpdateOne) Select(field string, fields ...string) *PublicJWKUpdateOne {
@@ -230,40 +265,7 @@ func (pjuo *PublicJWKUpdateOne) Select(field string, fields ...string) *PublicJW
 
 // Save executes the query and returns the updated PublicJWK entity.
 func (pjuo *PublicJWKUpdateOne) Save(ctx context.Context) (*PublicJWK, error) {
-	var (
-		err  error
-		node *PublicJWK
-	)
-	if len(pjuo.hooks) == 0 {
-		node, err = pjuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pjuo.mutation = mutation
-			node, err = pjuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pjuo.hooks) - 1; i >= 0; i-- {
-			if pjuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pjuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pjuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PublicJWK)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PublicJWKMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pjuo.sqlSave, pjuo.mutation, pjuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -289,16 +291,7 @@ func (pjuo *PublicJWKUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (pjuo *PublicJWKUpdateOne) sqlSave(ctx context.Context) (_node *PublicJWK, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   publicjwk.Table,
-			Columns: publicjwk.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwk.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(publicjwk.Table, publicjwk.Columns, sqlgraph.NewFieldSpec(publicjwk.FieldID, field.TypeInt))
 	id, ok := pjuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PublicJWK.id" for update`)}
@@ -354,5 +347,6 @@ func (pjuo *PublicJWKUpdateOne) sqlSave(ctx context.Context) (_node *PublicJWK, 
 		}
 		return nil, err
 	}
+	pjuo.mutation.done = true
 	return _node, nil
 }

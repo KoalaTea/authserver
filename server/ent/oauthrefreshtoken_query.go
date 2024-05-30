@@ -18,11 +18,9 @@ import (
 // OAuthRefreshTokenQuery is the builder for querying OAuthRefreshToken entities.
 type OAuthRefreshTokenQuery struct {
 	config
-	limit       *int
-	offset      *int
-	unique      *bool
-	order       []OrderFunc
-	fields      []string
+	ctx         *QueryContext
+	order       []oauthrefreshtoken.OrderOption
+	inters      []Interceptor
 	predicates  []predicate.OAuthRefreshToken
 	withSession *OAuthSessionQuery
 	withFKs     bool
@@ -39,34 +37,34 @@ func (ortq *OAuthRefreshTokenQuery) Where(ps ...predicate.OAuthRefreshToken) *OA
 	return ortq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (ortq *OAuthRefreshTokenQuery) Limit(limit int) *OAuthRefreshTokenQuery {
-	ortq.limit = &limit
+	ortq.ctx.Limit = &limit
 	return ortq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (ortq *OAuthRefreshTokenQuery) Offset(offset int) *OAuthRefreshTokenQuery {
-	ortq.offset = &offset
+	ortq.ctx.Offset = &offset
 	return ortq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (ortq *OAuthRefreshTokenQuery) Unique(unique bool) *OAuthRefreshTokenQuery {
-	ortq.unique = &unique
+	ortq.ctx.Unique = &unique
 	return ortq
 }
 
-// Order adds an order step to the query.
-func (ortq *OAuthRefreshTokenQuery) Order(o ...OrderFunc) *OAuthRefreshTokenQuery {
+// Order specifies how the records should be ordered.
+func (ortq *OAuthRefreshTokenQuery) Order(o ...oauthrefreshtoken.OrderOption) *OAuthRefreshTokenQuery {
 	ortq.order = append(ortq.order, o...)
 	return ortq
 }
 
 // QuerySession chains the current query on the "session" edge.
 func (ortq *OAuthRefreshTokenQuery) QuerySession() *OAuthSessionQuery {
-	query := &OAuthSessionQuery{config: ortq.config}
+	query := (&OAuthSessionClient{config: ortq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ortq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -89,7 +87,7 @@ func (ortq *OAuthRefreshTokenQuery) QuerySession() *OAuthSessionQuery {
 // First returns the first OAuthRefreshToken entity from the query.
 // Returns a *NotFoundError when no OAuthRefreshToken was found.
 func (ortq *OAuthRefreshTokenQuery) First(ctx context.Context) (*OAuthRefreshToken, error) {
-	nodes, err := ortq.Limit(1).All(ctx)
+	nodes, err := ortq.Limit(1).All(setContextOp(ctx, ortq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +110,7 @@ func (ortq *OAuthRefreshTokenQuery) FirstX(ctx context.Context) *OAuthRefreshTok
 // Returns a *NotFoundError when no OAuthRefreshToken ID was found.
 func (ortq *OAuthRefreshTokenQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = ortq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = ortq.Limit(1).IDs(setContextOp(ctx, ortq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +133,7 @@ func (ortq *OAuthRefreshTokenQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OAuthRefreshToken entity is found.
 // Returns a *NotFoundError when no OAuthRefreshToken entities are found.
 func (ortq *OAuthRefreshTokenQuery) Only(ctx context.Context) (*OAuthRefreshToken, error) {
-	nodes, err := ortq.Limit(2).All(ctx)
+	nodes, err := ortq.Limit(2).All(setContextOp(ctx, ortq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +161,7 @@ func (ortq *OAuthRefreshTokenQuery) OnlyX(ctx context.Context) *OAuthRefreshToke
 // Returns a *NotFoundError when no entities are found.
 func (ortq *OAuthRefreshTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = ortq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = ortq.Limit(2).IDs(setContextOp(ctx, ortq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,10 +186,12 @@ func (ortq *OAuthRefreshTokenQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OAuthRefreshTokens.
 func (ortq *OAuthRefreshTokenQuery) All(ctx context.Context) ([]*OAuthRefreshToken, error) {
+	ctx = setContextOp(ctx, ortq.ctx, "All")
 	if err := ortq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return ortq.sqlAll(ctx)
+	qr := querierAll[[]*OAuthRefreshToken, *OAuthRefreshTokenQuery]()
+	return withInterceptors[[]*OAuthRefreshToken](ctx, ortq, qr, ortq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -204,9 +204,12 @@ func (ortq *OAuthRefreshTokenQuery) AllX(ctx context.Context) []*OAuthRefreshTok
 }
 
 // IDs executes the query and returns a list of OAuthRefreshToken IDs.
-func (ortq *OAuthRefreshTokenQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := ortq.Select(oauthrefreshtoken.FieldID).Scan(ctx, &ids); err != nil {
+func (ortq *OAuthRefreshTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if ortq.ctx.Unique == nil && ortq.path != nil {
+		ortq.Unique(true)
+	}
+	ctx = setContextOp(ctx, ortq.ctx, "IDs")
+	if err = ortq.Select(oauthrefreshtoken.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -223,10 +226,11 @@ func (ortq *OAuthRefreshTokenQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (ortq *OAuthRefreshTokenQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, ortq.ctx, "Count")
 	if err := ortq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return ortq.sqlCount(ctx)
+	return withInterceptors[int](ctx, ortq, querierCount[*OAuthRefreshTokenQuery](), ortq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -240,10 +244,15 @@ func (ortq *OAuthRefreshTokenQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (ortq *OAuthRefreshTokenQuery) Exist(ctx context.Context) (bool, error) {
-	if err := ortq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, ortq.ctx, "Exist")
+	switch _, err := ortq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return ortq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -263,22 +272,21 @@ func (ortq *OAuthRefreshTokenQuery) Clone() *OAuthRefreshTokenQuery {
 	}
 	return &OAuthRefreshTokenQuery{
 		config:      ortq.config,
-		limit:       ortq.limit,
-		offset:      ortq.offset,
-		order:       append([]OrderFunc{}, ortq.order...),
+		ctx:         ortq.ctx.Clone(),
+		order:       append([]oauthrefreshtoken.OrderOption{}, ortq.order...),
+		inters:      append([]Interceptor{}, ortq.inters...),
 		predicates:  append([]predicate.OAuthRefreshToken{}, ortq.predicates...),
 		withSession: ortq.withSession.Clone(),
 		// clone intermediate query.
-		sql:    ortq.sql.Clone(),
-		path:   ortq.path,
-		unique: ortq.unique,
+		sql:  ortq.sql.Clone(),
+		path: ortq.path,
 	}
 }
 
 // WithSession tells the query-builder to eager-load the nodes that are connected to
 // the "session" edge. The optional arguments are used to configure the query builder of the edge.
 func (ortq *OAuthRefreshTokenQuery) WithSession(opts ...func(*OAuthSessionQuery)) *OAuthRefreshTokenQuery {
-	query := &OAuthSessionQuery{config: ortq.config}
+	query := (&OAuthSessionClient{config: ortq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -301,16 +309,11 @@ func (ortq *OAuthRefreshTokenQuery) WithSession(opts ...func(*OAuthSessionQuery)
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (ortq *OAuthRefreshTokenQuery) GroupBy(field string, fields ...string) *OAuthRefreshTokenGroupBy {
-	grbuild := &OAuthRefreshTokenGroupBy{config: ortq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := ortq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return ortq.sqlQuery(ctx), nil
-	}
+	ortq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OAuthRefreshTokenGroupBy{build: ortq}
+	grbuild.flds = &ortq.ctx.Fields
 	grbuild.label = oauthrefreshtoken.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,11 +330,11 @@ func (ortq *OAuthRefreshTokenQuery) GroupBy(field string, fields ...string) *OAu
 //		Select(oauthrefreshtoken.FieldSignature).
 //		Scan(ctx, &v)
 func (ortq *OAuthRefreshTokenQuery) Select(fields ...string) *OAuthRefreshTokenSelect {
-	ortq.fields = append(ortq.fields, fields...)
-	selbuild := &OAuthRefreshTokenSelect{OAuthRefreshTokenQuery: ortq}
-	selbuild.label = oauthrefreshtoken.Label
-	selbuild.flds, selbuild.scan = &ortq.fields, selbuild.Scan
-	return selbuild
+	ortq.ctx.Fields = append(ortq.ctx.Fields, fields...)
+	sbuild := &OAuthRefreshTokenSelect{OAuthRefreshTokenQuery: ortq}
+	sbuild.label = oauthrefreshtoken.Label
+	sbuild.flds, sbuild.scan = &ortq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OAuthRefreshTokenSelect configured with the given aggregations.
@@ -340,7 +343,17 @@ func (ortq *OAuthRefreshTokenQuery) Aggregate(fns ...AggregateFunc) *OAuthRefres
 }
 
 func (ortq *OAuthRefreshTokenQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range ortq.fields {
+	for _, inter := range ortq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, ortq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range ortq.ctx.Fields {
 		if !oauthrefreshtoken.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -418,6 +431,9 @@ func (ortq *OAuthRefreshTokenQuery) loadSession(ctx context.Context, query *OAut
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(oauthsession.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -440,41 +456,22 @@ func (ortq *OAuthRefreshTokenQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(ortq.modifiers) > 0 {
 		_spec.Modifiers = ortq.modifiers
 	}
-	_spec.Node.Columns = ortq.fields
-	if len(ortq.fields) > 0 {
-		_spec.Unique = ortq.unique != nil && *ortq.unique
+	_spec.Node.Columns = ortq.ctx.Fields
+	if len(ortq.ctx.Fields) > 0 {
+		_spec.Unique = ortq.ctx.Unique != nil && *ortq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, ortq.driver, _spec)
 }
 
-func (ortq *OAuthRefreshTokenQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := ortq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (ortq *OAuthRefreshTokenQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthrefreshtoken.Table,
-			Columns: oauthrefreshtoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthrefreshtoken.FieldID,
-			},
-		},
-		From:   ortq.sql,
-		Unique: true,
-	}
-	if unique := ortq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oauthrefreshtoken.Table, oauthrefreshtoken.Columns, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
+	_spec.From = ortq.sql
+	if unique := ortq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if ortq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := ortq.fields; len(fields) > 0 {
+	if fields := ortq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oauthrefreshtoken.FieldID)
 		for i := range fields {
@@ -490,10 +487,10 @@ func (ortq *OAuthRefreshTokenQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := ortq.limit; limit != nil {
+	if limit := ortq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ortq.offset; offset != nil {
+	if offset := ortq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := ortq.order; len(ps) > 0 {
@@ -509,7 +506,7 @@ func (ortq *OAuthRefreshTokenQuery) querySpec() *sqlgraph.QuerySpec {
 func (ortq *OAuthRefreshTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(ortq.driver.Dialect())
 	t1 := builder.Table(oauthrefreshtoken.Table)
-	columns := ortq.fields
+	columns := ortq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oauthrefreshtoken.Columns
 	}
@@ -518,7 +515,7 @@ func (ortq *OAuthRefreshTokenQuery) sqlQuery(ctx context.Context) *sql.Selector 
 		selector = ortq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ortq.unique != nil && *ortq.unique {
+	if ortq.ctx.Unique != nil && *ortq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range ortq.predicates {
@@ -527,12 +524,12 @@ func (ortq *OAuthRefreshTokenQuery) sqlQuery(ctx context.Context) *sql.Selector 
 	for _, p := range ortq.order {
 		p(selector)
 	}
-	if offset := ortq.offset; offset != nil {
+	if offset := ortq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ortq.limit; limit != nil {
+	if limit := ortq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -540,13 +537,8 @@ func (ortq *OAuthRefreshTokenQuery) sqlQuery(ctx context.Context) *sql.Selector 
 
 // OAuthRefreshTokenGroupBy is the group-by builder for OAuthRefreshToken entities.
 type OAuthRefreshTokenGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OAuthRefreshTokenQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -555,58 +547,46 @@ func (ortgb *OAuthRefreshTokenGroupBy) Aggregate(fns ...AggregateFunc) *OAuthRef
 	return ortgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (ortgb *OAuthRefreshTokenGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := ortgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, ortgb.build.ctx, "GroupBy")
+	if err := ortgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ortgb.sql = query
-	return ortgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthRefreshTokenQuery, *OAuthRefreshTokenGroupBy](ctx, ortgb.build, ortgb, ortgb.build.inters, v)
 }
 
-func (ortgb *OAuthRefreshTokenGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range ortgb.fields {
-		if !oauthrefreshtoken.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (ortgb *OAuthRefreshTokenGroupBy) sqlScan(ctx context.Context, root *OAuthRefreshTokenQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(ortgb.fns))
+	for _, fn := range ortgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := ortgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*ortgb.flds)+len(ortgb.fns))
+		for _, f := range *ortgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*ortgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ortgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := ortgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (ortgb *OAuthRefreshTokenGroupBy) sqlQuery() *sql.Selector {
-	selector := ortgb.sql.Select()
-	aggregation := make([]string, 0, len(ortgb.fns))
-	for _, fn := range ortgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(ortgb.fields)+len(ortgb.fns))
-		for _, f := range ortgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(ortgb.fields...)...)
-}
-
 // OAuthRefreshTokenSelect is the builder for selecting fields of OAuthRefreshToken entities.
 type OAuthRefreshTokenSelect struct {
 	*OAuthRefreshTokenQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -617,26 +597,27 @@ func (orts *OAuthRefreshTokenSelect) Aggregate(fns ...AggregateFunc) *OAuthRefre
 
 // Scan applies the selector query and scans the result into the given value.
 func (orts *OAuthRefreshTokenSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, orts.ctx, "Select")
 	if err := orts.prepareQuery(ctx); err != nil {
 		return err
 	}
-	orts.sql = orts.OAuthRefreshTokenQuery.sqlQuery(ctx)
-	return orts.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthRefreshTokenQuery, *OAuthRefreshTokenSelect](ctx, orts.OAuthRefreshTokenQuery, orts, orts.inters, v)
 }
 
-func (orts *OAuthRefreshTokenSelect) sqlScan(ctx context.Context, v any) error {
+func (orts *OAuthRefreshTokenSelect) sqlScan(ctx context.Context, root *OAuthRefreshTokenQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(orts.fns))
 	for _, fn := range orts.fns {
-		aggregation = append(aggregation, fn(orts.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*orts.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		orts.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		orts.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := orts.sql.Query()
+	query, args := selector.Query()
 	if err := orts.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

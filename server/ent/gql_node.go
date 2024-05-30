@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -33,517 +32,73 @@ import (
 
 // Noder wraps the basic Node method.
 type Noder interface {
-	Node(context.Context) (*Node, error)
+	IsNode()
 }
 
-// Node in the graph.
-type Node struct {
-	ID     int      `json:"id,omitempty"`     // node id.
-	Type   string   `json:"type,omitempty"`   // node type.
-	Fields []*Field `json:"fields,omitempty"` // node fields.
-	Edges  []*Edge  `json:"edges,omitempty"`  // node edges.
-}
+var authcodeImplementors = []string{"AuthCode", "Node"}
 
-// Field of a node.
-type Field struct {
-	Type  string `json:"type,omitempty"`  // field type.
-	Name  string `json:"name,omitempty"`  // field name (as in struct).
-	Value string `json:"value,omitempty"` // stringified value.
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*AuthCode) IsNode() {}
 
-// Edges between two nodes.
-type Edge struct {
-	Type string `json:"type,omitempty"` // edge type.
-	Name string `json:"name,omitempty"` // edge name.
-	IDs  []int  `json:"ids,omitempty"`  // node ids (where this edge point to).
-}
+var certImplementors = []string{"Cert", "Node"}
 
-func (ac *AuthCode) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     ac.ID,
-		Type:   "AuthCode",
-		Fields: make([]*Field, 2),
-		Edges:  make([]*Edge, 1),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(ac.Code); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "code",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(ac.Active); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "bool",
-		Name:  "active",
-		Value: string(buf),
-	}
-	node.Edges[0] = &Edge{
-		Type: "OAuthSession",
-		Name: "session",
-	}
-	err = ac.QuerySession().
-		Select(oauthsession.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*Cert) IsNode() {}
 
-func (c *Cert) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     c.ID,
-		Type:   "Cert",
-		Fields: make([]*Field, 0),
-		Edges:  make([]*Edge, 0),
-	}
-	return node, nil
-}
+var denylistedjtiImplementors = []string{"DenyListedJTI", "Node"}
 
-func (dlj *DenyListedJTI) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     dlj.ID,
-		Type:   "DenyListedJTI",
-		Fields: make([]*Field, 2),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(dlj.Jti); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "jti",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(dlj.Expiration); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "time.Time",
-		Name:  "expiration",
-		Value: string(buf),
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*DenyListedJTI) IsNode() {}
 
-func (oat *OAuthAccessToken) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     oat.ID,
-		Type:   "OAuthAccessToken",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 1),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(oat.Signature); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "signature",
-		Value: string(buf),
-	}
-	node.Edges[0] = &Edge{
-		Type: "OAuthSession",
-		Name: "session",
-	}
-	err = oat.QuerySession().
-		Select(oauthsession.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
+var oauthaccesstokenImplementors = []string{"OAuthAccessToken", "Node"}
 
-func (oc *OAuthClient) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     oc.ID,
-		Type:   "OAuthClient",
-		Fields: make([]*Field, 6),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(oc.ClientID); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "client_id",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(oc.Secret); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "string",
-		Name:  "secret",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(oc.RedirectUris); err != nil {
-		return nil, err
-	}
-	node.Fields[2] = &Field{
-		Type:  "[]string",
-		Name:  "redirect_uris",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(oc.ResponseTypes); err != nil {
-		return nil, err
-	}
-	node.Fields[3] = &Field{
-		Type:  "[]string",
-		Name:  "response_types",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(oc.GrantTypes); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "[]string",
-		Name:  "grant_types",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(oc.Scopes); err != nil {
-		return nil, err
-	}
-	node.Fields[5] = &Field{
-		Type:  "[]string",
-		Name:  "scopes",
-		Value: string(buf),
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*OAuthAccessToken) IsNode() {}
 
-func (opr *OAuthPARRequest) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     opr.ID,
-		Type:   "OAuthPARRequest",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(opr.Request); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "request",
-		Value: string(buf),
-	}
-	return node, nil
-}
+var oauthclientImplementors = []string{"OAuthClient", "Node"}
 
-func (ort *OAuthRefreshToken) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     ort.ID,
-		Type:   "OAuthRefreshToken",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 1),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(ort.Signature); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "signature",
-		Value: string(buf),
-	}
-	node.Edges[0] = &Edge{
-		Type: "OAuthSession",
-		Name: "session",
-	}
-	err = ort.QuerySession().
-		Select(oauthsession.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*OAuthClient) IsNode() {}
 
-func (os *OAuthSession) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     os.ID,
-		Type:   "OAuthSession",
-		Fields: make([]*Field, 13),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(os.Issuer); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "issuer",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.Subject); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "string",
-		Name:  "subject",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.Audiences); err != nil {
-		return nil, err
-	}
-	node.Fields[2] = &Field{
-		Type:  "[]string",
-		Name:  "audiences",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.ExpiresAt); err != nil {
-		return nil, err
-	}
-	node.Fields[3] = &Field{
-		Type:  "time.Time",
-		Name:  "expires_at",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.IssuedAt); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "time.Time",
-		Name:  "issued_at",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.RequestedAt); err != nil {
-		return nil, err
-	}
-	node.Fields[5] = &Field{
-		Type:  "time.Time",
-		Name:  "requested_at",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.AuthTime); err != nil {
-		return nil, err
-	}
-	node.Fields[6] = &Field{
-		Type:  "time.Time",
-		Name:  "auth_time",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.RequestedScopes); err != nil {
-		return nil, err
-	}
-	node.Fields[7] = &Field{
-		Type:  "[]string",
-		Name:  "requested_scopes",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.GrantedScopes); err != nil {
-		return nil, err
-	}
-	node.Fields[8] = &Field{
-		Type:  "[]string",
-		Name:  "granted_scopes",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.RequestedAudiences); err != nil {
-		return nil, err
-	}
-	node.Fields[9] = &Field{
-		Type:  "[]string",
-		Name:  "requested_audiences",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.GrantedAudiences); err != nil {
-		return nil, err
-	}
-	node.Fields[10] = &Field{
-		Type:  "[]string",
-		Name:  "granted_audiences",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.Request); err != nil {
-		return nil, err
-	}
-	node.Fields[11] = &Field{
-		Type:  "string",
-		Name:  "request",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(os.Form); err != nil {
-		return nil, err
-	}
-	node.Fields[12] = &Field{
-		Type:  "string",
-		Name:  "form",
-		Value: string(buf),
-	}
-	return node, nil
-}
+var oauthparrequestImplementors = []string{"OAuthPARRequest", "Node"}
 
-func (oac *OIDCAuthCode) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     oac.ID,
-		Type:   "OIDCAuthCode",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 1),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(oac.AuthorizationCode); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "authorization_code",
-		Value: string(buf),
-	}
-	node.Edges[0] = &Edge{
-		Type: "OAuthSession",
-		Name: "session",
-	}
-	err = oac.QuerySession().
-		Select(oauthsession.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*OAuthPARRequest) IsNode() {}
 
-func (pk *PKCE) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     pk.ID,
-		Type:   "PKCE",
-		Fields: make([]*Field, 1),
-		Edges:  make([]*Edge, 1),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(pk.Code); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "code",
-		Value: string(buf),
-	}
-	node.Edges[0] = &Edge{
-		Type: "OAuthSession",
-		Name: "session",
-	}
-	err = pk.QuerySession().
-		Select(oauthsession.FieldID).
-		Scan(ctx, &node.Edges[0].IDs)
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
-}
+var oauthrefreshtokenImplementors = []string{"OAuthRefreshToken", "Node"}
 
-func (pj *PublicJWK) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     pj.ID,
-		Type:   "PublicJWK",
-		Fields: make([]*Field, 5),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(pj.Sid); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "sid",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(pj.Kid); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "string",
-		Name:  "kid",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(pj.Key); err != nil {
-		return nil, err
-	}
-	node.Fields[2] = &Field{
-		Type:  "string",
-		Name:  "key",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(pj.Issuer); err != nil {
-		return nil, err
-	}
-	node.Fields[3] = &Field{
-		Type:  "string",
-		Name:  "issuer",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(pj.Scopes); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "[]string",
-		Name:  "scopes",
-		Value: string(buf),
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*OAuthRefreshToken) IsNode() {}
 
-func (pjs *PublicJWKSet) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     pjs.ID,
-		Type:   "PublicJWKSet",
-		Fields: make([]*Field, 0),
-		Edges:  make([]*Edge, 0),
-	}
-	return node, nil
-}
+var oauthsessionImplementors = []string{"OAuthSession", "Node"}
 
-func (u *User) Node(ctx context.Context) (node *Node, err error) {
-	node = &Node{
-		ID:     u.ID,
-		Type:   "User",
-		Fields: make([]*Field, 3),
-		Edges:  make([]*Edge, 0),
-	}
-	var buf []byte
-	if buf, err = json.Marshal(u.Name); err != nil {
-		return nil, err
-	}
-	node.Fields[0] = &Field{
-		Type:  "string",
-		Name:  "Name",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(u.OAuthID); err != nil {
-		return nil, err
-	}
-	node.Fields[1] = &Field{
-		Type:  "string",
-		Name:  "OAuthID",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(u.IsActivated); err != nil {
-		return nil, err
-	}
-	node.Fields[2] = &Field{
-		Type:  "bool",
-		Name:  "IsActivated",
-		Value: string(buf),
-	}
-	return node, nil
-}
+// IsNode implements the Node interface check for GQLGen.
+func (*OAuthSession) IsNode() {}
 
-func (c *Client) Node(ctx context.Context, id int) (*Node, error) {
-	n, err := c.Noder(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return n.Node(ctx)
-}
+var oidcauthcodeImplementors = []string{"OIDCAuthCode", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*OIDCAuthCode) IsNode() {}
+
+var pkceImplementors = []string{"PKCE", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*PKCE) IsNode() {}
+
+var publicjwkImplementors = []string{"PublicJWK", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*PublicJWK) IsNode() {}
+
+var publicjwksetImplementors = []string{"PublicJWKSet", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*PublicJWKSet) IsNode() {}
+
+var userImplementors = []string{"User", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*User) IsNode() {}
 
 var errNodeInvalidID = &NotFoundError{"node"}
 
@@ -606,159 +161,120 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 	case authcode.Table:
 		query := c.AuthCode.Query().
 			Where(authcode.ID(id))
-		query, err := query.CollectFields(ctx, "AuthCode")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, authcodeImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case cert.Table:
 		query := c.Cert.Query().
 			Where(cert.ID(id))
-		query, err := query.CollectFields(ctx, "Cert")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, certImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case denylistedjti.Table:
 		query := c.DenyListedJTI.Query().
 			Where(denylistedjti.ID(id))
-		query, err := query.CollectFields(ctx, "DenyListedJTI")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, denylistedjtiImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oauthaccesstoken.Table:
 		query := c.OAuthAccessToken.Query().
 			Where(oauthaccesstoken.ID(id))
-		query, err := query.CollectFields(ctx, "OAuthAccessToken")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oauthaccesstokenImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oauthclient.Table:
 		query := c.OAuthClient.Query().
 			Where(oauthclient.ID(id))
-		query, err := query.CollectFields(ctx, "OAuthClient")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oauthclientImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oauthparrequest.Table:
 		query := c.OAuthPARRequest.Query().
 			Where(oauthparrequest.ID(id))
-		query, err := query.CollectFields(ctx, "OAuthPARRequest")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oauthparrequestImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oauthrefreshtoken.Table:
 		query := c.OAuthRefreshToken.Query().
 			Where(oauthrefreshtoken.ID(id))
-		query, err := query.CollectFields(ctx, "OAuthRefreshToken")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oauthrefreshtokenImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oauthsession.Table:
 		query := c.OAuthSession.Query().
 			Where(oauthsession.ID(id))
-		query, err := query.CollectFields(ctx, "OAuthSession")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oauthsessionImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case oidcauthcode.Table:
 		query := c.OIDCAuthCode.Query().
 			Where(oidcauthcode.ID(id))
-		query, err := query.CollectFields(ctx, "OIDCAuthCode")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, oidcauthcodeImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case pkce.Table:
 		query := c.PKCE.Query().
 			Where(pkce.ID(id))
-		query, err := query.CollectFields(ctx, "PKCE")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, pkceImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case publicjwk.Table:
 		query := c.PublicJWK.Query().
 			Where(publicjwk.ID(id))
-		query, err := query.CollectFields(ctx, "PublicJWK")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, publicjwkImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case publicjwkset.Table:
 		query := c.PublicJWKSet.Query().
 			Where(publicjwkset.ID(id))
-		query, err := query.CollectFields(ctx, "PublicJWKSet")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, publicjwksetImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	case user.Table:
 		query := c.User.Query().
 			Where(user.ID(id))
-		query, err := query.CollectFields(ctx, "User")
-		if err != nil {
-			return nil, err
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, userImplementors...); err != nil {
+				return nil, err
+			}
 		}
-		n, err := query.Only(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
+		return query.Only(ctx)
 	default:
 		return nil, fmt.Errorf("cannot resolve noder from table %q: %w", table, errNodeInvalidID)
 	}
@@ -835,7 +351,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case authcode.Table:
 		query := c.AuthCode.Query().
 			Where(authcode.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "AuthCode")
+		query, err := query.CollectFields(ctx, authcodeImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -851,7 +367,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case cert.Table:
 		query := c.Cert.Query().
 			Where(cert.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "Cert")
+		query, err := query.CollectFields(ctx, certImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -867,7 +383,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case denylistedjti.Table:
 		query := c.DenyListedJTI.Query().
 			Where(denylistedjti.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "DenyListedJTI")
+		query, err := query.CollectFields(ctx, denylistedjtiImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -883,7 +399,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oauthaccesstoken.Table:
 		query := c.OAuthAccessToken.Query().
 			Where(oauthaccesstoken.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OAuthAccessToken")
+		query, err := query.CollectFields(ctx, oauthaccesstokenImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -899,7 +415,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oauthclient.Table:
 		query := c.OAuthClient.Query().
 			Where(oauthclient.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OAuthClient")
+		query, err := query.CollectFields(ctx, oauthclientImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -915,7 +431,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oauthparrequest.Table:
 		query := c.OAuthPARRequest.Query().
 			Where(oauthparrequest.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OAuthPARRequest")
+		query, err := query.CollectFields(ctx, oauthparrequestImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -931,7 +447,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oauthrefreshtoken.Table:
 		query := c.OAuthRefreshToken.Query().
 			Where(oauthrefreshtoken.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OAuthRefreshToken")
+		query, err := query.CollectFields(ctx, oauthrefreshtokenImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -947,7 +463,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oauthsession.Table:
 		query := c.OAuthSession.Query().
 			Where(oauthsession.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OAuthSession")
+		query, err := query.CollectFields(ctx, oauthsessionImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -963,7 +479,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case oidcauthcode.Table:
 		query := c.OIDCAuthCode.Query().
 			Where(oidcauthcode.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "OIDCAuthCode")
+		query, err := query.CollectFields(ctx, oidcauthcodeImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -979,7 +495,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case pkce.Table:
 		query := c.PKCE.Query().
 			Where(pkce.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "PKCE")
+		query, err := query.CollectFields(ctx, pkceImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -995,7 +511,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case publicjwk.Table:
 		query := c.PublicJWK.Query().
 			Where(publicjwk.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "PublicJWK")
+		query, err := query.CollectFields(ctx, publicjwkImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -1011,7 +527,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case publicjwkset.Table:
 		query := c.PublicJWKSet.Query().
 			Where(publicjwkset.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "PublicJWKSet")
+		query, err := query.CollectFields(ctx, publicjwksetImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -1027,7 +543,7 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 	case user.Table:
 		query := c.User.Query().
 			Where(user.IDIn(ids...))
-		query, err := query.CollectFields(ctx, "User")
+		query, err := query.CollectFields(ctx, userImplementors...)
 		if err != nil {
 			return nil, err
 		}

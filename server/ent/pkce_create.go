@@ -52,49 +52,7 @@ func (pc *PKCECreate) Mutation() *PKCEMutation {
 
 // Save creates the PKCE in the database.
 func (pc *PKCECreate) Save(ctx context.Context) (*PKCE, error) {
-	var (
-		err  error
-		node *PKCE
-	)
-	if len(pc.hooks) == 0 {
-		if err = pc.check(); err != nil {
-			return nil, err
-		}
-		node, err = pc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PKCEMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pc.check(); err != nil {
-				return nil, err
-			}
-			pc.mutation = mutation
-			if node, err = pc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pc.hooks) - 1; i >= 0; i-- {
-			if pc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PKCE)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PKCEMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pc.sqlSave, pc.mutation, pc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -128,6 +86,9 @@ func (pc *PKCECreate) check() error {
 }
 
 func (pc *PKCECreate) sqlSave(ctx context.Context) (*PKCE, error) {
+	if err := pc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := pc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, pc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -137,19 +98,15 @@ func (pc *PKCECreate) sqlSave(ctx context.Context) (*PKCE, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	pc.mutation.id = &_node.ID
+	pc.mutation.done = true
 	return _node, nil
 }
 
 func (pc *PKCECreate) createSpec() (*PKCE, *sqlgraph.CreateSpec) {
 	var (
 		_node = &PKCE{config: pc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: pkce.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: pkce.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(pkce.Table, sqlgraph.NewFieldSpec(pkce.FieldID, field.TypeInt))
 	)
 	if value, ok := pc.mutation.Code(); ok {
 		_spec.SetField(pkce.FieldCode, field.TypeString, value)
@@ -163,10 +120,7 @@ func (pc *PKCECreate) createSpec() (*PKCE, *sqlgraph.CreateSpec) {
 			Columns: []string{pkce.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -181,11 +135,15 @@ func (pc *PKCECreate) createSpec() (*PKCE, *sqlgraph.CreateSpec) {
 // PKCECreateBulk is the builder for creating many PKCE entities in bulk.
 type PKCECreateBulk struct {
 	config
+	err      error
 	builders []*PKCECreate
 }
 
 // Save creates the PKCE entities in the database.
 func (pcb *PKCECreateBulk) Save(ctx context.Context) ([]*PKCE, error) {
+	if pcb.err != nil {
+		return nil, pcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pcb.builders))
 	nodes := make([]*PKCE, len(pcb.builders))
 	mutators := make([]Mutator, len(pcb.builders))
@@ -201,8 +159,8 @@ func (pcb *PKCECreateBulk) Save(ctx context.Context) ([]*PKCE, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pcb.builders[i+1].mutation)
 				} else {

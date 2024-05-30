@@ -2,6 +2,11 @@
 
 package oidcauthcode
 
+import (
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+)
+
 const (
 	// Label holds the string label denoting the oidcauthcode type in the database.
 	Label = "oidc_auth_code"
@@ -47,4 +52,31 @@ func ValidColumn(column string) bool {
 		}
 	}
 	return false
+}
+
+// OrderOption defines the ordering options for the OIDCAuthCode queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByAuthorizationCode orders the results by the authorization_code field.
+func ByAuthorizationCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthorizationCode, opts...).ToFunc()
+}
+
+// BySessionField orders the results by session field.
+func BySessionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSessionStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newSessionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SessionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, SessionTable, SessionColumn),
+	)
 }

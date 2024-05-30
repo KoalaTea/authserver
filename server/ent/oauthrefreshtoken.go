@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
@@ -22,6 +23,7 @@ type OAuthRefreshToken struct {
 	// The values are being populated by the OAuthRefreshTokenQuery when eager-loading is set.
 	Edges                       OAuthRefreshTokenEdges `json:"edges"`
 	oauth_refresh_token_session *int
+	selectValues                sql.SelectValues
 }
 
 // OAuthRefreshTokenEdges holds the relations/edges for other nodes in the graph.
@@ -38,12 +40,10 @@ type OAuthRefreshTokenEdges struct {
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e OAuthRefreshTokenEdges) SessionOrErr() (*OAuthSession, error) {
-	if e.loadedTypes[0] {
-		if e.Session == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oauthsession.Label}
-		}
+	if e.Session != nil {
 		return e.Session, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthsession.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
 }
@@ -60,7 +60,7 @@ func (*OAuthRefreshToken) scanValues(columns []string) ([]any, error) {
 		case oauthrefreshtoken.ForeignKeys[0]: // oauth_refresh_token_session
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OAuthRefreshToken", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -93,21 +93,29 @@ func (ort *OAuthRefreshToken) assignValues(columns []string, values []any) error
 				ort.oauth_refresh_token_session = new(int)
 				*ort.oauth_refresh_token_session = int(value.Int64)
 			}
+		default:
+			ort.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the OAuthRefreshToken.
+// This includes values selected through modifiers, order, etc.
+func (ort *OAuthRefreshToken) Value(name string) (ent.Value, error) {
+	return ort.selectValues.Get(name)
+}
+
 // QuerySession queries the "session" edge of the OAuthRefreshToken entity.
 func (ort *OAuthRefreshToken) QuerySession() *OAuthSessionQuery {
-	return (&OAuthRefreshTokenClient{config: ort.config}).QuerySession(ort)
+	return NewOAuthRefreshTokenClient(ort.config).QuerySession(ort)
 }
 
 // Update returns a builder for updating this OAuthRefreshToken.
 // Note that you need to call OAuthRefreshToken.Unwrap() before calling this method if this OAuthRefreshToken
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ort *OAuthRefreshToken) Update() *OAuthRefreshTokenUpdateOne {
-	return (&OAuthRefreshTokenClient{config: ort.config}).UpdateOne(ort)
+	return NewOAuthRefreshTokenClient(ort.config).UpdateOne(ort)
 }
 
 // Unwrap unwraps the OAuthRefreshToken entity that was returned from a transaction after it was closed,
@@ -134,9 +142,3 @@ func (ort *OAuthRefreshToken) String() string {
 
 // OAuthRefreshTokens is a parsable slice of OAuthRefreshToken.
 type OAuthRefreshTokens []*OAuthRefreshToken
-
-func (ort OAuthRefreshTokens) config(cfg config) {
-	for _i := range ort {
-		ort[_i].config = cfg
-	}
-}

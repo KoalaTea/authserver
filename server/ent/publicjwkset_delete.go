@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (pjsd *PublicJWKSetDelete) Where(ps ...predicate.PublicJWKSet) *PublicJWKSe
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (pjsd *PublicJWKSetDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pjsd.hooks) == 0 {
-		affected, err = pjsd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKSetMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pjsd.mutation = mutation
-			affected, err = pjsd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pjsd.hooks) - 1; i >= 0; i-- {
-			if pjsd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pjsd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pjsd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, pjsd.sqlExec, pjsd.mutation, pjsd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (pjsd *PublicJWKSetDelete) ExecX(ctx context.Context) int {
 }
 
 func (pjsd *PublicJWKSetDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: publicjwkset.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwkset.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(publicjwkset.Table, sqlgraph.NewFieldSpec(publicjwkset.FieldID, field.TypeInt))
 	if ps := pjsd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (pjsd *PublicJWKSetDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	pjsd.mutation.done = true
 	return affected, err
 }
 
 // PublicJWKSetDeleteOne is the builder for deleting a single PublicJWKSet entity.
 type PublicJWKSetDeleteOne struct {
 	pjsd *PublicJWKSetDelete
+}
+
+// Where appends a list predicates to the PublicJWKSetDelete builder.
+func (pjsdo *PublicJWKSetDeleteOne) Where(ps ...predicate.PublicJWKSet) *PublicJWKSetDeleteOne {
+	pjsdo.pjsd.mutation.Where(ps...)
+	return pjsdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (pjsdo *PublicJWKSetDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (pjsdo *PublicJWKSetDeleteOne) ExecX(ctx context.Context) {
-	pjsdo.pjsd.ExecX(ctx)
+	if err := pjsdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

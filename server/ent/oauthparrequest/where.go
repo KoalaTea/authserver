@@ -9,209 +9,130 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.OAuthPARRequest(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.OAuthPARRequest(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.OAuthPARRequest(sql.FieldLTE(FieldID, id))
 }
 
 // Request applies equality check predicate on the "request" field. It's identical to RequestEQ.
 func Request(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldEQ(FieldRequest, v))
 }
 
 // RequestEQ applies the EQ predicate on the "request" field.
 func RequestEQ(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldEQ(FieldRequest, v))
 }
 
 // RequestNEQ applies the NEQ predicate on the "request" field.
 func RequestNEQ(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldNEQ(FieldRequest, v))
 }
 
 // RequestIn applies the In predicate on the "request" field.
 func RequestIn(vs ...string) predicate.OAuthPARRequest {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRequest), v...))
-	})
+	return predicate.OAuthPARRequest(sql.FieldIn(FieldRequest, vs...))
 }
 
 // RequestNotIn applies the NotIn predicate on the "request" field.
 func RequestNotIn(vs ...string) predicate.OAuthPARRequest {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRequest), v...))
-	})
+	return predicate.OAuthPARRequest(sql.FieldNotIn(FieldRequest, vs...))
 }
 
 // RequestGT applies the GT predicate on the "request" field.
 func RequestGT(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldGT(FieldRequest, v))
 }
 
 // RequestGTE applies the GTE predicate on the "request" field.
 func RequestGTE(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldGTE(FieldRequest, v))
 }
 
 // RequestLT applies the LT predicate on the "request" field.
 func RequestLT(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldLT(FieldRequest, v))
 }
 
 // RequestLTE applies the LTE predicate on the "request" field.
 func RequestLTE(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldLTE(FieldRequest, v))
 }
 
 // RequestContains applies the Contains predicate on the "request" field.
 func RequestContains(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldContains(FieldRequest, v))
 }
 
 // RequestHasPrefix applies the HasPrefix predicate on the "request" field.
 func RequestHasPrefix(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldHasPrefix(FieldRequest, v))
 }
 
 // RequestHasSuffix applies the HasSuffix predicate on the "request" field.
 func RequestHasSuffix(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldHasSuffix(FieldRequest, v))
 }
 
 // RequestEqualFold applies the EqualFold predicate on the "request" field.
 func RequestEqualFold(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldEqualFold(FieldRequest, v))
 }
 
 // RequestContainsFold applies the ContainsFold predicate on the "request" field.
 func RequestContainsFold(v string) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldRequest), v))
-	})
+	return predicate.OAuthPARRequest(sql.FieldContainsFold(FieldRequest, v))
 }
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.OAuthPARRequest) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthPARRequest(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.OAuthPARRequest) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OAuthPARRequest(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.OAuthPARRequest) predicate.OAuthPARRequest {
-	return predicate.OAuthPARRequest(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.OAuthPARRequest(sql.NotPredicates(p))
 }

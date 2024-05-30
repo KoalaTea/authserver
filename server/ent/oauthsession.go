@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
 )
@@ -42,7 +43,8 @@ type OAuthSession struct {
 	// Request holds the value of the "request" field.
 	Request string `json:"request,omitempty"`
 	// Form holds the value of the "form" field.
-	Form string `json:"form,omitempty"`
+	Form         string `json:"form,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,7 +61,7 @@ func (*OAuthSession) scanValues(columns []string) ([]any, error) {
 		case oauthsession.FieldExpiresAt, oauthsession.FieldIssuedAt, oauthsession.FieldRequestedAt, oauthsession.FieldAuthTime:
 			values[i] = new(sql.NullTime)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OAuthSession", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -167,16 +169,24 @@ func (os *OAuthSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				os.Form = value.String
 			}
+		default:
+			os.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the OAuthSession.
+// This includes values selected through modifiers, order, etc.
+func (os *OAuthSession) Value(name string) (ent.Value, error) {
+	return os.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this OAuthSession.
 // Note that you need to call OAuthSession.Unwrap() before calling this method if this OAuthSession
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (os *OAuthSession) Update() *OAuthSessionUpdateOne {
-	return (&OAuthSessionClient{config: os.config}).UpdateOne(os)
+	return NewOAuthSessionClient(os.config).UpdateOne(os)
 }
 
 // Unwrap unwraps the OAuthSession entity that was returned from a transaction after it was closed,
@@ -239,9 +249,3 @@ func (os *OAuthSession) String() string {
 
 // OAuthSessions is a parsable slice of OAuthSession.
 type OAuthSessions []*OAuthSession
-
-func (os OAuthSessions) config(cfg config) {
-	for _i := range os {
-		os[_i].config = cfg
-	}
-}

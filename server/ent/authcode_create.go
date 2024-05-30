@@ -58,49 +58,7 @@ func (acc *AuthCodeCreate) Mutation() *AuthCodeMutation {
 
 // Save creates the AuthCode in the database.
 func (acc *AuthCodeCreate) Save(ctx context.Context) (*AuthCode, error) {
-	var (
-		err  error
-		node *AuthCode
-	)
-	if len(acc.hooks) == 0 {
-		if err = acc.check(); err != nil {
-			return nil, err
-		}
-		node, err = acc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*AuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = acc.check(); err != nil {
-				return nil, err
-			}
-			acc.mutation = mutation
-			if node, err = acc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(acc.hooks) - 1; i >= 0; i-- {
-			if acc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = acc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, acc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*AuthCode)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from AuthCodeMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, acc.sqlSave, acc.mutation, acc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -137,6 +95,9 @@ func (acc *AuthCodeCreate) check() error {
 }
 
 func (acc *AuthCodeCreate) sqlSave(ctx context.Context) (*AuthCode, error) {
+	if err := acc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := acc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, acc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -146,19 +107,15 @@ func (acc *AuthCodeCreate) sqlSave(ctx context.Context) (*AuthCode, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	acc.mutation.id = &_node.ID
+	acc.mutation.done = true
 	return _node, nil
 }
 
 func (acc *AuthCodeCreate) createSpec() (*AuthCode, *sqlgraph.CreateSpec) {
 	var (
 		_node = &AuthCode{config: acc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: authcode.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: authcode.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(authcode.Table, sqlgraph.NewFieldSpec(authcode.FieldID, field.TypeInt))
 	)
 	if value, ok := acc.mutation.Code(); ok {
 		_spec.SetField(authcode.FieldCode, field.TypeString, value)
@@ -176,10 +133,7 @@ func (acc *AuthCodeCreate) createSpec() (*AuthCode, *sqlgraph.CreateSpec) {
 			Columns: []string{authcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -194,11 +148,15 @@ func (acc *AuthCodeCreate) createSpec() (*AuthCode, *sqlgraph.CreateSpec) {
 // AuthCodeCreateBulk is the builder for creating many AuthCode entities in bulk.
 type AuthCodeCreateBulk struct {
 	config
+	err      error
 	builders []*AuthCodeCreate
 }
 
 // Save creates the AuthCode entities in the database.
 func (accb *AuthCodeCreateBulk) Save(ctx context.Context) ([]*AuthCode, error) {
+	if accb.err != nil {
+		return nil, accb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(accb.builders))
 	nodes := make([]*AuthCode, len(accb.builders))
 	mutators := make([]Mutator, len(accb.builders))
@@ -214,8 +172,8 @@ func (accb *AuthCodeCreateBulk) Save(ctx context.Context) ([]*AuthCode, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, accb.builders[i+1].mutation)
 				} else {

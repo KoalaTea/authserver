@@ -2,6 +2,10 @@
 
 package publicjwk
 
+import (
+	"entgo.io/ent/dialect/sql"
+)
+
 const (
 	// Label holds the string label denoting the publicjwk type in the database.
 	Label = "public_jwk"
@@ -39,4 +43,32 @@ func ValidColumn(column string) bool {
 		}
 	}
 	return false
+}
+
+// OrderOption defines the ordering options for the PublicJWK queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// BySid orders the results by the sid field.
+func BySid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSid, opts...).ToFunc()
+}
+
+// ByKid orders the results by the kid field.
+func ByKid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKid, opts...).ToFunc()
+}
+
+// ByKey orders the results by the key field.
+func ByKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKey, opts...).ToFunc()
+}
+
+// ByIssuer orders the results by the issuer field.
+func ByIssuer(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIssuer, opts...).ToFunc()
 }

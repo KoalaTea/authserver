@@ -34,9 +34,25 @@ func (ocu *OAuthClientUpdate) SetClientID(s string) *OAuthClientUpdate {
 	return ocu
 }
 
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (ocu *OAuthClientUpdate) SetNillableClientID(s *string) *OAuthClientUpdate {
+	if s != nil {
+		ocu.SetClientID(*s)
+	}
+	return ocu
+}
+
 // SetSecret sets the "secret" field.
 func (ocu *OAuthClientUpdate) SetSecret(s string) *OAuthClientUpdate {
 	ocu.mutation.SetSecret(s)
+	return ocu
+}
+
+// SetNillableSecret sets the "secret" field if the given value is not nil.
+func (ocu *OAuthClientUpdate) SetNillableSecret(s *string) *OAuthClientUpdate {
+	if s != nil {
+		ocu.SetSecret(*s)
+	}
 	return ocu
 }
 
@@ -95,34 +111,7 @@ func (ocu *OAuthClientUpdate) Mutation() *OAuthClientMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ocu *OAuthClientUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ocu.hooks) == 0 {
-		affected, err = ocu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthClientMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ocu.mutation = mutation
-			affected, err = ocu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ocu.hooks) - 1; i >= 0; i-- {
-			if ocu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ocu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ocu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ocu.sqlSave, ocu.mutation, ocu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -148,16 +137,7 @@ func (ocu *OAuthClientUpdate) ExecX(ctx context.Context) {
 }
 
 func (ocu *OAuthClientUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthclient.Table,
-			Columns: oauthclient.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthclient.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthclient.Table, oauthclient.Columns, sqlgraph.NewFieldSpec(oauthclient.FieldID, field.TypeInt))
 	if ps := ocu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -211,6 +191,7 @@ func (ocu *OAuthClientUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	ocu.mutation.done = true
 	return n, nil
 }
 
@@ -228,9 +209,25 @@ func (ocuo *OAuthClientUpdateOne) SetClientID(s string) *OAuthClientUpdateOne {
 	return ocuo
 }
 
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (ocuo *OAuthClientUpdateOne) SetNillableClientID(s *string) *OAuthClientUpdateOne {
+	if s != nil {
+		ocuo.SetClientID(*s)
+	}
+	return ocuo
+}
+
 // SetSecret sets the "secret" field.
 func (ocuo *OAuthClientUpdateOne) SetSecret(s string) *OAuthClientUpdateOne {
 	ocuo.mutation.SetSecret(s)
+	return ocuo
+}
+
+// SetNillableSecret sets the "secret" field if the given value is not nil.
+func (ocuo *OAuthClientUpdateOne) SetNillableSecret(s *string) *OAuthClientUpdateOne {
+	if s != nil {
+		ocuo.SetSecret(*s)
+	}
 	return ocuo
 }
 
@@ -287,6 +284,12 @@ func (ocuo *OAuthClientUpdateOne) Mutation() *OAuthClientMutation {
 	return ocuo.mutation
 }
 
+// Where appends a list predicates to the OAuthClientUpdate builder.
+func (ocuo *OAuthClientUpdateOne) Where(ps ...predicate.OAuthClient) *OAuthClientUpdateOne {
+	ocuo.mutation.Where(ps...)
+	return ocuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ocuo *OAuthClientUpdateOne) Select(field string, fields ...string) *OAuthClientUpdateOne {
@@ -296,40 +299,7 @@ func (ocuo *OAuthClientUpdateOne) Select(field string, fields ...string) *OAuthC
 
 // Save executes the query and returns the updated OAuthClient entity.
 func (ocuo *OAuthClientUpdateOne) Save(ctx context.Context) (*OAuthClient, error) {
-	var (
-		err  error
-		node *OAuthClient
-	)
-	if len(ocuo.hooks) == 0 {
-		node, err = ocuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthClientMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ocuo.mutation = mutation
-			node, err = ocuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ocuo.hooks) - 1; i >= 0; i-- {
-			if ocuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ocuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ocuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthClient)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthClientMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ocuo.sqlSave, ocuo.mutation, ocuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -355,16 +325,7 @@ func (ocuo *OAuthClientUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ocuo *OAuthClientUpdateOne) sqlSave(ctx context.Context) (_node *OAuthClient, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthclient.Table,
-			Columns: oauthclient.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthclient.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthclient.Table, oauthclient.Columns, sqlgraph.NewFieldSpec(oauthclient.FieldID, field.TypeInt))
 	id, ok := ocuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OAuthClient.id" for update`)}
@@ -438,5 +399,6 @@ func (ocuo *OAuthClientUpdateOne) sqlSave(ctx context.Context) (_node *OAuthClie
 		}
 		return nil, err
 	}
+	ocuo.mutation.done = true
 	return _node, nil
 }
