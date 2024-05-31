@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"net/http"
 
 	"entgo.io/contrib/entgql"
@@ -21,6 +22,7 @@ import (
 	"github.com/koalatea/authserver/server/graphql"
 	"github.com/koalatea/authserver/server/oauthclient"
 	"github.com/koalatea/authserver/server/oidc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -36,6 +38,16 @@ func newServer(ctx context.Context, options ...func(*Server)) *Server {
 		opt(s)
 	}
 	return s
+}
+
+func newMetricsServer() *http.Server {
+	router := http.NewServeMux()
+	router.Handle("/metrics", promhttp.Handler())
+	return &http.Server{
+		// Localhost to seperate unauthenticated metrics endpoint
+		Addr:    "127.0.0.1:9999",
+		Handler: router,
+	}
 }
 
 func (srv *Server) Run(ctx context.Context) error {
@@ -64,11 +76,11 @@ func (srv *Server) Run(ctx context.Context) error {
 		context.Background(),
 		migrate.WithGlobalUniqueID(true),
 	); err != nil {
-		fmt.Printf("failed to initialize graph schema: %w", err)
+		log.Printf("failed to initialize graph schema: %w", err)
 	}
 	certProvider, err := certificates.NewCertProvider()
 	if err != nil {
-		fmt.Printf("failed to initialize certProvider")
+		log.Printf("failed to initialize certProvider")
 	}
 	server := handler.NewDefaultServer(graphql.NewSchema(graph, certProvider))
 	server.Use(entgql.Transactioner{TxOpener: graph})
@@ -93,7 +105,7 @@ func (srv *Server) Run(ctx context.Context) error {
 	}
 	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		fmt.Printf("Failed to generate keys for usage in oauth flow: %s", err)
+		log.Printf("Failed to generate keys for usage in oauth flow: %s", err)
 	}
 	router.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey))
 	router.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"))
@@ -101,8 +113,16 @@ func (srv *Server) Run(ctx context.Context) error {
 	oidcProvider := oidc.NewOIDCProvider(graph)
 	oidcProvider.RegisterHandlers(router, auth.HandleUser(graph))
 
+	metricsHTTP := newMetricsServer()
+	go func() {
+		log.Printf("Metrics HTTP Server started on %s", metricsHTTP.Addr)
+		if err := metricsHTTP.ListenAndServe(); err != nil {
+			log.Printf("[WARN] stopped metrics http server: %v", err)
+		}
+	}()
+	log.Printf("Starting HTTP server on %s", "0.0.0.0:8080")
 	if err := http.ListenAndServe("0.0.0.0:8080", router); err != nil {
-		return err
+		return fmt.Errorf("stopped http server: %w", err)
 	}
 	return nil
 }
