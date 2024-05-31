@@ -11,280 +11,175 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.DenyListedJTI(sql.FieldLTE(FieldID, id))
 }
 
 // Jti applies equality check predicate on the "jti" field. It's identical to JtiEQ.
 func Jti(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldJti, v))
 }
 
 // Expiration applies equality check predicate on the "expiration" field. It's identical to ExpirationEQ.
 func Expiration(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldExpiration, v))
 }
 
 // JtiEQ applies the EQ predicate on the "jti" field.
 func JtiEQ(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldJti, v))
 }
 
 // JtiNEQ applies the NEQ predicate on the "jti" field.
 func JtiNEQ(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldNEQ(FieldJti, v))
 }
 
 // JtiIn applies the In predicate on the "jti" field.
 func JtiIn(vs ...string) predicate.DenyListedJTI {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldJti), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldIn(FieldJti, vs...))
 }
 
 // JtiNotIn applies the NotIn predicate on the "jti" field.
 func JtiNotIn(vs ...string) predicate.DenyListedJTI {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldJti), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldNotIn(FieldJti, vs...))
 }
 
 // JtiGT applies the GT predicate on the "jti" field.
 func JtiGT(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldGT(FieldJti, v))
 }
 
 // JtiGTE applies the GTE predicate on the "jti" field.
 func JtiGTE(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldGTE(FieldJti, v))
 }
 
 // JtiLT applies the LT predicate on the "jti" field.
 func JtiLT(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldLT(FieldJti, v))
 }
 
 // JtiLTE applies the LTE predicate on the "jti" field.
 func JtiLTE(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldLTE(FieldJti, v))
 }
 
 // JtiContains applies the Contains predicate on the "jti" field.
 func JtiContains(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldContains(FieldJti, v))
 }
 
 // JtiHasPrefix applies the HasPrefix predicate on the "jti" field.
 func JtiHasPrefix(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldHasPrefix(FieldJti, v))
 }
 
 // JtiHasSuffix applies the HasSuffix predicate on the "jti" field.
 func JtiHasSuffix(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldHasSuffix(FieldJti, v))
 }
 
 // JtiEqualFold applies the EqualFold predicate on the "jti" field.
 func JtiEqualFold(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldEqualFold(FieldJti, v))
 }
 
 // JtiContainsFold applies the ContainsFold predicate on the "jti" field.
 func JtiContainsFold(v string) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldJti), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldContainsFold(FieldJti, v))
 }
 
 // ExpirationEQ applies the EQ predicate on the "expiration" field.
 func ExpirationEQ(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldEQ(FieldExpiration, v))
 }
 
 // ExpirationNEQ applies the NEQ predicate on the "expiration" field.
 func ExpirationNEQ(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldNEQ(FieldExpiration, v))
 }
 
 // ExpirationIn applies the In predicate on the "expiration" field.
 func ExpirationIn(vs ...time.Time) predicate.DenyListedJTI {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldExpiration), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldIn(FieldExpiration, vs...))
 }
 
 // ExpirationNotIn applies the NotIn predicate on the "expiration" field.
 func ExpirationNotIn(vs ...time.Time) predicate.DenyListedJTI {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldExpiration), v...))
-	})
+	return predicate.DenyListedJTI(sql.FieldNotIn(FieldExpiration, vs...))
 }
 
 // ExpirationGT applies the GT predicate on the "expiration" field.
 func ExpirationGT(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldGT(FieldExpiration, v))
 }
 
 // ExpirationGTE applies the GTE predicate on the "expiration" field.
 func ExpirationGTE(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldGTE(FieldExpiration, v))
 }
 
 // ExpirationLT applies the LT predicate on the "expiration" field.
 func ExpirationLT(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldLT(FieldExpiration, v))
 }
 
 // ExpirationLTE applies the LTE predicate on the "expiration" field.
 func ExpirationLTE(v time.Time) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldExpiration), v))
-	})
+	return predicate.DenyListedJTI(sql.FieldLTE(FieldExpiration, v))
 }
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.DenyListedJTI) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.DenyListedJTI(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.DenyListedJTI) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.DenyListedJTI(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.DenyListedJTI) predicate.DenyListedJTI {
-	return predicate.DenyListedJTI(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.DenyListedJTI(sql.NotPredicates(p))
 }

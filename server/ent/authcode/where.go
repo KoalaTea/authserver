@@ -10,200 +10,132 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.AuthCode(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.AuthCode(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.AuthCode(sql.FieldLTE(FieldID, id))
 }
 
 // Code applies equality check predicate on the "code" field. It's identical to CodeEQ.
 func Code(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldCode, v))
 }
 
 // Active applies equality check predicate on the "active" field. It's identical to ActiveEQ.
 func Active(v bool) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldActive), v))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldActive, v))
 }
 
 // CodeEQ applies the EQ predicate on the "code" field.
 func CodeEQ(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldCode, v))
 }
 
 // CodeNEQ applies the NEQ predicate on the "code" field.
 func CodeNEQ(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldNEQ(FieldCode, v))
 }
 
 // CodeIn applies the In predicate on the "code" field.
 func CodeIn(vs ...string) predicate.AuthCode {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldCode), v...))
-	})
+	return predicate.AuthCode(sql.FieldIn(FieldCode, vs...))
 }
 
 // CodeNotIn applies the NotIn predicate on the "code" field.
 func CodeNotIn(vs ...string) predicate.AuthCode {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldCode), v...))
-	})
+	return predicate.AuthCode(sql.FieldNotIn(FieldCode, vs...))
 }
 
 // CodeGT applies the GT predicate on the "code" field.
 func CodeGT(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldGT(FieldCode, v))
 }
 
 // CodeGTE applies the GTE predicate on the "code" field.
 func CodeGTE(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldGTE(FieldCode, v))
 }
 
 // CodeLT applies the LT predicate on the "code" field.
 func CodeLT(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldLT(FieldCode, v))
 }
 
 // CodeLTE applies the LTE predicate on the "code" field.
 func CodeLTE(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldLTE(FieldCode, v))
 }
 
 // CodeContains applies the Contains predicate on the "code" field.
 func CodeContains(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldContains(FieldCode, v))
 }
 
 // CodeHasPrefix applies the HasPrefix predicate on the "code" field.
 func CodeHasPrefix(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldHasPrefix(FieldCode, v))
 }
 
 // CodeHasSuffix applies the HasSuffix predicate on the "code" field.
 func CodeHasSuffix(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldHasSuffix(FieldCode, v))
 }
 
 // CodeEqualFold applies the EqualFold predicate on the "code" field.
 func CodeEqualFold(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldEqualFold(FieldCode, v))
 }
 
 // CodeContainsFold applies the ContainsFold predicate on the "code" field.
 func CodeContainsFold(v string) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldCode), v))
-	})
+	return predicate.AuthCode(sql.FieldContainsFold(FieldCode, v))
 }
 
 // ActiveEQ applies the EQ predicate on the "active" field.
 func ActiveEQ(v bool) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldActive), v))
-	})
+	return predicate.AuthCode(sql.FieldEQ(FieldActive, v))
 }
 
 // ActiveNEQ applies the NEQ predicate on the "active" field.
 func ActiveNEQ(v bool) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldActive), v))
-	})
+	return predicate.AuthCode(sql.FieldNEQ(FieldActive, v))
 }
 
 // HasSession applies the HasEdge predicate on the "session" edge.
@@ -211,7 +143,6 @@ func HasSession() predicate.AuthCode {
 	return predicate.AuthCode(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SessionTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, SessionTable, SessionColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -221,11 +152,7 @@ func HasSession() predicate.AuthCode {
 // HasSessionWith applies the HasEdge predicate on the "session" edge with a given conditions (other predicates).
 func HasSessionWith(preds ...predicate.OAuthSession) predicate.AuthCode {
 	return predicate.AuthCode(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SessionInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, SessionTable, SessionColumn),
-		)
+		step := newSessionStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -236,32 +163,15 @@ func HasSessionWith(preds ...predicate.OAuthSession) predicate.AuthCode {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.AuthCode) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.AuthCode(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.AuthCode) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.AuthCode(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.AuthCode) predicate.AuthCode {
-	return predicate.AuthCode(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.AuthCode(sql.NotPredicates(p))
 }

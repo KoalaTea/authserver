@@ -17,11 +17,9 @@ import (
 // OAuthPARRequestQuery is the builder for querying OAuthPARRequest entities.
 type OAuthPARRequestQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []oauthparrequest.OrderOption
+	inters     []Interceptor
 	predicates []predicate.OAuthPARRequest
 	modifiers  []func(*sql.Selector)
 	loadTotal  []func(context.Context, []*OAuthPARRequest) error
@@ -36,27 +34,27 @@ func (oprq *OAuthPARRequestQuery) Where(ps ...predicate.OAuthPARRequest) *OAuthP
 	return oprq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (oprq *OAuthPARRequestQuery) Limit(limit int) *OAuthPARRequestQuery {
-	oprq.limit = &limit
+	oprq.ctx.Limit = &limit
 	return oprq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (oprq *OAuthPARRequestQuery) Offset(offset int) *OAuthPARRequestQuery {
-	oprq.offset = &offset
+	oprq.ctx.Offset = &offset
 	return oprq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (oprq *OAuthPARRequestQuery) Unique(unique bool) *OAuthPARRequestQuery {
-	oprq.unique = &unique
+	oprq.ctx.Unique = &unique
 	return oprq
 }
 
-// Order adds an order step to the query.
-func (oprq *OAuthPARRequestQuery) Order(o ...OrderFunc) *OAuthPARRequestQuery {
+// Order specifies how the records should be ordered.
+func (oprq *OAuthPARRequestQuery) Order(o ...oauthparrequest.OrderOption) *OAuthPARRequestQuery {
 	oprq.order = append(oprq.order, o...)
 	return oprq
 }
@@ -64,7 +62,7 @@ func (oprq *OAuthPARRequestQuery) Order(o ...OrderFunc) *OAuthPARRequestQuery {
 // First returns the first OAuthPARRequest entity from the query.
 // Returns a *NotFoundError when no OAuthPARRequest was found.
 func (oprq *OAuthPARRequestQuery) First(ctx context.Context) (*OAuthPARRequest, error) {
-	nodes, err := oprq.Limit(1).All(ctx)
+	nodes, err := oprq.Limit(1).All(setContextOp(ctx, oprq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func (oprq *OAuthPARRequestQuery) FirstX(ctx context.Context) *OAuthPARRequest {
 // Returns a *NotFoundError when no OAuthPARRequest ID was found.
 func (oprq *OAuthPARRequestQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oprq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = oprq.Limit(1).IDs(setContextOp(ctx, oprq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -110,7 +108,7 @@ func (oprq *OAuthPARRequestQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OAuthPARRequest entity is found.
 // Returns a *NotFoundError when no OAuthPARRequest entities are found.
 func (oprq *OAuthPARRequestQuery) Only(ctx context.Context) (*OAuthPARRequest, error) {
-	nodes, err := oprq.Limit(2).All(ctx)
+	nodes, err := oprq.Limit(2).All(setContextOp(ctx, oprq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ func (oprq *OAuthPARRequestQuery) OnlyX(ctx context.Context) *OAuthPARRequest {
 // Returns a *NotFoundError when no entities are found.
 func (oprq *OAuthPARRequestQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = oprq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = oprq.Limit(2).IDs(setContextOp(ctx, oprq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -163,10 +161,12 @@ func (oprq *OAuthPARRequestQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OAuthPARRequests.
 func (oprq *OAuthPARRequestQuery) All(ctx context.Context) ([]*OAuthPARRequest, error) {
+	ctx = setContextOp(ctx, oprq.ctx, "All")
 	if err := oprq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return oprq.sqlAll(ctx)
+	qr := querierAll[[]*OAuthPARRequest, *OAuthPARRequestQuery]()
+	return withInterceptors[[]*OAuthPARRequest](ctx, oprq, qr, oprq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -179,9 +179,12 @@ func (oprq *OAuthPARRequestQuery) AllX(ctx context.Context) []*OAuthPARRequest {
 }
 
 // IDs executes the query and returns a list of OAuthPARRequest IDs.
-func (oprq *OAuthPARRequestQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := oprq.Select(oauthparrequest.FieldID).Scan(ctx, &ids); err != nil {
+func (oprq *OAuthPARRequestQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if oprq.ctx.Unique == nil && oprq.path != nil {
+		oprq.Unique(true)
+	}
+	ctx = setContextOp(ctx, oprq.ctx, "IDs")
+	if err = oprq.Select(oauthparrequest.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -198,10 +201,11 @@ func (oprq *OAuthPARRequestQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (oprq *OAuthPARRequestQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, oprq.ctx, "Count")
 	if err := oprq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return oprq.sqlCount(ctx)
+	return withInterceptors[int](ctx, oprq, querierCount[*OAuthPARRequestQuery](), oprq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -215,10 +219,15 @@ func (oprq *OAuthPARRequestQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (oprq *OAuthPARRequestQuery) Exist(ctx context.Context) (bool, error) {
-	if err := oprq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, oprq.ctx, "Exist")
+	switch _, err := oprq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return oprq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -238,14 +247,13 @@ func (oprq *OAuthPARRequestQuery) Clone() *OAuthPARRequestQuery {
 	}
 	return &OAuthPARRequestQuery{
 		config:     oprq.config,
-		limit:      oprq.limit,
-		offset:     oprq.offset,
-		order:      append([]OrderFunc{}, oprq.order...),
+		ctx:        oprq.ctx.Clone(),
+		order:      append([]oauthparrequest.OrderOption{}, oprq.order...),
+		inters:     append([]Interceptor{}, oprq.inters...),
 		predicates: append([]predicate.OAuthPARRequest{}, oprq.predicates...),
 		// clone intermediate query.
-		sql:    oprq.sql.Clone(),
-		path:   oprq.path,
-		unique: oprq.unique,
+		sql:  oprq.sql.Clone(),
+		path: oprq.path,
 	}
 }
 
@@ -264,16 +272,11 @@ func (oprq *OAuthPARRequestQuery) Clone() *OAuthPARRequestQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (oprq *OAuthPARRequestQuery) GroupBy(field string, fields ...string) *OAuthPARRequestGroupBy {
-	grbuild := &OAuthPARRequestGroupBy{config: oprq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := oprq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return oprq.sqlQuery(ctx), nil
-	}
+	oprq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OAuthPARRequestGroupBy{build: oprq}
+	grbuild.flds = &oprq.ctx.Fields
 	grbuild.label = oauthparrequest.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -290,11 +293,11 @@ func (oprq *OAuthPARRequestQuery) GroupBy(field string, fields ...string) *OAuth
 //		Select(oauthparrequest.FieldRequest).
 //		Scan(ctx, &v)
 func (oprq *OAuthPARRequestQuery) Select(fields ...string) *OAuthPARRequestSelect {
-	oprq.fields = append(oprq.fields, fields...)
-	selbuild := &OAuthPARRequestSelect{OAuthPARRequestQuery: oprq}
-	selbuild.label = oauthparrequest.Label
-	selbuild.flds, selbuild.scan = &oprq.fields, selbuild.Scan
-	return selbuild
+	oprq.ctx.Fields = append(oprq.ctx.Fields, fields...)
+	sbuild := &OAuthPARRequestSelect{OAuthPARRequestQuery: oprq}
+	sbuild.label = oauthparrequest.Label
+	sbuild.flds, sbuild.scan = &oprq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OAuthPARRequestSelect configured with the given aggregations.
@@ -303,7 +306,17 @@ func (oprq *OAuthPARRequestQuery) Aggregate(fns ...AggregateFunc) *OAuthPARReque
 }
 
 func (oprq *OAuthPARRequestQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range oprq.fields {
+	for _, inter := range oprq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, oprq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range oprq.ctx.Fields {
 		if !oauthparrequest.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -356,41 +369,22 @@ func (oprq *OAuthPARRequestQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(oprq.modifiers) > 0 {
 		_spec.Modifiers = oprq.modifiers
 	}
-	_spec.Node.Columns = oprq.fields
-	if len(oprq.fields) > 0 {
-		_spec.Unique = oprq.unique != nil && *oprq.unique
+	_spec.Node.Columns = oprq.ctx.Fields
+	if len(oprq.ctx.Fields) > 0 {
+		_spec.Unique = oprq.ctx.Unique != nil && *oprq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, oprq.driver, _spec)
 }
 
-func (oprq *OAuthPARRequestQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := oprq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (oprq *OAuthPARRequestQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthparrequest.Table,
-			Columns: oauthparrequest.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthparrequest.FieldID,
-			},
-		},
-		From:   oprq.sql,
-		Unique: true,
-	}
-	if unique := oprq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oauthparrequest.Table, oauthparrequest.Columns, sqlgraph.NewFieldSpec(oauthparrequest.FieldID, field.TypeInt))
+	_spec.From = oprq.sql
+	if unique := oprq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if oprq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := oprq.fields; len(fields) > 0 {
+	if fields := oprq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oauthparrequest.FieldID)
 		for i := range fields {
@@ -406,10 +400,10 @@ func (oprq *OAuthPARRequestQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := oprq.limit; limit != nil {
+	if limit := oprq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := oprq.offset; offset != nil {
+	if offset := oprq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := oprq.order; len(ps) > 0 {
@@ -425,7 +419,7 @@ func (oprq *OAuthPARRequestQuery) querySpec() *sqlgraph.QuerySpec {
 func (oprq *OAuthPARRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(oprq.driver.Dialect())
 	t1 := builder.Table(oauthparrequest.Table)
-	columns := oprq.fields
+	columns := oprq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oauthparrequest.Columns
 	}
@@ -434,7 +428,7 @@ func (oprq *OAuthPARRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = oprq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if oprq.unique != nil && *oprq.unique {
+	if oprq.ctx.Unique != nil && *oprq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range oprq.predicates {
@@ -443,12 +437,12 @@ func (oprq *OAuthPARRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range oprq.order {
 		p(selector)
 	}
-	if offset := oprq.offset; offset != nil {
+	if offset := oprq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := oprq.limit; limit != nil {
+	if limit := oprq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -456,13 +450,8 @@ func (oprq *OAuthPARRequestQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // OAuthPARRequestGroupBy is the group-by builder for OAuthPARRequest entities.
 type OAuthPARRequestGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OAuthPARRequestQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -471,58 +460,46 @@ func (oprgb *OAuthPARRequestGroupBy) Aggregate(fns ...AggregateFunc) *OAuthPARRe
 	return oprgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (oprgb *OAuthPARRequestGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := oprgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, oprgb.build.ctx, "GroupBy")
+	if err := oprgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oprgb.sql = query
-	return oprgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthPARRequestQuery, *OAuthPARRequestGroupBy](ctx, oprgb.build, oprgb, oprgb.build.inters, v)
 }
 
-func (oprgb *OAuthPARRequestGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range oprgb.fields {
-		if !oauthparrequest.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (oprgb *OAuthPARRequestGroupBy) sqlScan(ctx context.Context, root *OAuthPARRequestQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(oprgb.fns))
+	for _, fn := range oprgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := oprgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*oprgb.flds)+len(oprgb.fns))
+		for _, f := range *oprgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*oprgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := oprgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := oprgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (oprgb *OAuthPARRequestGroupBy) sqlQuery() *sql.Selector {
-	selector := oprgb.sql.Select()
-	aggregation := make([]string, 0, len(oprgb.fns))
-	for _, fn := range oprgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(oprgb.fields)+len(oprgb.fns))
-		for _, f := range oprgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(oprgb.fields...)...)
-}
-
 // OAuthPARRequestSelect is the builder for selecting fields of OAuthPARRequest entities.
 type OAuthPARRequestSelect struct {
 	*OAuthPARRequestQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -533,26 +510,27 @@ func (oprs *OAuthPARRequestSelect) Aggregate(fns ...AggregateFunc) *OAuthPARRequ
 
 // Scan applies the selector query and scans the result into the given value.
 func (oprs *OAuthPARRequestSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, oprs.ctx, "Select")
 	if err := oprs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oprs.sql = oprs.OAuthPARRequestQuery.sqlQuery(ctx)
-	return oprs.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthPARRequestQuery, *OAuthPARRequestSelect](ctx, oprs.OAuthPARRequestQuery, oprs, oprs.inters, v)
 }
 
-func (oprs *OAuthPARRequestSelect) sqlScan(ctx context.Context, v any) error {
+func (oprs *OAuthPARRequestSelect) sqlScan(ctx context.Context, root *OAuthPARRequestQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(oprs.fns))
 	for _, fn := range oprs.fns {
-		aggregation = append(aggregation, fn(oprs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*oprs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		oprs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		oprs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := oprs.sql.Query()
+	query, args := selector.Query()
 	if err := oprs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

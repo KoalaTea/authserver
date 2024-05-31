@@ -17,11 +17,9 @@ import (
 // OAuthSessionQuery is the builder for querying OAuthSession entities.
 type OAuthSessionQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []oauthsession.OrderOption
+	inters     []Interceptor
 	predicates []predicate.OAuthSession
 	modifiers  []func(*sql.Selector)
 	loadTotal  []func(context.Context, []*OAuthSession) error
@@ -36,27 +34,27 @@ func (osq *OAuthSessionQuery) Where(ps ...predicate.OAuthSession) *OAuthSessionQ
 	return osq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (osq *OAuthSessionQuery) Limit(limit int) *OAuthSessionQuery {
-	osq.limit = &limit
+	osq.ctx.Limit = &limit
 	return osq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (osq *OAuthSessionQuery) Offset(offset int) *OAuthSessionQuery {
-	osq.offset = &offset
+	osq.ctx.Offset = &offset
 	return osq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (osq *OAuthSessionQuery) Unique(unique bool) *OAuthSessionQuery {
-	osq.unique = &unique
+	osq.ctx.Unique = &unique
 	return osq
 }
 
-// Order adds an order step to the query.
-func (osq *OAuthSessionQuery) Order(o ...OrderFunc) *OAuthSessionQuery {
+// Order specifies how the records should be ordered.
+func (osq *OAuthSessionQuery) Order(o ...oauthsession.OrderOption) *OAuthSessionQuery {
 	osq.order = append(osq.order, o...)
 	return osq
 }
@@ -64,7 +62,7 @@ func (osq *OAuthSessionQuery) Order(o ...OrderFunc) *OAuthSessionQuery {
 // First returns the first OAuthSession entity from the query.
 // Returns a *NotFoundError when no OAuthSession was found.
 func (osq *OAuthSessionQuery) First(ctx context.Context) (*OAuthSession, error) {
-	nodes, err := osq.Limit(1).All(ctx)
+	nodes, err := osq.Limit(1).All(setContextOp(ctx, osq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func (osq *OAuthSessionQuery) FirstX(ctx context.Context) *OAuthSession {
 // Returns a *NotFoundError when no OAuthSession ID was found.
 func (osq *OAuthSessionQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = osq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = osq.Limit(1).IDs(setContextOp(ctx, osq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -110,7 +108,7 @@ func (osq *OAuthSessionQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OAuthSession entity is found.
 // Returns a *NotFoundError when no OAuthSession entities are found.
 func (osq *OAuthSessionQuery) Only(ctx context.Context) (*OAuthSession, error) {
-	nodes, err := osq.Limit(2).All(ctx)
+	nodes, err := osq.Limit(2).All(setContextOp(ctx, osq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ func (osq *OAuthSessionQuery) OnlyX(ctx context.Context) *OAuthSession {
 // Returns a *NotFoundError when no entities are found.
 func (osq *OAuthSessionQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = osq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = osq.Limit(2).IDs(setContextOp(ctx, osq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -163,10 +161,12 @@ func (osq *OAuthSessionQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OAuthSessions.
 func (osq *OAuthSessionQuery) All(ctx context.Context) ([]*OAuthSession, error) {
+	ctx = setContextOp(ctx, osq.ctx, "All")
 	if err := osq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return osq.sqlAll(ctx)
+	qr := querierAll[[]*OAuthSession, *OAuthSessionQuery]()
+	return withInterceptors[[]*OAuthSession](ctx, osq, qr, osq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -179,9 +179,12 @@ func (osq *OAuthSessionQuery) AllX(ctx context.Context) []*OAuthSession {
 }
 
 // IDs executes the query and returns a list of OAuthSession IDs.
-func (osq *OAuthSessionQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := osq.Select(oauthsession.FieldID).Scan(ctx, &ids); err != nil {
+func (osq *OAuthSessionQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if osq.ctx.Unique == nil && osq.path != nil {
+		osq.Unique(true)
+	}
+	ctx = setContextOp(ctx, osq.ctx, "IDs")
+	if err = osq.Select(oauthsession.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -198,10 +201,11 @@ func (osq *OAuthSessionQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (osq *OAuthSessionQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, osq.ctx, "Count")
 	if err := osq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return osq.sqlCount(ctx)
+	return withInterceptors[int](ctx, osq, querierCount[*OAuthSessionQuery](), osq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -215,10 +219,15 @@ func (osq *OAuthSessionQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (osq *OAuthSessionQuery) Exist(ctx context.Context) (bool, error) {
-	if err := osq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, osq.ctx, "Exist")
+	switch _, err := osq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return osq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -238,14 +247,13 @@ func (osq *OAuthSessionQuery) Clone() *OAuthSessionQuery {
 	}
 	return &OAuthSessionQuery{
 		config:     osq.config,
-		limit:      osq.limit,
-		offset:     osq.offset,
-		order:      append([]OrderFunc{}, osq.order...),
+		ctx:        osq.ctx.Clone(),
+		order:      append([]oauthsession.OrderOption{}, osq.order...),
+		inters:     append([]Interceptor{}, osq.inters...),
 		predicates: append([]predicate.OAuthSession{}, osq.predicates...),
 		// clone intermediate query.
-		sql:    osq.sql.Clone(),
-		path:   osq.path,
-		unique: osq.unique,
+		sql:  osq.sql.Clone(),
+		path: osq.path,
 	}
 }
 
@@ -264,16 +272,11 @@ func (osq *OAuthSessionQuery) Clone() *OAuthSessionQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (osq *OAuthSessionQuery) GroupBy(field string, fields ...string) *OAuthSessionGroupBy {
-	grbuild := &OAuthSessionGroupBy{config: osq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := osq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return osq.sqlQuery(ctx), nil
-	}
+	osq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OAuthSessionGroupBy{build: osq}
+	grbuild.flds = &osq.ctx.Fields
 	grbuild.label = oauthsession.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -290,11 +293,11 @@ func (osq *OAuthSessionQuery) GroupBy(field string, fields ...string) *OAuthSess
 //		Select(oauthsession.FieldIssuer).
 //		Scan(ctx, &v)
 func (osq *OAuthSessionQuery) Select(fields ...string) *OAuthSessionSelect {
-	osq.fields = append(osq.fields, fields...)
-	selbuild := &OAuthSessionSelect{OAuthSessionQuery: osq}
-	selbuild.label = oauthsession.Label
-	selbuild.flds, selbuild.scan = &osq.fields, selbuild.Scan
-	return selbuild
+	osq.ctx.Fields = append(osq.ctx.Fields, fields...)
+	sbuild := &OAuthSessionSelect{OAuthSessionQuery: osq}
+	sbuild.label = oauthsession.Label
+	sbuild.flds, sbuild.scan = &osq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OAuthSessionSelect configured with the given aggregations.
@@ -303,7 +306,17 @@ func (osq *OAuthSessionQuery) Aggregate(fns ...AggregateFunc) *OAuthSessionSelec
 }
 
 func (osq *OAuthSessionQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range osq.fields {
+	for _, inter := range osq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, osq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range osq.ctx.Fields {
 		if !oauthsession.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -356,41 +369,22 @@ func (osq *OAuthSessionQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(osq.modifiers) > 0 {
 		_spec.Modifiers = osq.modifiers
 	}
-	_spec.Node.Columns = osq.fields
-	if len(osq.fields) > 0 {
-		_spec.Unique = osq.unique != nil && *osq.unique
+	_spec.Node.Columns = osq.ctx.Fields
+	if len(osq.ctx.Fields) > 0 {
+		_spec.Unique = osq.ctx.Unique != nil && *osq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, osq.driver, _spec)
 }
 
-func (osq *OAuthSessionQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := osq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (osq *OAuthSessionQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthsession.Table,
-			Columns: oauthsession.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthsession.FieldID,
-			},
-		},
-		From:   osq.sql,
-		Unique: true,
-	}
-	if unique := osq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oauthsession.Table, oauthsession.Columns, sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt))
+	_spec.From = osq.sql
+	if unique := osq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if osq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := osq.fields; len(fields) > 0 {
+	if fields := osq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oauthsession.FieldID)
 		for i := range fields {
@@ -406,10 +400,10 @@ func (osq *OAuthSessionQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := osq.limit; limit != nil {
+	if limit := osq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := osq.offset; offset != nil {
+	if offset := osq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := osq.order; len(ps) > 0 {
@@ -425,7 +419,7 @@ func (osq *OAuthSessionQuery) querySpec() *sqlgraph.QuerySpec {
 func (osq *OAuthSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(osq.driver.Dialect())
 	t1 := builder.Table(oauthsession.Table)
-	columns := osq.fields
+	columns := osq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oauthsession.Columns
 	}
@@ -434,7 +428,7 @@ func (osq *OAuthSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = osq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if osq.unique != nil && *osq.unique {
+	if osq.ctx.Unique != nil && *osq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range osq.predicates {
@@ -443,12 +437,12 @@ func (osq *OAuthSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range osq.order {
 		p(selector)
 	}
-	if offset := osq.offset; offset != nil {
+	if offset := osq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := osq.limit; limit != nil {
+	if limit := osq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -456,13 +450,8 @@ func (osq *OAuthSessionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // OAuthSessionGroupBy is the group-by builder for OAuthSession entities.
 type OAuthSessionGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OAuthSessionQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -471,58 +460,46 @@ func (osgb *OAuthSessionGroupBy) Aggregate(fns ...AggregateFunc) *OAuthSessionGr
 	return osgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (osgb *OAuthSessionGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := osgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, osgb.build.ctx, "GroupBy")
+	if err := osgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	osgb.sql = query
-	return osgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthSessionQuery, *OAuthSessionGroupBy](ctx, osgb.build, osgb, osgb.build.inters, v)
 }
 
-func (osgb *OAuthSessionGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range osgb.fields {
-		if !oauthsession.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (osgb *OAuthSessionGroupBy) sqlScan(ctx context.Context, root *OAuthSessionQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(osgb.fns))
+	for _, fn := range osgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := osgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*osgb.flds)+len(osgb.fns))
+		for _, f := range *osgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*osgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := osgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := osgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (osgb *OAuthSessionGroupBy) sqlQuery() *sql.Selector {
-	selector := osgb.sql.Select()
-	aggregation := make([]string, 0, len(osgb.fns))
-	for _, fn := range osgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(osgb.fields)+len(osgb.fns))
-		for _, f := range osgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(osgb.fields...)...)
-}
-
 // OAuthSessionSelect is the builder for selecting fields of OAuthSession entities.
 type OAuthSessionSelect struct {
 	*OAuthSessionQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -533,26 +510,27 @@ func (oss *OAuthSessionSelect) Aggregate(fns ...AggregateFunc) *OAuthSessionSele
 
 // Scan applies the selector query and scans the result into the given value.
 func (oss *OAuthSessionSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, oss.ctx, "Select")
 	if err := oss.prepareQuery(ctx); err != nil {
 		return err
 	}
-	oss.sql = oss.OAuthSessionQuery.sqlQuery(ctx)
-	return oss.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthSessionQuery, *OAuthSessionSelect](ctx, oss.OAuthSessionQuery, oss, oss.inters, v)
 }
 
-func (oss *OAuthSessionSelect) sqlScan(ctx context.Context, v any) error {
+func (oss *OAuthSessionSelect) sqlScan(ctx context.Context, root *OAuthSessionQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(oss.fns))
 	for _, fn := range oss.fns {
-		aggregation = append(aggregation, fn(oss.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*oss.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		oss.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		oss.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := oss.sql.Query()
+	query, args := selector.Query()
 	if err := oss.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

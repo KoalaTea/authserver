@@ -34,6 +34,14 @@ func (ortu *OAuthRefreshTokenUpdate) SetSignature(s string) *OAuthRefreshTokenUp
 	return ortu
 }
 
+// SetNillableSignature sets the "signature" field if the given value is not nil.
+func (ortu *OAuthRefreshTokenUpdate) SetNillableSignature(s *string) *OAuthRefreshTokenUpdate {
+	if s != nil {
+		ortu.SetSignature(*s)
+	}
+	return ortu
+}
+
 // SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (ortu *OAuthRefreshTokenUpdate) SetSessionID(id int) *OAuthRefreshTokenUpdate {
 	ortu.mutation.SetSessionID(id)
@@ -66,34 +74,7 @@ func (ortu *OAuthRefreshTokenUpdate) ClearSession() *OAuthRefreshTokenUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ortu *OAuthRefreshTokenUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ortu.hooks) == 0 {
-		affected, err = ortu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthRefreshTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ortu.mutation = mutation
-			affected, err = ortu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ortu.hooks) - 1; i >= 0; i-- {
-			if ortu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ortu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ortu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ortu.sqlSave, ortu.mutation, ortu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -119,16 +100,7 @@ func (ortu *OAuthRefreshTokenUpdate) ExecX(ctx context.Context) {
 }
 
 func (ortu *OAuthRefreshTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthrefreshtoken.Table,
-			Columns: oauthrefreshtoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthrefreshtoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthrefreshtoken.Table, oauthrefreshtoken.Columns, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
 	if ps := ortu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -147,10 +119,7 @@ func (ortu *OAuthRefreshTokenUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{oauthrefreshtoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -163,10 +132,7 @@ func (ortu *OAuthRefreshTokenUpdate) sqlSave(ctx context.Context) (n int, err er
 			Columns: []string{oauthrefreshtoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -182,6 +148,7 @@ func (ortu *OAuthRefreshTokenUpdate) sqlSave(ctx context.Context) (n int, err er
 		}
 		return 0, err
 	}
+	ortu.mutation.done = true
 	return n, nil
 }
 
@@ -196,6 +163,14 @@ type OAuthRefreshTokenUpdateOne struct {
 // SetSignature sets the "signature" field.
 func (ortuo *OAuthRefreshTokenUpdateOne) SetSignature(s string) *OAuthRefreshTokenUpdateOne {
 	ortuo.mutation.SetSignature(s)
+	return ortuo
+}
+
+// SetNillableSignature sets the "signature" field if the given value is not nil.
+func (ortuo *OAuthRefreshTokenUpdateOne) SetNillableSignature(s *string) *OAuthRefreshTokenUpdateOne {
+	if s != nil {
+		ortuo.SetSignature(*s)
+	}
 	return ortuo
 }
 
@@ -229,6 +204,12 @@ func (ortuo *OAuthRefreshTokenUpdateOne) ClearSession() *OAuthRefreshTokenUpdate
 	return ortuo
 }
 
+// Where appends a list predicates to the OAuthRefreshTokenUpdate builder.
+func (ortuo *OAuthRefreshTokenUpdateOne) Where(ps ...predicate.OAuthRefreshToken) *OAuthRefreshTokenUpdateOne {
+	ortuo.mutation.Where(ps...)
+	return ortuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ortuo *OAuthRefreshTokenUpdateOne) Select(field string, fields ...string) *OAuthRefreshTokenUpdateOne {
@@ -238,40 +219,7 @@ func (ortuo *OAuthRefreshTokenUpdateOne) Select(field string, fields ...string) 
 
 // Save executes the query and returns the updated OAuthRefreshToken entity.
 func (ortuo *OAuthRefreshTokenUpdateOne) Save(ctx context.Context) (*OAuthRefreshToken, error) {
-	var (
-		err  error
-		node *OAuthRefreshToken
-	)
-	if len(ortuo.hooks) == 0 {
-		node, err = ortuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthRefreshTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ortuo.mutation = mutation
-			node, err = ortuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ortuo.hooks) - 1; i >= 0; i-- {
-			if ortuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ortuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ortuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthRefreshToken)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthRefreshTokenMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ortuo.sqlSave, ortuo.mutation, ortuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -297,16 +245,7 @@ func (ortuo *OAuthRefreshTokenUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ortuo *OAuthRefreshTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAuthRefreshToken, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthrefreshtoken.Table,
-			Columns: oauthrefreshtoken.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthrefreshtoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthrefreshtoken.Table, oauthrefreshtoken.Columns, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
 	id, ok := ortuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OAuthRefreshToken.id" for update`)}
@@ -342,10 +281,7 @@ func (ortuo *OAuthRefreshTokenUpdateOne) sqlSave(ctx context.Context) (_node *OA
 			Columns: []string{oauthrefreshtoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -358,10 +294,7 @@ func (ortuo *OAuthRefreshTokenUpdateOne) sqlSave(ctx context.Context) (_node *OA
 			Columns: []string{oauthrefreshtoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -380,5 +313,6 @@ func (ortuo *OAuthRefreshTokenUpdateOne) sqlSave(ctx context.Context) (_node *OA
 		}
 		return nil, err
 	}
+	ortuo.mutation.done = true
 	return _node, nil
 }

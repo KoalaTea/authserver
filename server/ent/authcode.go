@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
@@ -24,6 +25,7 @@ type AuthCode struct {
 	// The values are being populated by the AuthCodeQuery when eager-loading is set.
 	Edges             AuthCodeEdges `json:"edges"`
 	auth_code_session *int
+	selectValues      sql.SelectValues
 }
 
 // AuthCodeEdges holds the relations/edges for other nodes in the graph.
@@ -40,12 +42,10 @@ type AuthCodeEdges struct {
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e AuthCodeEdges) SessionOrErr() (*OAuthSession, error) {
-	if e.loadedTypes[0] {
-		if e.Session == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oauthsession.Label}
-		}
+	if e.Session != nil {
 		return e.Session, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthsession.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
 }
@@ -64,7 +64,7 @@ func (*AuthCode) scanValues(columns []string) ([]any, error) {
 		case authcode.ForeignKeys[0]: // auth_code_session
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type AuthCode", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -103,21 +103,29 @@ func (ac *AuthCode) assignValues(columns []string, values []any) error {
 				ac.auth_code_session = new(int)
 				*ac.auth_code_session = int(value.Int64)
 			}
+		default:
+			ac.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the AuthCode.
+// This includes values selected through modifiers, order, etc.
+func (ac *AuthCode) Value(name string) (ent.Value, error) {
+	return ac.selectValues.Get(name)
+}
+
 // QuerySession queries the "session" edge of the AuthCode entity.
 func (ac *AuthCode) QuerySession() *OAuthSessionQuery {
-	return (&AuthCodeClient{config: ac.config}).QuerySession(ac)
+	return NewAuthCodeClient(ac.config).QuerySession(ac)
 }
 
 // Update returns a builder for updating this AuthCode.
 // Note that you need to call AuthCode.Unwrap() before calling this method if this AuthCode
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ac *AuthCode) Update() *AuthCodeUpdateOne {
-	return (&AuthCodeClient{config: ac.config}).UpdateOne(ac)
+	return NewAuthCodeClient(ac.config).UpdateOne(ac)
 }
 
 // Unwrap unwraps the AuthCode entity that was returned from a transaction after it was closed,
@@ -147,9 +155,3 @@ func (ac *AuthCode) String() string {
 
 // AuthCodes is a parsable slice of AuthCode.
 type AuthCodes []*AuthCode
-
-func (ac AuthCodes) config(cfg config) {
-	for _i := range ac {
-		ac[_i].config = cfg
-	}
-}

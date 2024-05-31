@@ -52,49 +52,7 @@ func (oatc *OAuthAccessTokenCreate) Mutation() *OAuthAccessTokenMutation {
 
 // Save creates the OAuthAccessToken in the database.
 func (oatc *OAuthAccessTokenCreate) Save(ctx context.Context) (*OAuthAccessToken, error) {
-	var (
-		err  error
-		node *OAuthAccessToken
-	)
-	if len(oatc.hooks) == 0 {
-		if err = oatc.check(); err != nil {
-			return nil, err
-		}
-		node, err = oatc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthAccessTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = oatc.check(); err != nil {
-				return nil, err
-			}
-			oatc.mutation = mutation
-			if node, err = oatc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(oatc.hooks) - 1; i >= 0; i-- {
-			if oatc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oatc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, oatc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthAccessToken)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthAccessTokenMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, oatc.sqlSave, oatc.mutation, oatc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -128,6 +86,9 @@ func (oatc *OAuthAccessTokenCreate) check() error {
 }
 
 func (oatc *OAuthAccessTokenCreate) sqlSave(ctx context.Context) (*OAuthAccessToken, error) {
+	if err := oatc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := oatc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, oatc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -137,19 +98,15 @@ func (oatc *OAuthAccessTokenCreate) sqlSave(ctx context.Context) (*OAuthAccessTo
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	oatc.mutation.id = &_node.ID
+	oatc.mutation.done = true
 	return _node, nil
 }
 
 func (oatc *OAuthAccessTokenCreate) createSpec() (*OAuthAccessToken, *sqlgraph.CreateSpec) {
 	var (
 		_node = &OAuthAccessToken{config: oatc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: oauthaccesstoken.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthaccesstoken.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(oauthaccesstoken.Table, sqlgraph.NewFieldSpec(oauthaccesstoken.FieldID, field.TypeInt))
 	)
 	if value, ok := oatc.mutation.Signature(); ok {
 		_spec.SetField(oauthaccesstoken.FieldSignature, field.TypeString, value)
@@ -163,10 +120,7 @@ func (oatc *OAuthAccessTokenCreate) createSpec() (*OAuthAccessToken, *sqlgraph.C
 			Columns: []string{oauthaccesstoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -181,11 +135,15 @@ func (oatc *OAuthAccessTokenCreate) createSpec() (*OAuthAccessToken, *sqlgraph.C
 // OAuthAccessTokenCreateBulk is the builder for creating many OAuthAccessToken entities in bulk.
 type OAuthAccessTokenCreateBulk struct {
 	config
+	err      error
 	builders []*OAuthAccessTokenCreate
 }
 
 // Save creates the OAuthAccessToken entities in the database.
 func (oatcb *OAuthAccessTokenCreateBulk) Save(ctx context.Context) ([]*OAuthAccessToken, error) {
+	if oatcb.err != nil {
+		return nil, oatcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(oatcb.builders))
 	nodes := make([]*OAuthAccessToken, len(oatcb.builders))
 	mutators := make([]Mutator, len(oatcb.builders))
@@ -201,8 +159,8 @@ func (oatcb *OAuthAccessTokenCreateBulk) Save(ctx context.Context) ([]*OAuthAcce
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, oatcb.builders[i+1].mutation)
 				} else {

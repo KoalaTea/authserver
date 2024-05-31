@@ -17,11 +17,9 @@ import (
 // OAuthClientQuery is the builder for querying OAuthClient entities.
 type OAuthClientQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []oauthclient.OrderOption
+	inters     []Interceptor
 	predicates []predicate.OAuthClient
 	modifiers  []func(*sql.Selector)
 	loadTotal  []func(context.Context, []*OAuthClient) error
@@ -36,27 +34,27 @@ func (ocq *OAuthClientQuery) Where(ps ...predicate.OAuthClient) *OAuthClientQuer
 	return ocq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (ocq *OAuthClientQuery) Limit(limit int) *OAuthClientQuery {
-	ocq.limit = &limit
+	ocq.ctx.Limit = &limit
 	return ocq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (ocq *OAuthClientQuery) Offset(offset int) *OAuthClientQuery {
-	ocq.offset = &offset
+	ocq.ctx.Offset = &offset
 	return ocq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (ocq *OAuthClientQuery) Unique(unique bool) *OAuthClientQuery {
-	ocq.unique = &unique
+	ocq.ctx.Unique = &unique
 	return ocq
 }
 
-// Order adds an order step to the query.
-func (ocq *OAuthClientQuery) Order(o ...OrderFunc) *OAuthClientQuery {
+// Order specifies how the records should be ordered.
+func (ocq *OAuthClientQuery) Order(o ...oauthclient.OrderOption) *OAuthClientQuery {
 	ocq.order = append(ocq.order, o...)
 	return ocq
 }
@@ -64,7 +62,7 @@ func (ocq *OAuthClientQuery) Order(o ...OrderFunc) *OAuthClientQuery {
 // First returns the first OAuthClient entity from the query.
 // Returns a *NotFoundError when no OAuthClient was found.
 func (ocq *OAuthClientQuery) First(ctx context.Context) (*OAuthClient, error) {
-	nodes, err := ocq.Limit(1).All(ctx)
+	nodes, err := ocq.Limit(1).All(setContextOp(ctx, ocq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func (ocq *OAuthClientQuery) FirstX(ctx context.Context) *OAuthClient {
 // Returns a *NotFoundError when no OAuthClient ID was found.
 func (ocq *OAuthClientQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = ocq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = ocq.Limit(1).IDs(setContextOp(ctx, ocq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -110,7 +108,7 @@ func (ocq *OAuthClientQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one OAuthClient entity is found.
 // Returns a *NotFoundError when no OAuthClient entities are found.
 func (ocq *OAuthClientQuery) Only(ctx context.Context) (*OAuthClient, error) {
-	nodes, err := ocq.Limit(2).All(ctx)
+	nodes, err := ocq.Limit(2).All(setContextOp(ctx, ocq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ func (ocq *OAuthClientQuery) OnlyX(ctx context.Context) *OAuthClient {
 // Returns a *NotFoundError when no entities are found.
 func (ocq *OAuthClientQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = ocq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = ocq.Limit(2).IDs(setContextOp(ctx, ocq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -163,10 +161,12 @@ func (ocq *OAuthClientQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of OAuthClients.
 func (ocq *OAuthClientQuery) All(ctx context.Context) ([]*OAuthClient, error) {
+	ctx = setContextOp(ctx, ocq.ctx, "All")
 	if err := ocq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return ocq.sqlAll(ctx)
+	qr := querierAll[[]*OAuthClient, *OAuthClientQuery]()
+	return withInterceptors[[]*OAuthClient](ctx, ocq, qr, ocq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -179,9 +179,12 @@ func (ocq *OAuthClientQuery) AllX(ctx context.Context) []*OAuthClient {
 }
 
 // IDs executes the query and returns a list of OAuthClient IDs.
-func (ocq *OAuthClientQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := ocq.Select(oauthclient.FieldID).Scan(ctx, &ids); err != nil {
+func (ocq *OAuthClientQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if ocq.ctx.Unique == nil && ocq.path != nil {
+		ocq.Unique(true)
+	}
+	ctx = setContextOp(ctx, ocq.ctx, "IDs")
+	if err = ocq.Select(oauthclient.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -198,10 +201,11 @@ func (ocq *OAuthClientQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (ocq *OAuthClientQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, ocq.ctx, "Count")
 	if err := ocq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return ocq.sqlCount(ctx)
+	return withInterceptors[int](ctx, ocq, querierCount[*OAuthClientQuery](), ocq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -215,10 +219,15 @@ func (ocq *OAuthClientQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (ocq *OAuthClientQuery) Exist(ctx context.Context) (bool, error) {
-	if err := ocq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, ocq.ctx, "Exist")
+	switch _, err := ocq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return ocq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -238,14 +247,13 @@ func (ocq *OAuthClientQuery) Clone() *OAuthClientQuery {
 	}
 	return &OAuthClientQuery{
 		config:     ocq.config,
-		limit:      ocq.limit,
-		offset:     ocq.offset,
-		order:      append([]OrderFunc{}, ocq.order...),
+		ctx:        ocq.ctx.Clone(),
+		order:      append([]oauthclient.OrderOption{}, ocq.order...),
+		inters:     append([]Interceptor{}, ocq.inters...),
 		predicates: append([]predicate.OAuthClient{}, ocq.predicates...),
 		// clone intermediate query.
-		sql:    ocq.sql.Clone(),
-		path:   ocq.path,
-		unique: ocq.unique,
+		sql:  ocq.sql.Clone(),
+		path: ocq.path,
 	}
 }
 
@@ -264,16 +272,11 @@ func (ocq *OAuthClientQuery) Clone() *OAuthClientQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (ocq *OAuthClientQuery) GroupBy(field string, fields ...string) *OAuthClientGroupBy {
-	grbuild := &OAuthClientGroupBy{config: ocq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := ocq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return ocq.sqlQuery(ctx), nil
-	}
+	ocq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &OAuthClientGroupBy{build: ocq}
+	grbuild.flds = &ocq.ctx.Fields
 	grbuild.label = oauthclient.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -290,11 +293,11 @@ func (ocq *OAuthClientQuery) GroupBy(field string, fields ...string) *OAuthClien
 //		Select(oauthclient.FieldClientID).
 //		Scan(ctx, &v)
 func (ocq *OAuthClientQuery) Select(fields ...string) *OAuthClientSelect {
-	ocq.fields = append(ocq.fields, fields...)
-	selbuild := &OAuthClientSelect{OAuthClientQuery: ocq}
-	selbuild.label = oauthclient.Label
-	selbuild.flds, selbuild.scan = &ocq.fields, selbuild.Scan
-	return selbuild
+	ocq.ctx.Fields = append(ocq.ctx.Fields, fields...)
+	sbuild := &OAuthClientSelect{OAuthClientQuery: ocq}
+	sbuild.label = oauthclient.Label
+	sbuild.flds, sbuild.scan = &ocq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a OAuthClientSelect configured with the given aggregations.
@@ -303,7 +306,17 @@ func (ocq *OAuthClientQuery) Aggregate(fns ...AggregateFunc) *OAuthClientSelect 
 }
 
 func (ocq *OAuthClientQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range ocq.fields {
+	for _, inter := range ocq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, ocq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range ocq.ctx.Fields {
 		if !oauthclient.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -356,41 +369,22 @@ func (ocq *OAuthClientQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(ocq.modifiers) > 0 {
 		_spec.Modifiers = ocq.modifiers
 	}
-	_spec.Node.Columns = ocq.fields
-	if len(ocq.fields) > 0 {
-		_spec.Unique = ocq.unique != nil && *ocq.unique
+	_spec.Node.Columns = ocq.ctx.Fields
+	if len(ocq.ctx.Fields) > 0 {
+		_spec.Unique = ocq.ctx.Unique != nil && *ocq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, ocq.driver, _spec)
 }
 
-func (ocq *OAuthClientQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := ocq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (ocq *OAuthClientQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthclient.Table,
-			Columns: oauthclient.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthclient.FieldID,
-			},
-		},
-		From:   ocq.sql,
-		Unique: true,
-	}
-	if unique := ocq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(oauthclient.Table, oauthclient.Columns, sqlgraph.NewFieldSpec(oauthclient.FieldID, field.TypeInt))
+	_spec.From = ocq.sql
+	if unique := ocq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if ocq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := ocq.fields; len(fields) > 0 {
+	if fields := ocq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, oauthclient.FieldID)
 		for i := range fields {
@@ -406,10 +400,10 @@ func (ocq *OAuthClientQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := ocq.limit; limit != nil {
+	if limit := ocq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ocq.offset; offset != nil {
+	if offset := ocq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := ocq.order; len(ps) > 0 {
@@ -425,7 +419,7 @@ func (ocq *OAuthClientQuery) querySpec() *sqlgraph.QuerySpec {
 func (ocq *OAuthClientQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(ocq.driver.Dialect())
 	t1 := builder.Table(oauthclient.Table)
-	columns := ocq.fields
+	columns := ocq.ctx.Fields
 	if len(columns) == 0 {
 		columns = oauthclient.Columns
 	}
@@ -434,7 +428,7 @@ func (ocq *OAuthClientQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = ocq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ocq.unique != nil && *ocq.unique {
+	if ocq.ctx.Unique != nil && *ocq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range ocq.predicates {
@@ -443,12 +437,12 @@ func (ocq *OAuthClientQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range ocq.order {
 		p(selector)
 	}
-	if offset := ocq.offset; offset != nil {
+	if offset := ocq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ocq.limit; limit != nil {
+	if limit := ocq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -456,13 +450,8 @@ func (ocq *OAuthClientQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // OAuthClientGroupBy is the group-by builder for OAuthClient entities.
 type OAuthClientGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *OAuthClientQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -471,58 +460,46 @@ func (ocgb *OAuthClientGroupBy) Aggregate(fns ...AggregateFunc) *OAuthClientGrou
 	return ocgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (ocgb *OAuthClientGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := ocgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, ocgb.build.ctx, "GroupBy")
+	if err := ocgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ocgb.sql = query
-	return ocgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthClientQuery, *OAuthClientGroupBy](ctx, ocgb.build, ocgb, ocgb.build.inters, v)
 }
 
-func (ocgb *OAuthClientGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range ocgb.fields {
-		if !oauthclient.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (ocgb *OAuthClientGroupBy) sqlScan(ctx context.Context, root *OAuthClientQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(ocgb.fns))
+	for _, fn := range ocgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := ocgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*ocgb.flds)+len(ocgb.fns))
+		for _, f := range *ocgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*ocgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := ocgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := ocgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (ocgb *OAuthClientGroupBy) sqlQuery() *sql.Selector {
-	selector := ocgb.sql.Select()
-	aggregation := make([]string, 0, len(ocgb.fns))
-	for _, fn := range ocgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(ocgb.fields)+len(ocgb.fns))
-		for _, f := range ocgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(ocgb.fields...)...)
-}
-
 // OAuthClientSelect is the builder for selecting fields of OAuthClient entities.
 type OAuthClientSelect struct {
 	*OAuthClientQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -533,26 +510,27 @@ func (ocs *OAuthClientSelect) Aggregate(fns ...AggregateFunc) *OAuthClientSelect
 
 // Scan applies the selector query and scans the result into the given value.
 func (ocs *OAuthClientSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, ocs.ctx, "Select")
 	if err := ocs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ocs.sql = ocs.OAuthClientQuery.sqlQuery(ctx)
-	return ocs.sqlScan(ctx, v)
+	return scanWithInterceptors[*OAuthClientQuery, *OAuthClientSelect](ctx, ocs.OAuthClientQuery, ocs, ocs.inters, v)
 }
 
-func (ocs *OAuthClientSelect) sqlScan(ctx context.Context, v any) error {
+func (ocs *OAuthClientSelect) sqlScan(ctx context.Context, root *OAuthClientQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(ocs.fns))
 	for _, fn := range ocs.fns {
-		aggregation = append(aggregation, fn(ocs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*ocs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		ocs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		ocs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := ocs.sql.Query()
+	query, args := selector.Query()
 	if err := ocs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

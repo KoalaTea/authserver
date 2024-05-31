@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (osd *OAuthSessionDelete) Where(ps ...predicate.OAuthSession) *OAuthSession
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (osd *OAuthSessionDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(osd.hooks) == 0 {
-		affected, err = osd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthSessionMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			osd.mutation = mutation
-			affected, err = osd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(osd.hooks) - 1; i >= 0; i-- {
-			if osd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = osd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, osd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, osd.sqlExec, osd.mutation, osd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (osd *OAuthSessionDelete) ExecX(ctx context.Context) int {
 }
 
 func (osd *OAuthSessionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: oauthsession.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthsession.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(oauthsession.Table, sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt))
 	if ps := osd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (osd *OAuthSessionDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	osd.mutation.done = true
 	return affected, err
 }
 
 // OAuthSessionDeleteOne is the builder for deleting a single OAuthSession entity.
 type OAuthSessionDeleteOne struct {
 	osd *OAuthSessionDelete
+}
+
+// Where appends a list predicates to the OAuthSessionDelete builder.
+func (osdo *OAuthSessionDeleteOne) Where(ps ...predicate.OAuthSession) *OAuthSessionDeleteOne {
+	osdo.osd.mutation.Where(ps...)
+	return osdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (osdo *OAuthSessionDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (osdo *OAuthSessionDeleteOne) ExecX(ctx context.Context) {
-	osdo.osd.ExecX(ctx)
+	if err := osdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

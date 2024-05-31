@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (ocd *OAuthClientDelete) Where(ps ...predicate.OAuthClient) *OAuthClientDel
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ocd *OAuthClientDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ocd.hooks) == 0 {
-		affected, err = ocd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthClientMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ocd.mutation = mutation
-			affected, err = ocd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ocd.hooks) - 1; i >= 0; i-- {
-			if ocd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ocd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ocd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ocd.sqlExec, ocd.mutation, ocd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (ocd *OAuthClientDelete) ExecX(ctx context.Context) int {
 }
 
 func (ocd *OAuthClientDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: oauthclient.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthclient.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(oauthclient.Table, sqlgraph.NewFieldSpec(oauthclient.FieldID, field.TypeInt))
 	if ps := ocd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (ocd *OAuthClientDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	ocd.mutation.done = true
 	return affected, err
 }
 
 // OAuthClientDeleteOne is the builder for deleting a single OAuthClient entity.
 type OAuthClientDeleteOne struct {
 	ocd *OAuthClientDelete
+}
+
+// Where appends a list predicates to the OAuthClientDelete builder.
+func (ocdo *OAuthClientDeleteOne) Where(ps ...predicate.OAuthClient) *OAuthClientDeleteOne {
+	ocdo.ocd.mutation.Where(ps...)
+	return ocdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (ocdo *OAuthClientDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ocdo *OAuthClientDeleteOne) ExecX(ctx context.Context) {
-	ocdo.ocd.ExecX(ctx)
+	if err := ocdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

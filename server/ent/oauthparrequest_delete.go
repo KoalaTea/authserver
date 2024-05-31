@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (oprd *OAuthPARRequestDelete) Where(ps ...predicate.OAuthPARRequest) *OAuth
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (oprd *OAuthPARRequestDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(oprd.hooks) == 0 {
-		affected, err = oprd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthPARRequestMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oprd.mutation = mutation
-			affected, err = oprd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(oprd.hooks) - 1; i >= 0; i-- {
-			if oprd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oprd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, oprd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, oprd.sqlExec, oprd.mutation, oprd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (oprd *OAuthPARRequestDelete) ExecX(ctx context.Context) int {
 }
 
 func (oprd *OAuthPARRequestDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: oauthparrequest.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthparrequest.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(oauthparrequest.Table, sqlgraph.NewFieldSpec(oauthparrequest.FieldID, field.TypeInt))
 	if ps := oprd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (oprd *OAuthPARRequestDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	oprd.mutation.done = true
 	return affected, err
 }
 
 // OAuthPARRequestDeleteOne is the builder for deleting a single OAuthPARRequest entity.
 type OAuthPARRequestDeleteOne struct {
 	oprd *OAuthPARRequestDelete
+}
+
+// Where appends a list predicates to the OAuthPARRequestDelete builder.
+func (oprdo *OAuthPARRequestDeleteOne) Where(ps ...predicate.OAuthPARRequest) *OAuthPARRequestDeleteOne {
+	oprdo.oprd.mutation.Where(ps...)
+	return oprdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (oprdo *OAuthPARRequestDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (oprdo *OAuthPARRequestDeleteOne) ExecX(ctx context.Context) {
-	oprdo.oprd.ExecX(ctx)
+	if err := oprdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

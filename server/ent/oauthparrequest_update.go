@@ -33,6 +33,14 @@ func (opru *OAuthPARRequestUpdate) SetRequest(s string) *OAuthPARRequestUpdate {
 	return opru
 }
 
+// SetNillableRequest sets the "request" field if the given value is not nil.
+func (opru *OAuthPARRequestUpdate) SetNillableRequest(s *string) *OAuthPARRequestUpdate {
+	if s != nil {
+		opru.SetRequest(*s)
+	}
+	return opru
+}
+
 // Mutation returns the OAuthPARRequestMutation object of the builder.
 func (opru *OAuthPARRequestUpdate) Mutation() *OAuthPARRequestMutation {
 	return opru.mutation
@@ -40,34 +48,7 @@ func (opru *OAuthPARRequestUpdate) Mutation() *OAuthPARRequestMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (opru *OAuthPARRequestUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(opru.hooks) == 0 {
-		affected, err = opru.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthPARRequestMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			opru.mutation = mutation
-			affected, err = opru.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(opru.hooks) - 1; i >= 0; i-- {
-			if opru.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = opru.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, opru.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, opru.sqlSave, opru.mutation, opru.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -93,16 +74,7 @@ func (opru *OAuthPARRequestUpdate) ExecX(ctx context.Context) {
 }
 
 func (opru *OAuthPARRequestUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthparrequest.Table,
-			Columns: oauthparrequest.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthparrequest.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthparrequest.Table, oauthparrequest.Columns, sqlgraph.NewFieldSpec(oauthparrequest.FieldID, field.TypeInt))
 	if ps := opru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -121,6 +93,7 @@ func (opru *OAuthPARRequestUpdate) sqlSave(ctx context.Context) (n int, err erro
 		}
 		return 0, err
 	}
+	opru.mutation.done = true
 	return n, nil
 }
 
@@ -138,9 +111,23 @@ func (opruo *OAuthPARRequestUpdateOne) SetRequest(s string) *OAuthPARRequestUpda
 	return opruo
 }
 
+// SetNillableRequest sets the "request" field if the given value is not nil.
+func (opruo *OAuthPARRequestUpdateOne) SetNillableRequest(s *string) *OAuthPARRequestUpdateOne {
+	if s != nil {
+		opruo.SetRequest(*s)
+	}
+	return opruo
+}
+
 // Mutation returns the OAuthPARRequestMutation object of the builder.
 func (opruo *OAuthPARRequestUpdateOne) Mutation() *OAuthPARRequestMutation {
 	return opruo.mutation
+}
+
+// Where appends a list predicates to the OAuthPARRequestUpdate builder.
+func (opruo *OAuthPARRequestUpdateOne) Where(ps ...predicate.OAuthPARRequest) *OAuthPARRequestUpdateOne {
+	opruo.mutation.Where(ps...)
+	return opruo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -152,40 +139,7 @@ func (opruo *OAuthPARRequestUpdateOne) Select(field string, fields ...string) *O
 
 // Save executes the query and returns the updated OAuthPARRequest entity.
 func (opruo *OAuthPARRequestUpdateOne) Save(ctx context.Context) (*OAuthPARRequest, error) {
-	var (
-		err  error
-		node *OAuthPARRequest
-	)
-	if len(opruo.hooks) == 0 {
-		node, err = opruo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthPARRequestMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			opruo.mutation = mutation
-			node, err = opruo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(opruo.hooks) - 1; i >= 0; i-- {
-			if opruo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = opruo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, opruo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthPARRequest)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthPARRequestMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, opruo.sqlSave, opruo.mutation, opruo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -211,16 +165,7 @@ func (opruo *OAuthPARRequestUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (opruo *OAuthPARRequestUpdateOne) sqlSave(ctx context.Context) (_node *OAuthPARRequest, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oauthparrequest.Table,
-			Columns: oauthparrequest.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthparrequest.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oauthparrequest.Table, oauthparrequest.Columns, sqlgraph.NewFieldSpec(oauthparrequest.FieldID, field.TypeInt))
 	id, ok := opruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OAuthPARRequest.id" for update`)}
@@ -259,5 +204,6 @@ func (opruo *OAuthPARRequestUpdateOne) sqlSave(ctx context.Context) (_node *OAut
 		}
 		return nil, err
 	}
+	opruo.mutation.done = true
 	return _node, nil
 }

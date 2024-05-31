@@ -10,179 +10,117 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.OIDCAuthCode(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.OIDCAuthCode(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id int) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.OIDCAuthCode(sql.FieldLTE(FieldID, id))
 }
 
 // AuthorizationCode applies equality check predicate on the "authorization_code" field. It's identical to AuthorizationCodeEQ.
 func AuthorizationCode(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldEQ(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeEQ applies the EQ predicate on the "authorization_code" field.
 func AuthorizationCodeEQ(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldEQ(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeNEQ applies the NEQ predicate on the "authorization_code" field.
 func AuthorizationCodeNEQ(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldNEQ(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeIn applies the In predicate on the "authorization_code" field.
 func AuthorizationCodeIn(vs ...string) predicate.OIDCAuthCode {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldAuthorizationCode), v...))
-	})
+	return predicate.OIDCAuthCode(sql.FieldIn(FieldAuthorizationCode, vs...))
 }
 
 // AuthorizationCodeNotIn applies the NotIn predicate on the "authorization_code" field.
 func AuthorizationCodeNotIn(vs ...string) predicate.OIDCAuthCode {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldAuthorizationCode), v...))
-	})
+	return predicate.OIDCAuthCode(sql.FieldNotIn(FieldAuthorizationCode, vs...))
 }
 
 // AuthorizationCodeGT applies the GT predicate on the "authorization_code" field.
 func AuthorizationCodeGT(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldGT(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeGTE applies the GTE predicate on the "authorization_code" field.
 func AuthorizationCodeGTE(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldGTE(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeLT applies the LT predicate on the "authorization_code" field.
 func AuthorizationCodeLT(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldLT(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeLTE applies the LTE predicate on the "authorization_code" field.
 func AuthorizationCodeLTE(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldLTE(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeContains applies the Contains predicate on the "authorization_code" field.
 func AuthorizationCodeContains(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldContains(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeHasPrefix applies the HasPrefix predicate on the "authorization_code" field.
 func AuthorizationCodeHasPrefix(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldHasPrefix(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeHasSuffix applies the HasSuffix predicate on the "authorization_code" field.
 func AuthorizationCodeHasSuffix(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldHasSuffix(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeEqualFold applies the EqualFold predicate on the "authorization_code" field.
 func AuthorizationCodeEqualFold(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldEqualFold(FieldAuthorizationCode, v))
 }
 
 // AuthorizationCodeContainsFold applies the ContainsFold predicate on the "authorization_code" field.
 func AuthorizationCodeContainsFold(v string) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldAuthorizationCode), v))
-	})
+	return predicate.OIDCAuthCode(sql.FieldContainsFold(FieldAuthorizationCode, v))
 }
 
 // HasSession applies the HasEdge predicate on the "session" edge.
@@ -190,7 +128,6 @@ func HasSession() predicate.OIDCAuthCode {
 	return predicate.OIDCAuthCode(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SessionTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, SessionTable, SessionColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -200,11 +137,7 @@ func HasSession() predicate.OIDCAuthCode {
 // HasSessionWith applies the HasEdge predicate on the "session" edge with a given conditions (other predicates).
 func HasSessionWith(preds ...predicate.OAuthSession) predicate.OIDCAuthCode {
 	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SessionInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, SessionTable, SessionColumn),
-		)
+		step := newSessionStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -215,32 +148,15 @@ func HasSessionWith(preds ...predicate.OAuthSession) predicate.OIDCAuthCode {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.OIDCAuthCode) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OIDCAuthCode(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.OIDCAuthCode) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.OIDCAuthCode(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.OIDCAuthCode) predicate.OIDCAuthCode {
-	return predicate.OIDCAuthCode(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.OIDCAuthCode(sql.NotPredicates(p))
 }

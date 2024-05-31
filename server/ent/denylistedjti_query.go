@@ -17,11 +17,9 @@ import (
 // DenyListedJTIQuery is the builder for querying DenyListedJTI entities.
 type DenyListedJTIQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []denylistedjti.OrderOption
+	inters     []Interceptor
 	predicates []predicate.DenyListedJTI
 	modifiers  []func(*sql.Selector)
 	loadTotal  []func(context.Context, []*DenyListedJTI) error
@@ -36,27 +34,27 @@ func (dljq *DenyListedJTIQuery) Where(ps ...predicate.DenyListedJTI) *DenyListed
 	return dljq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (dljq *DenyListedJTIQuery) Limit(limit int) *DenyListedJTIQuery {
-	dljq.limit = &limit
+	dljq.ctx.Limit = &limit
 	return dljq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (dljq *DenyListedJTIQuery) Offset(offset int) *DenyListedJTIQuery {
-	dljq.offset = &offset
+	dljq.ctx.Offset = &offset
 	return dljq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (dljq *DenyListedJTIQuery) Unique(unique bool) *DenyListedJTIQuery {
-	dljq.unique = &unique
+	dljq.ctx.Unique = &unique
 	return dljq
 }
 
-// Order adds an order step to the query.
-func (dljq *DenyListedJTIQuery) Order(o ...OrderFunc) *DenyListedJTIQuery {
+// Order specifies how the records should be ordered.
+func (dljq *DenyListedJTIQuery) Order(o ...denylistedjti.OrderOption) *DenyListedJTIQuery {
 	dljq.order = append(dljq.order, o...)
 	return dljq
 }
@@ -64,7 +62,7 @@ func (dljq *DenyListedJTIQuery) Order(o ...OrderFunc) *DenyListedJTIQuery {
 // First returns the first DenyListedJTI entity from the query.
 // Returns a *NotFoundError when no DenyListedJTI was found.
 func (dljq *DenyListedJTIQuery) First(ctx context.Context) (*DenyListedJTI, error) {
-	nodes, err := dljq.Limit(1).All(ctx)
+	nodes, err := dljq.Limit(1).All(setContextOp(ctx, dljq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func (dljq *DenyListedJTIQuery) FirstX(ctx context.Context) *DenyListedJTI {
 // Returns a *NotFoundError when no DenyListedJTI ID was found.
 func (dljq *DenyListedJTIQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = dljq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = dljq.Limit(1).IDs(setContextOp(ctx, dljq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -110,7 +108,7 @@ func (dljq *DenyListedJTIQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one DenyListedJTI entity is found.
 // Returns a *NotFoundError when no DenyListedJTI entities are found.
 func (dljq *DenyListedJTIQuery) Only(ctx context.Context) (*DenyListedJTI, error) {
-	nodes, err := dljq.Limit(2).All(ctx)
+	nodes, err := dljq.Limit(2).All(setContextOp(ctx, dljq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ func (dljq *DenyListedJTIQuery) OnlyX(ctx context.Context) *DenyListedJTI {
 // Returns a *NotFoundError when no entities are found.
 func (dljq *DenyListedJTIQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = dljq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = dljq.Limit(2).IDs(setContextOp(ctx, dljq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -163,10 +161,12 @@ func (dljq *DenyListedJTIQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of DenyListedJTIs.
 func (dljq *DenyListedJTIQuery) All(ctx context.Context) ([]*DenyListedJTI, error) {
+	ctx = setContextOp(ctx, dljq.ctx, "All")
 	if err := dljq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return dljq.sqlAll(ctx)
+	qr := querierAll[[]*DenyListedJTI, *DenyListedJTIQuery]()
+	return withInterceptors[[]*DenyListedJTI](ctx, dljq, qr, dljq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -179,9 +179,12 @@ func (dljq *DenyListedJTIQuery) AllX(ctx context.Context) []*DenyListedJTI {
 }
 
 // IDs executes the query and returns a list of DenyListedJTI IDs.
-func (dljq *DenyListedJTIQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := dljq.Select(denylistedjti.FieldID).Scan(ctx, &ids); err != nil {
+func (dljq *DenyListedJTIQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if dljq.ctx.Unique == nil && dljq.path != nil {
+		dljq.Unique(true)
+	}
+	ctx = setContextOp(ctx, dljq.ctx, "IDs")
+	if err = dljq.Select(denylistedjti.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -198,10 +201,11 @@ func (dljq *DenyListedJTIQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (dljq *DenyListedJTIQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, dljq.ctx, "Count")
 	if err := dljq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return dljq.sqlCount(ctx)
+	return withInterceptors[int](ctx, dljq, querierCount[*DenyListedJTIQuery](), dljq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -215,10 +219,15 @@ func (dljq *DenyListedJTIQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dljq *DenyListedJTIQuery) Exist(ctx context.Context) (bool, error) {
-	if err := dljq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, dljq.ctx, "Exist")
+	switch _, err := dljq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return dljq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -238,14 +247,13 @@ func (dljq *DenyListedJTIQuery) Clone() *DenyListedJTIQuery {
 	}
 	return &DenyListedJTIQuery{
 		config:     dljq.config,
-		limit:      dljq.limit,
-		offset:     dljq.offset,
-		order:      append([]OrderFunc{}, dljq.order...),
+		ctx:        dljq.ctx.Clone(),
+		order:      append([]denylistedjti.OrderOption{}, dljq.order...),
+		inters:     append([]Interceptor{}, dljq.inters...),
 		predicates: append([]predicate.DenyListedJTI{}, dljq.predicates...),
 		// clone intermediate query.
-		sql:    dljq.sql.Clone(),
-		path:   dljq.path,
-		unique: dljq.unique,
+		sql:  dljq.sql.Clone(),
+		path: dljq.path,
 	}
 }
 
@@ -264,16 +272,11 @@ func (dljq *DenyListedJTIQuery) Clone() *DenyListedJTIQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (dljq *DenyListedJTIQuery) GroupBy(field string, fields ...string) *DenyListedJTIGroupBy {
-	grbuild := &DenyListedJTIGroupBy{config: dljq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := dljq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return dljq.sqlQuery(ctx), nil
-	}
+	dljq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &DenyListedJTIGroupBy{build: dljq}
+	grbuild.flds = &dljq.ctx.Fields
 	grbuild.label = denylistedjti.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -290,11 +293,11 @@ func (dljq *DenyListedJTIQuery) GroupBy(field string, fields ...string) *DenyLis
 //		Select(denylistedjti.FieldJti).
 //		Scan(ctx, &v)
 func (dljq *DenyListedJTIQuery) Select(fields ...string) *DenyListedJTISelect {
-	dljq.fields = append(dljq.fields, fields...)
-	selbuild := &DenyListedJTISelect{DenyListedJTIQuery: dljq}
-	selbuild.label = denylistedjti.Label
-	selbuild.flds, selbuild.scan = &dljq.fields, selbuild.Scan
-	return selbuild
+	dljq.ctx.Fields = append(dljq.ctx.Fields, fields...)
+	sbuild := &DenyListedJTISelect{DenyListedJTIQuery: dljq}
+	sbuild.label = denylistedjti.Label
+	sbuild.flds, sbuild.scan = &dljq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a DenyListedJTISelect configured with the given aggregations.
@@ -303,7 +306,17 @@ func (dljq *DenyListedJTIQuery) Aggregate(fns ...AggregateFunc) *DenyListedJTISe
 }
 
 func (dljq *DenyListedJTIQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range dljq.fields {
+	for _, inter := range dljq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, dljq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range dljq.ctx.Fields {
 		if !denylistedjti.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -356,41 +369,22 @@ func (dljq *DenyListedJTIQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(dljq.modifiers) > 0 {
 		_spec.Modifiers = dljq.modifiers
 	}
-	_spec.Node.Columns = dljq.fields
-	if len(dljq.fields) > 0 {
-		_spec.Unique = dljq.unique != nil && *dljq.unique
+	_spec.Node.Columns = dljq.ctx.Fields
+	if len(dljq.ctx.Fields) > 0 {
+		_spec.Unique = dljq.ctx.Unique != nil && *dljq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, dljq.driver, _spec)
 }
 
-func (dljq *DenyListedJTIQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := dljq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (dljq *DenyListedJTIQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   denylistedjti.Table,
-			Columns: denylistedjti.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: denylistedjti.FieldID,
-			},
-		},
-		From:   dljq.sql,
-		Unique: true,
-	}
-	if unique := dljq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(denylistedjti.Table, denylistedjti.Columns, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
+	_spec.From = dljq.sql
+	if unique := dljq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if dljq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := dljq.fields; len(fields) > 0 {
+	if fields := dljq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, denylistedjti.FieldID)
 		for i := range fields {
@@ -406,10 +400,10 @@ func (dljq *DenyListedJTIQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := dljq.limit; limit != nil {
+	if limit := dljq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := dljq.offset; offset != nil {
+	if offset := dljq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := dljq.order; len(ps) > 0 {
@@ -425,7 +419,7 @@ func (dljq *DenyListedJTIQuery) querySpec() *sqlgraph.QuerySpec {
 func (dljq *DenyListedJTIQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(dljq.driver.Dialect())
 	t1 := builder.Table(denylistedjti.Table)
-	columns := dljq.fields
+	columns := dljq.ctx.Fields
 	if len(columns) == 0 {
 		columns = denylistedjti.Columns
 	}
@@ -434,7 +428,7 @@ func (dljq *DenyListedJTIQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = dljq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if dljq.unique != nil && *dljq.unique {
+	if dljq.ctx.Unique != nil && *dljq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range dljq.predicates {
@@ -443,12 +437,12 @@ func (dljq *DenyListedJTIQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range dljq.order {
 		p(selector)
 	}
-	if offset := dljq.offset; offset != nil {
+	if offset := dljq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := dljq.limit; limit != nil {
+	if limit := dljq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -456,13 +450,8 @@ func (dljq *DenyListedJTIQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // DenyListedJTIGroupBy is the group-by builder for DenyListedJTI entities.
 type DenyListedJTIGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *DenyListedJTIQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -471,58 +460,46 @@ func (dljgb *DenyListedJTIGroupBy) Aggregate(fns ...AggregateFunc) *DenyListedJT
 	return dljgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (dljgb *DenyListedJTIGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := dljgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, dljgb.build.ctx, "GroupBy")
+	if err := dljgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	dljgb.sql = query
-	return dljgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*DenyListedJTIQuery, *DenyListedJTIGroupBy](ctx, dljgb.build, dljgb, dljgb.build.inters, v)
 }
 
-func (dljgb *DenyListedJTIGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range dljgb.fields {
-		if !denylistedjti.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (dljgb *DenyListedJTIGroupBy) sqlScan(ctx context.Context, root *DenyListedJTIQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(dljgb.fns))
+	for _, fn := range dljgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := dljgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*dljgb.flds)+len(dljgb.fns))
+		for _, f := range *dljgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*dljgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := dljgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := dljgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (dljgb *DenyListedJTIGroupBy) sqlQuery() *sql.Selector {
-	selector := dljgb.sql.Select()
-	aggregation := make([]string, 0, len(dljgb.fns))
-	for _, fn := range dljgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(dljgb.fields)+len(dljgb.fns))
-		for _, f := range dljgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(dljgb.fields...)...)
-}
-
 // DenyListedJTISelect is the builder for selecting fields of DenyListedJTI entities.
 type DenyListedJTISelect struct {
 	*DenyListedJTIQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -533,26 +510,27 @@ func (dljs *DenyListedJTISelect) Aggregate(fns ...AggregateFunc) *DenyListedJTIS
 
 // Scan applies the selector query and scans the result into the given value.
 func (dljs *DenyListedJTISelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, dljs.ctx, "Select")
 	if err := dljs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	dljs.sql = dljs.DenyListedJTIQuery.sqlQuery(ctx)
-	return dljs.sqlScan(ctx, v)
+	return scanWithInterceptors[*DenyListedJTIQuery, *DenyListedJTISelect](ctx, dljs.DenyListedJTIQuery, dljs, dljs.inters, v)
 }
 
-func (dljs *DenyListedJTISelect) sqlScan(ctx context.Context, v any) error {
+func (dljs *DenyListedJTISelect) sqlScan(ctx context.Context, root *DenyListedJTIQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(dljs.fns))
 	for _, fn := range dljs.fns {
-		aggregation = append(aggregation, fn(dljs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*dljs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		dljs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		dljs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := dljs.sql.Query()
+	query, args := selector.Query()
 	if err := dljs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

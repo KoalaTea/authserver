@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
@@ -22,6 +23,7 @@ type OAuthAccessToken struct {
 	// The values are being populated by the OAuthAccessTokenQuery when eager-loading is set.
 	Edges                      OAuthAccessTokenEdges `json:"edges"`
 	oauth_access_token_session *int
+	selectValues               sql.SelectValues
 }
 
 // OAuthAccessTokenEdges holds the relations/edges for other nodes in the graph.
@@ -38,12 +40,10 @@ type OAuthAccessTokenEdges struct {
 // SessionOrErr returns the Session value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e OAuthAccessTokenEdges) SessionOrErr() (*OAuthSession, error) {
-	if e.loadedTypes[0] {
-		if e.Session == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: oauthsession.Label}
-		}
+	if e.Session != nil {
 		return e.Session, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthsession.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
 }
@@ -60,7 +60,7 @@ func (*OAuthAccessToken) scanValues(columns []string) ([]any, error) {
 		case oauthaccesstoken.ForeignKeys[0]: // oauth_access_token_session
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type OAuthAccessToken", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -93,21 +93,29 @@ func (oat *OAuthAccessToken) assignValues(columns []string, values []any) error 
 				oat.oauth_access_token_session = new(int)
 				*oat.oauth_access_token_session = int(value.Int64)
 			}
+		default:
+			oat.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
 }
 
+// Value returns the ent.Value that was dynamically selected and assigned to the OAuthAccessToken.
+// This includes values selected through modifiers, order, etc.
+func (oat *OAuthAccessToken) Value(name string) (ent.Value, error) {
+	return oat.selectValues.Get(name)
+}
+
 // QuerySession queries the "session" edge of the OAuthAccessToken entity.
 func (oat *OAuthAccessToken) QuerySession() *OAuthSessionQuery {
-	return (&OAuthAccessTokenClient{config: oat.config}).QuerySession(oat)
+	return NewOAuthAccessTokenClient(oat.config).QuerySession(oat)
 }
 
 // Update returns a builder for updating this OAuthAccessToken.
 // Note that you need to call OAuthAccessToken.Unwrap() before calling this method if this OAuthAccessToken
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (oat *OAuthAccessToken) Update() *OAuthAccessTokenUpdateOne {
-	return (&OAuthAccessTokenClient{config: oat.config}).UpdateOne(oat)
+	return NewOAuthAccessTokenClient(oat.config).UpdateOne(oat)
 }
 
 // Unwrap unwraps the OAuthAccessToken entity that was returned from a transaction after it was closed,
@@ -134,9 +142,3 @@ func (oat *OAuthAccessToken) String() string {
 
 // OAuthAccessTokens is a parsable slice of OAuthAccessToken.
 type OAuthAccessTokens []*OAuthAccessToken
-
-func (oat OAuthAccessTokens) config(cfg config) {
-	for _i := range oat {
-		oat[_i].config = cfg
-	}
-}

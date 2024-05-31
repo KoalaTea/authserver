@@ -34,6 +34,14 @@ func (oacu *OIDCAuthCodeUpdate) SetAuthorizationCode(s string) *OIDCAuthCodeUpda
 	return oacu
 }
 
+// SetNillableAuthorizationCode sets the "authorization_code" field if the given value is not nil.
+func (oacu *OIDCAuthCodeUpdate) SetNillableAuthorizationCode(s *string) *OIDCAuthCodeUpdate {
+	if s != nil {
+		oacu.SetAuthorizationCode(*s)
+	}
+	return oacu
+}
+
 // SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (oacu *OIDCAuthCodeUpdate) SetSessionID(id int) *OIDCAuthCodeUpdate {
 	oacu.mutation.SetSessionID(id)
@@ -66,34 +74,7 @@ func (oacu *OIDCAuthCodeUpdate) ClearSession() *OIDCAuthCodeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (oacu *OIDCAuthCodeUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(oacu.hooks) == 0 {
-		affected, err = oacu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OIDCAuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oacu.mutation = mutation
-			affected, err = oacu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(oacu.hooks) - 1; i >= 0; i-- {
-			if oacu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oacu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, oacu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, oacu.sqlSave, oacu.mutation, oacu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -119,16 +100,7 @@ func (oacu *OIDCAuthCodeUpdate) ExecX(ctx context.Context) {
 }
 
 func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oidcauthcode.Table,
-			Columns: oidcauthcode.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oidcauthcode.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oidcauthcode.Table, oidcauthcode.Columns, sqlgraph.NewFieldSpec(oidcauthcode.FieldID, field.TypeInt))
 	if ps := oacu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -147,10 +119,7 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Columns: []string{oidcauthcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -163,10 +132,7 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Columns: []string{oidcauthcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -182,6 +148,7 @@ func (oacu *OIDCAuthCodeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		return 0, err
 	}
+	oacu.mutation.done = true
 	return n, nil
 }
 
@@ -196,6 +163,14 @@ type OIDCAuthCodeUpdateOne struct {
 // SetAuthorizationCode sets the "authorization_code" field.
 func (oacuo *OIDCAuthCodeUpdateOne) SetAuthorizationCode(s string) *OIDCAuthCodeUpdateOne {
 	oacuo.mutation.SetAuthorizationCode(s)
+	return oacuo
+}
+
+// SetNillableAuthorizationCode sets the "authorization_code" field if the given value is not nil.
+func (oacuo *OIDCAuthCodeUpdateOne) SetNillableAuthorizationCode(s *string) *OIDCAuthCodeUpdateOne {
+	if s != nil {
+		oacuo.SetAuthorizationCode(*s)
+	}
 	return oacuo
 }
 
@@ -229,6 +204,12 @@ func (oacuo *OIDCAuthCodeUpdateOne) ClearSession() *OIDCAuthCodeUpdateOne {
 	return oacuo
 }
 
+// Where appends a list predicates to the OIDCAuthCodeUpdate builder.
+func (oacuo *OIDCAuthCodeUpdateOne) Where(ps ...predicate.OIDCAuthCode) *OIDCAuthCodeUpdateOne {
+	oacuo.mutation.Where(ps...)
+	return oacuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (oacuo *OIDCAuthCodeUpdateOne) Select(field string, fields ...string) *OIDCAuthCodeUpdateOne {
@@ -238,40 +219,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) Select(field string, fields ...string) *OIDC
 
 // Save executes the query and returns the updated OIDCAuthCode entity.
 func (oacuo *OIDCAuthCodeUpdateOne) Save(ctx context.Context) (*OIDCAuthCode, error) {
-	var (
-		err  error
-		node *OIDCAuthCode
-	)
-	if len(oacuo.hooks) == 0 {
-		node, err = oacuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OIDCAuthCodeMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oacuo.mutation = mutation
-			node, err = oacuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(oacuo.hooks) - 1; i >= 0; i-- {
-			if oacuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oacuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, oacuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OIDCAuthCode)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OIDCAuthCodeMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, oacuo.sqlSave, oacuo.mutation, oacuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -297,16 +245,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAuthCode, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   oidcauthcode.Table,
-			Columns: oidcauthcode.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oidcauthcode.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(oidcauthcode.Table, oidcauthcode.Columns, sqlgraph.NewFieldSpec(oidcauthcode.FieldID, field.TypeInt))
 	id, ok := oacuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "OIDCAuthCode.id" for update`)}
@@ -342,10 +281,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 			Columns: []string{oidcauthcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -358,10 +294,7 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 			Columns: []string{oidcauthcode.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -380,5 +313,6 @@ func (oacuo *OIDCAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OIDCAut
 		}
 		return nil, err
 	}
+	oacuo.mutation.done = true
 	return _node, nil
 }

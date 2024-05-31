@@ -62,49 +62,7 @@ func (occ *OAuthClientCreate) Mutation() *OAuthClientMutation {
 
 // Save creates the OAuthClient in the database.
 func (occ *OAuthClientCreate) Save(ctx context.Context) (*OAuthClient, error) {
-	var (
-		err  error
-		node *OAuthClient
-	)
-	if len(occ.hooks) == 0 {
-		if err = occ.check(); err != nil {
-			return nil, err
-		}
-		node, err = occ.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthClientMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = occ.check(); err != nil {
-				return nil, err
-			}
-			occ.mutation = mutation
-			if node, err = occ.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(occ.hooks) - 1; i >= 0; i-- {
-			if occ.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = occ.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, occ.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthClient)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthClientMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, occ.sqlSave, occ.mutation, occ.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -153,6 +111,9 @@ func (occ *OAuthClientCreate) check() error {
 }
 
 func (occ *OAuthClientCreate) sqlSave(ctx context.Context) (*OAuthClient, error) {
+	if err := occ.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := occ.createSpec()
 	if err := sqlgraph.CreateNode(ctx, occ.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -162,19 +123,15 @@ func (occ *OAuthClientCreate) sqlSave(ctx context.Context) (*OAuthClient, error)
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	occ.mutation.id = &_node.ID
+	occ.mutation.done = true
 	return _node, nil
 }
 
 func (occ *OAuthClientCreate) createSpec() (*OAuthClient, *sqlgraph.CreateSpec) {
 	var (
 		_node = &OAuthClient{config: occ.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: oauthclient.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthclient.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(oauthclient.Table, sqlgraph.NewFieldSpec(oauthclient.FieldID, field.TypeInt))
 	)
 	if value, ok := occ.mutation.ClientID(); ok {
 		_spec.SetField(oauthclient.FieldClientID, field.TypeString, value)
@@ -206,11 +163,15 @@ func (occ *OAuthClientCreate) createSpec() (*OAuthClient, *sqlgraph.CreateSpec) 
 // OAuthClientCreateBulk is the builder for creating many OAuthClient entities in bulk.
 type OAuthClientCreateBulk struct {
 	config
+	err      error
 	builders []*OAuthClientCreate
 }
 
 // Save creates the OAuthClient entities in the database.
 func (occb *OAuthClientCreateBulk) Save(ctx context.Context) ([]*OAuthClient, error) {
+	if occb.err != nil {
+		return nil, occb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(occb.builders))
 	nodes := make([]*OAuthClient, len(occb.builders))
 	mutators := make([]Mutator, len(occb.builders))
@@ -226,8 +187,8 @@ func (occb *OAuthClientCreateBulk) Save(ctx context.Context) ([]*OAuthClient, er
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, occb.builders[i+1].mutation)
 				} else {

@@ -2,6 +2,10 @@
 
 package oauthparrequest
 
+import (
+	"entgo.io/ent/dialect/sql"
+)
+
 const (
 	// Label holds the string label denoting the oauthparrequest type in the database.
 	Label = "oauth_par_request"
@@ -27,4 +31,17 @@ func ValidColumn(column string) bool {
 		}
 	}
 	return false
+}
+
+// OrderOption defines the ordering options for the OAuthPARRequest queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRequest orders the results by the request field.
+func ByRequest(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequest, opts...).ToFunc()
 }

@@ -52,49 +52,7 @@ func (ortc *OAuthRefreshTokenCreate) Mutation() *OAuthRefreshTokenMutation {
 
 // Save creates the OAuthRefreshToken in the database.
 func (ortc *OAuthRefreshTokenCreate) Save(ctx context.Context) (*OAuthRefreshToken, error) {
-	var (
-		err  error
-		node *OAuthRefreshToken
-	)
-	if len(ortc.hooks) == 0 {
-		if err = ortc.check(); err != nil {
-			return nil, err
-		}
-		node, err = ortc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthRefreshTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ortc.check(); err != nil {
-				return nil, err
-			}
-			ortc.mutation = mutation
-			if node, err = ortc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ortc.hooks) - 1; i >= 0; i-- {
-			if ortc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ortc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ortc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*OAuthRefreshToken)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from OAuthRefreshTokenMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ortc.sqlSave, ortc.mutation, ortc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -128,6 +86,9 @@ func (ortc *OAuthRefreshTokenCreate) check() error {
 }
 
 func (ortc *OAuthRefreshTokenCreate) sqlSave(ctx context.Context) (*OAuthRefreshToken, error) {
+	if err := ortc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := ortc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, ortc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -137,19 +98,15 @@ func (ortc *OAuthRefreshTokenCreate) sqlSave(ctx context.Context) (*OAuthRefresh
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	ortc.mutation.id = &_node.ID
+	ortc.mutation.done = true
 	return _node, nil
 }
 
 func (ortc *OAuthRefreshTokenCreate) createSpec() (*OAuthRefreshToken, *sqlgraph.CreateSpec) {
 	var (
 		_node = &OAuthRefreshToken{config: ortc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: oauthrefreshtoken.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthrefreshtoken.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(oauthrefreshtoken.Table, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
 	)
 	if value, ok := ortc.mutation.Signature(); ok {
 		_spec.SetField(oauthrefreshtoken.FieldSignature, field.TypeString, value)
@@ -163,10 +120,7 @@ func (ortc *OAuthRefreshTokenCreate) createSpec() (*OAuthRefreshToken, *sqlgraph
 			Columns: []string{oauthrefreshtoken.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -181,11 +135,15 @@ func (ortc *OAuthRefreshTokenCreate) createSpec() (*OAuthRefreshToken, *sqlgraph
 // OAuthRefreshTokenCreateBulk is the builder for creating many OAuthRefreshToken entities in bulk.
 type OAuthRefreshTokenCreateBulk struct {
 	config
+	err      error
 	builders []*OAuthRefreshTokenCreate
 }
 
 // Save creates the OAuthRefreshToken entities in the database.
 func (ortcb *OAuthRefreshTokenCreateBulk) Save(ctx context.Context) ([]*OAuthRefreshToken, error) {
+	if ortcb.err != nil {
+		return nil, ortcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ortcb.builders))
 	nodes := make([]*OAuthRefreshToken, len(ortcb.builders))
 	mutators := make([]Mutator, len(ortcb.builders))
@@ -201,8 +159,8 @@ func (ortcb *OAuthRefreshTokenCreateBulk) Save(ctx context.Context) ([]*OAuthRef
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ortcb.builders[i+1].mutation)
 				} else {

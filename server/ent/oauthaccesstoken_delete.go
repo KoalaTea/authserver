@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (oatd *OAuthAccessTokenDelete) Where(ps ...predicate.OAuthAccessToken) *OAu
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (oatd *OAuthAccessTokenDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(oatd.hooks) == 0 {
-		affected, err = oatd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*OAuthAccessTokenMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			oatd.mutation = mutation
-			affected, err = oatd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(oatd.hooks) - 1; i >= 0; i-- {
-			if oatd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = oatd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, oatd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, oatd.sqlExec, oatd.mutation, oatd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,15 +40,7 @@ func (oatd *OAuthAccessTokenDelete) ExecX(ctx context.Context) int {
 }
 
 func (oatd *OAuthAccessTokenDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: oauthaccesstoken.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: oauthaccesstoken.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(oauthaccesstoken.Table, sqlgraph.NewFieldSpec(oauthaccesstoken.FieldID, field.TypeInt))
 	if ps := oatd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -88,12 +52,19 @@ func (oatd *OAuthAccessTokenDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	oatd.mutation.done = true
 	return affected, err
 }
 
 // OAuthAccessTokenDeleteOne is the builder for deleting a single OAuthAccessToken entity.
 type OAuthAccessTokenDeleteOne struct {
 	oatd *OAuthAccessTokenDelete
+}
+
+// Where appends a list predicates to the OAuthAccessTokenDelete builder.
+func (oatdo *OAuthAccessTokenDeleteOne) Where(ps ...predicate.OAuthAccessToken) *OAuthAccessTokenDeleteOne {
+	oatdo.oatd.mutation.Where(ps...)
+	return oatdo
 }
 
 // Exec executes the deletion query.
@@ -111,5 +82,7 @@ func (oatdo *OAuthAccessTokenDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (oatdo *OAuthAccessTokenDeleteOne) ExecX(ctx context.Context) {
-	oatdo.oatd.ExecX(ctx)
+	if err := oatdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

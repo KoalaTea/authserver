@@ -39,49 +39,7 @@ func (dljc *DenyListedJTICreate) Mutation() *DenyListedJTIMutation {
 
 // Save creates the DenyListedJTI in the database.
 func (dljc *DenyListedJTICreate) Save(ctx context.Context) (*DenyListedJTI, error) {
-	var (
-		err  error
-		node *DenyListedJTI
-	)
-	if len(dljc.hooks) == 0 {
-		if err = dljc.check(); err != nil {
-			return nil, err
-		}
-		node, err = dljc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DenyListedJTIMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = dljc.check(); err != nil {
-				return nil, err
-			}
-			dljc.mutation = mutation
-			if node, err = dljc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(dljc.hooks) - 1; i >= 0; i-- {
-			if dljc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dljc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, dljc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*DenyListedJTI)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from DenyListedJTIMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, dljc.sqlSave, dljc.mutation, dljc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -118,6 +76,9 @@ func (dljc *DenyListedJTICreate) check() error {
 }
 
 func (dljc *DenyListedJTICreate) sqlSave(ctx context.Context) (*DenyListedJTI, error) {
+	if err := dljc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := dljc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, dljc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -127,19 +88,15 @@ func (dljc *DenyListedJTICreate) sqlSave(ctx context.Context) (*DenyListedJTI, e
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
+	dljc.mutation.id = &_node.ID
+	dljc.mutation.done = true
 	return _node, nil
 }
 
 func (dljc *DenyListedJTICreate) createSpec() (*DenyListedJTI, *sqlgraph.CreateSpec) {
 	var (
 		_node = &DenyListedJTI{config: dljc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: denylistedjti.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: denylistedjti.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(denylistedjti.Table, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
 	)
 	if value, ok := dljc.mutation.Jti(); ok {
 		_spec.SetField(denylistedjti.FieldJti, field.TypeString, value)
@@ -155,11 +112,15 @@ func (dljc *DenyListedJTICreate) createSpec() (*DenyListedJTI, *sqlgraph.CreateS
 // DenyListedJTICreateBulk is the builder for creating many DenyListedJTI entities in bulk.
 type DenyListedJTICreateBulk struct {
 	config
+	err      error
 	builders []*DenyListedJTICreate
 }
 
 // Save creates the DenyListedJTI entities in the database.
 func (dljcb *DenyListedJTICreateBulk) Save(ctx context.Context) ([]*DenyListedJTI, error) {
+	if dljcb.err != nil {
+		return nil, dljcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(dljcb.builders))
 	nodes := make([]*DenyListedJTI, len(dljcb.builders))
 	mutators := make([]Mutator, len(dljcb.builders))
@@ -175,8 +136,8 @@ func (dljcb *DenyListedJTICreateBulk) Save(ctx context.Context) ([]*DenyListedJT
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, dljcb.builders[i+1].mutation)
 				} else {

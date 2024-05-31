@@ -34,34 +34,7 @@ func (pjsu *PublicJWKSetUpdate) Mutation() *PublicJWKSetMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pjsu *PublicJWKSetUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pjsu.hooks) == 0 {
-		affected, err = pjsu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKSetMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pjsu.mutation = mutation
-			affected, err = pjsu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pjsu.hooks) - 1; i >= 0; i-- {
-			if pjsu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pjsu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pjsu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, pjsu.sqlSave, pjsu.mutation, pjsu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -87,16 +60,7 @@ func (pjsu *PublicJWKSetUpdate) ExecX(ctx context.Context) {
 }
 
 func (pjsu *PublicJWKSetUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   publicjwkset.Table,
-			Columns: publicjwkset.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwkset.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(publicjwkset.Table, publicjwkset.Columns, sqlgraph.NewFieldSpec(publicjwkset.FieldID, field.TypeInt))
 	if ps := pjsu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,6 +76,7 @@ func (pjsu *PublicJWKSetUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		return 0, err
 	}
+	pjsu.mutation.done = true
 	return n, nil
 }
 
@@ -128,6 +93,12 @@ func (pjsuo *PublicJWKSetUpdateOne) Mutation() *PublicJWKSetMutation {
 	return pjsuo.mutation
 }
 
+// Where appends a list predicates to the PublicJWKSetUpdate builder.
+func (pjsuo *PublicJWKSetUpdateOne) Where(ps ...predicate.PublicJWKSet) *PublicJWKSetUpdateOne {
+	pjsuo.mutation.Where(ps...)
+	return pjsuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (pjsuo *PublicJWKSetUpdateOne) Select(field string, fields ...string) *PublicJWKSetUpdateOne {
@@ -137,40 +108,7 @@ func (pjsuo *PublicJWKSetUpdateOne) Select(field string, fields ...string) *Publ
 
 // Save executes the query and returns the updated PublicJWKSet entity.
 func (pjsuo *PublicJWKSetUpdateOne) Save(ctx context.Context) (*PublicJWKSet, error) {
-	var (
-		err  error
-		node *PublicJWKSet
-	)
-	if len(pjsuo.hooks) == 0 {
-		node, err = pjsuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PublicJWKSetMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pjsuo.mutation = mutation
-			node, err = pjsuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(pjsuo.hooks) - 1; i >= 0; i-- {
-			if pjsuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pjsuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, pjsuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PublicJWKSet)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PublicJWKSetMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, pjsuo.sqlSave, pjsuo.mutation, pjsuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -196,16 +134,7 @@ func (pjsuo *PublicJWKSetUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (pjsuo *PublicJWKSetUpdateOne) sqlSave(ctx context.Context) (_node *PublicJWKSet, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   publicjwkset.Table,
-			Columns: publicjwkset.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwkset.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(publicjwkset.Table, publicjwkset.Columns, sqlgraph.NewFieldSpec(publicjwkset.FieldID, field.TypeInt))
 	id, ok := pjsuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PublicJWKSet.id" for update`)}
@@ -241,5 +170,6 @@ func (pjsuo *PublicJWKSetUpdateOne) sqlSave(ctx context.Context) (_node *PublicJ
 		}
 		return nil, err
 	}
+	pjsuo.mutation.done = true
 	return _node, nil
 }

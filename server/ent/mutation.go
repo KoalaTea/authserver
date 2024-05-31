@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
 	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
@@ -21,8 +23,6 @@ import (
 	"github.com/koalatea/authserver/server/ent/predicate"
 	"github.com/koalatea/authserver/server/ent/publicjwk"
 	"github.com/koalatea/authserver/server/ent/user"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -279,9 +279,24 @@ func (m *AuthCodeMutation) Where(ps ...predicate.AuthCode) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the AuthCodeMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AuthCodeMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AuthCode, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *AuthCodeMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AuthCodeMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (AuthCode).
@@ -596,9 +611,24 @@ func (m *CertMutation) Where(ps ...predicate.Cert) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the CertMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CertMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Cert, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *CertMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CertMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Cert).
@@ -919,9 +949,24 @@ func (m *DenyListedJTIMutation) Where(ps ...predicate.DenyListedJTI) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the DenyListedJTIMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DenyListedJTIMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.DenyListedJTI, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *DenyListedJTIMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DenyListedJTIMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (DenyListedJTI).
@@ -1288,9 +1333,24 @@ func (m *OAuthAccessTokenMutation) Where(ps ...predicate.OAuthAccessToken) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OAuthAccessTokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OAuthAccessTokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OAuthAccessToken, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OAuthAccessTokenMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OAuthAccessTokenMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OAuthAccessToken).
@@ -1874,9 +1934,24 @@ func (m *OAuthClientMutation) Where(ps ...predicate.OAuthClient) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OAuthClientMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OAuthClientMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OAuthClient, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OAuthClientMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OAuthClientMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OAuthClient).
@@ -2270,9 +2345,24 @@ func (m *OAuthPARRequestMutation) Where(ps ...predicate.OAuthPARRequest) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OAuthPARRequestMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OAuthPARRequestMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OAuthPARRequest, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OAuthPARRequestMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OAuthPARRequestMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OAuthPARRequest).
@@ -2622,9 +2712,24 @@ func (m *OAuthRefreshTokenMutation) Where(ps ...predicate.OAuthRefreshToken) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OAuthRefreshTokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OAuthRefreshTokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OAuthRefreshToken, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OAuthRefreshTokenMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OAuthRefreshTokenMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OAuthRefreshToken).
@@ -3483,9 +3588,24 @@ func (m *OAuthSessionMutation) Where(ps ...predicate.OAuthSession) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OAuthSessionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OAuthSessionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OAuthSession, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OAuthSessionMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OAuthSessionMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OAuthSession).
@@ -4039,9 +4159,24 @@ func (m *OIDCAuthCodeMutation) Where(ps ...predicate.OIDCAuthCode) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the OIDCAuthCodeMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OIDCAuthCodeMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OIDCAuthCode, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *OIDCAuthCodeMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OIDCAuthCodeMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (OIDCAuthCode).
@@ -4417,9 +4552,24 @@ func (m *PKCEMutation) Where(ps ...predicate.PKCE) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the PKCEMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PKCEMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PKCE, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *PKCEMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PKCEMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (PKCE).
@@ -4918,9 +5068,24 @@ func (m *PublicJWKMutation) Where(ps ...predicate.PublicJWK) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the PublicJWKMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PublicJWKMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PublicJWK, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *PublicJWKMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PublicJWKMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (PublicJWK).
@@ -5260,9 +5425,24 @@ func (m *PublicJWKSetMutation) Where(ps ...predicate.PublicJWKSet) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the PublicJWKSetMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PublicJWKSetMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PublicJWKSet, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *PublicJWKSetMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PublicJWKSetMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (PublicJWKSet).
@@ -5657,9 +5837,24 @@ func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the UserMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UserMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.User, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UserMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (User).

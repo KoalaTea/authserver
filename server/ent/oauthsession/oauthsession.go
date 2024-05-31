@@ -2,6 +2,10 @@
 
 package oauthsession
 
+import (
+	"entgo.io/ent/dialect/sql"
+)
+
 const (
 	// Label holds the string label denoting the oauthsession type in the database.
 	Label = "oauth_session"
@@ -63,4 +67,52 @@ func ValidColumn(column string) bool {
 		}
 	}
 	return false
+}
+
+// OrderOption defines the ordering options for the OAuthSession queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByIssuer orders the results by the issuer field.
+func ByIssuer(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIssuer, opts...).ToFunc()
+}
+
+// BySubject orders the results by the subject field.
+func BySubject(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubject, opts...).ToFunc()
+}
+
+// ByExpiresAt orders the results by the expires_at field.
+func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
+}
+
+// ByIssuedAt orders the results by the issued_at field.
+func ByIssuedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIssuedAt, opts...).ToFunc()
+}
+
+// ByRequestedAt orders the results by the requested_at field.
+func ByRequestedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequestedAt, opts...).ToFunc()
+}
+
+// ByAuthTime orders the results by the auth_time field.
+func ByAuthTime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthTime, opts...).ToFunc()
+}
+
+// ByRequest orders the results by the request field.
+func ByRequest(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequest, opts...).ToFunc()
+}
+
+// ByForm orders the results by the form field.
+func ByForm(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldForm, opts...).ToFunc()
 }

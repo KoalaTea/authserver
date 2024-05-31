@@ -46,8 +46,8 @@ func (srv *Server) Run(ctx context.Context) error {
 	// can I register a router in a nother router? can I middleware the router?
 
 	// Do not know if this actually does some tracing stuff or not. XSAM/otelsql though
-	// db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	db, err := otelsql.Open("sqlite3", "file:server/nopush/db.sql?_fk=1")
+	db, err := otelsql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	// db, err := otelsql.Open("sqlite3", "file:server/nopush/db.sql?_fk=1")
 
 	if err != nil {
 		panic(err)

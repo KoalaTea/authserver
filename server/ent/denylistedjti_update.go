@@ -34,9 +34,25 @@ func (dlju *DenyListedJTIUpdate) SetJti(s string) *DenyListedJTIUpdate {
 	return dlju
 }
 
+// SetNillableJti sets the "jti" field if the given value is not nil.
+func (dlju *DenyListedJTIUpdate) SetNillableJti(s *string) *DenyListedJTIUpdate {
+	if s != nil {
+		dlju.SetJti(*s)
+	}
+	return dlju
+}
+
 // SetExpiration sets the "expiration" field.
 func (dlju *DenyListedJTIUpdate) SetExpiration(t time.Time) *DenyListedJTIUpdate {
 	dlju.mutation.SetExpiration(t)
+	return dlju
+}
+
+// SetNillableExpiration sets the "expiration" field if the given value is not nil.
+func (dlju *DenyListedJTIUpdate) SetNillableExpiration(t *time.Time) *DenyListedJTIUpdate {
+	if t != nil {
+		dlju.SetExpiration(*t)
+	}
 	return dlju
 }
 
@@ -47,34 +63,7 @@ func (dlju *DenyListedJTIUpdate) Mutation() *DenyListedJTIMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (dlju *DenyListedJTIUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(dlju.hooks) == 0 {
-		affected, err = dlju.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DenyListedJTIMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			dlju.mutation = mutation
-			affected, err = dlju.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(dlju.hooks) - 1; i >= 0; i-- {
-			if dlju.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dlju.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, dlju.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, dlju.sqlSave, dlju.mutation, dlju.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -100,16 +89,7 @@ func (dlju *DenyListedJTIUpdate) ExecX(ctx context.Context) {
 }
 
 func (dlju *DenyListedJTIUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   denylistedjti.Table,
-			Columns: denylistedjti.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: denylistedjti.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(denylistedjti.Table, denylistedjti.Columns, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
 	if ps := dlju.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -131,6 +111,7 @@ func (dlju *DenyListedJTIUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
+	dlju.mutation.done = true
 	return n, nil
 }
 
@@ -148,15 +129,37 @@ func (dljuo *DenyListedJTIUpdateOne) SetJti(s string) *DenyListedJTIUpdateOne {
 	return dljuo
 }
 
+// SetNillableJti sets the "jti" field if the given value is not nil.
+func (dljuo *DenyListedJTIUpdateOne) SetNillableJti(s *string) *DenyListedJTIUpdateOne {
+	if s != nil {
+		dljuo.SetJti(*s)
+	}
+	return dljuo
+}
+
 // SetExpiration sets the "expiration" field.
 func (dljuo *DenyListedJTIUpdateOne) SetExpiration(t time.Time) *DenyListedJTIUpdateOne {
 	dljuo.mutation.SetExpiration(t)
 	return dljuo
 }
 
+// SetNillableExpiration sets the "expiration" field if the given value is not nil.
+func (dljuo *DenyListedJTIUpdateOne) SetNillableExpiration(t *time.Time) *DenyListedJTIUpdateOne {
+	if t != nil {
+		dljuo.SetExpiration(*t)
+	}
+	return dljuo
+}
+
 // Mutation returns the DenyListedJTIMutation object of the builder.
 func (dljuo *DenyListedJTIUpdateOne) Mutation() *DenyListedJTIMutation {
 	return dljuo.mutation
+}
+
+// Where appends a list predicates to the DenyListedJTIUpdate builder.
+func (dljuo *DenyListedJTIUpdateOne) Where(ps ...predicate.DenyListedJTI) *DenyListedJTIUpdateOne {
+	dljuo.mutation.Where(ps...)
+	return dljuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -168,40 +171,7 @@ func (dljuo *DenyListedJTIUpdateOne) Select(field string, fields ...string) *Den
 
 // Save executes the query and returns the updated DenyListedJTI entity.
 func (dljuo *DenyListedJTIUpdateOne) Save(ctx context.Context) (*DenyListedJTI, error) {
-	var (
-		err  error
-		node *DenyListedJTI
-	)
-	if len(dljuo.hooks) == 0 {
-		node, err = dljuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DenyListedJTIMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			dljuo.mutation = mutation
-			node, err = dljuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(dljuo.hooks) - 1; i >= 0; i-- {
-			if dljuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dljuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, dljuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*DenyListedJTI)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from DenyListedJTIMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, dljuo.sqlSave, dljuo.mutation, dljuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -227,16 +197,7 @@ func (dljuo *DenyListedJTIUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (dljuo *DenyListedJTIUpdateOne) sqlSave(ctx context.Context) (_node *DenyListedJTI, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   denylistedjti.Table,
-			Columns: denylistedjti.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: denylistedjti.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(denylistedjti.Table, denylistedjti.Columns, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
 	id, ok := dljuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "DenyListedJTI.id" for update`)}
@@ -278,5 +239,6 @@ func (dljuo *DenyListedJTIUpdateOne) sqlSave(ctx context.Context) (_node *DenyLi
 		}
 		return nil, err
 	}
+	dljuo.mutation.done = true
 	return _node, nil
 }

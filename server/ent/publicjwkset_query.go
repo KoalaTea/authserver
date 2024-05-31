@@ -17,11 +17,9 @@ import (
 // PublicJWKSetQuery is the builder for querying PublicJWKSet entities.
 type PublicJWKSetQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []publicjwkset.OrderOption
+	inters     []Interceptor
 	predicates []predicate.PublicJWKSet
 	modifiers  []func(*sql.Selector)
 	loadTotal  []func(context.Context, []*PublicJWKSet) error
@@ -36,27 +34,27 @@ func (pjsq *PublicJWKSetQuery) Where(ps ...predicate.PublicJWKSet) *PublicJWKSet
 	return pjsq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (pjsq *PublicJWKSetQuery) Limit(limit int) *PublicJWKSetQuery {
-	pjsq.limit = &limit
+	pjsq.ctx.Limit = &limit
 	return pjsq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (pjsq *PublicJWKSetQuery) Offset(offset int) *PublicJWKSetQuery {
-	pjsq.offset = &offset
+	pjsq.ctx.Offset = &offset
 	return pjsq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (pjsq *PublicJWKSetQuery) Unique(unique bool) *PublicJWKSetQuery {
-	pjsq.unique = &unique
+	pjsq.ctx.Unique = &unique
 	return pjsq
 }
 
-// Order adds an order step to the query.
-func (pjsq *PublicJWKSetQuery) Order(o ...OrderFunc) *PublicJWKSetQuery {
+// Order specifies how the records should be ordered.
+func (pjsq *PublicJWKSetQuery) Order(o ...publicjwkset.OrderOption) *PublicJWKSetQuery {
 	pjsq.order = append(pjsq.order, o...)
 	return pjsq
 }
@@ -64,7 +62,7 @@ func (pjsq *PublicJWKSetQuery) Order(o ...OrderFunc) *PublicJWKSetQuery {
 // First returns the first PublicJWKSet entity from the query.
 // Returns a *NotFoundError when no PublicJWKSet was found.
 func (pjsq *PublicJWKSetQuery) First(ctx context.Context) (*PublicJWKSet, error) {
-	nodes, err := pjsq.Limit(1).All(ctx)
+	nodes, err := pjsq.Limit(1).All(setContextOp(ctx, pjsq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func (pjsq *PublicJWKSetQuery) FirstX(ctx context.Context) *PublicJWKSet {
 // Returns a *NotFoundError when no PublicJWKSet ID was found.
 func (pjsq *PublicJWKSetQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = pjsq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = pjsq.Limit(1).IDs(setContextOp(ctx, pjsq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -110,7 +108,7 @@ func (pjsq *PublicJWKSetQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one PublicJWKSet entity is found.
 // Returns a *NotFoundError when no PublicJWKSet entities are found.
 func (pjsq *PublicJWKSetQuery) Only(ctx context.Context) (*PublicJWKSet, error) {
-	nodes, err := pjsq.Limit(2).All(ctx)
+	nodes, err := pjsq.Limit(2).All(setContextOp(ctx, pjsq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ func (pjsq *PublicJWKSetQuery) OnlyX(ctx context.Context) *PublicJWKSet {
 // Returns a *NotFoundError when no entities are found.
 func (pjsq *PublicJWKSetQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = pjsq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = pjsq.Limit(2).IDs(setContextOp(ctx, pjsq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -163,10 +161,12 @@ func (pjsq *PublicJWKSetQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of PublicJWKSets.
 func (pjsq *PublicJWKSetQuery) All(ctx context.Context) ([]*PublicJWKSet, error) {
+	ctx = setContextOp(ctx, pjsq.ctx, "All")
 	if err := pjsq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return pjsq.sqlAll(ctx)
+	qr := querierAll[[]*PublicJWKSet, *PublicJWKSetQuery]()
+	return withInterceptors[[]*PublicJWKSet](ctx, pjsq, qr, pjsq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -179,9 +179,12 @@ func (pjsq *PublicJWKSetQuery) AllX(ctx context.Context) []*PublicJWKSet {
 }
 
 // IDs executes the query and returns a list of PublicJWKSet IDs.
-func (pjsq *PublicJWKSetQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	if err := pjsq.Select(publicjwkset.FieldID).Scan(ctx, &ids); err != nil {
+func (pjsq *PublicJWKSetQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if pjsq.ctx.Unique == nil && pjsq.path != nil {
+		pjsq.Unique(true)
+	}
+	ctx = setContextOp(ctx, pjsq.ctx, "IDs")
+	if err = pjsq.Select(publicjwkset.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -198,10 +201,11 @@ func (pjsq *PublicJWKSetQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (pjsq *PublicJWKSetQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, pjsq.ctx, "Count")
 	if err := pjsq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return pjsq.sqlCount(ctx)
+	return withInterceptors[int](ctx, pjsq, querierCount[*PublicJWKSetQuery](), pjsq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -215,10 +219,15 @@ func (pjsq *PublicJWKSetQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pjsq *PublicJWKSetQuery) Exist(ctx context.Context) (bool, error) {
-	if err := pjsq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = setContextOp(ctx, pjsq.ctx, "Exist")
+	switch _, err := pjsq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return pjsq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -238,41 +247,35 @@ func (pjsq *PublicJWKSetQuery) Clone() *PublicJWKSetQuery {
 	}
 	return &PublicJWKSetQuery{
 		config:     pjsq.config,
-		limit:      pjsq.limit,
-		offset:     pjsq.offset,
-		order:      append([]OrderFunc{}, pjsq.order...),
+		ctx:        pjsq.ctx.Clone(),
+		order:      append([]publicjwkset.OrderOption{}, pjsq.order...),
+		inters:     append([]Interceptor{}, pjsq.inters...),
 		predicates: append([]predicate.PublicJWKSet{}, pjsq.predicates...),
 		// clone intermediate query.
-		sql:    pjsq.sql.Clone(),
-		path:   pjsq.path,
-		unique: pjsq.unique,
+		sql:  pjsq.sql.Clone(),
+		path: pjsq.path,
 	}
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (pjsq *PublicJWKSetQuery) GroupBy(field string, fields ...string) *PublicJWKSetGroupBy {
-	grbuild := &PublicJWKSetGroupBy{config: pjsq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := pjsq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return pjsq.sqlQuery(ctx), nil
-	}
+	pjsq.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &PublicJWKSetGroupBy{build: pjsq}
+	grbuild.flds = &pjsq.ctx.Fields
 	grbuild.label = publicjwkset.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (pjsq *PublicJWKSetQuery) Select(fields ...string) *PublicJWKSetSelect {
-	pjsq.fields = append(pjsq.fields, fields...)
-	selbuild := &PublicJWKSetSelect{PublicJWKSetQuery: pjsq}
-	selbuild.label = publicjwkset.Label
-	selbuild.flds, selbuild.scan = &pjsq.fields, selbuild.Scan
-	return selbuild
+	pjsq.ctx.Fields = append(pjsq.ctx.Fields, fields...)
+	sbuild := &PublicJWKSetSelect{PublicJWKSetQuery: pjsq}
+	sbuild.label = publicjwkset.Label
+	sbuild.flds, sbuild.scan = &pjsq.ctx.Fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a PublicJWKSetSelect configured with the given aggregations.
@@ -281,7 +284,17 @@ func (pjsq *PublicJWKSetQuery) Aggregate(fns ...AggregateFunc) *PublicJWKSetSele
 }
 
 func (pjsq *PublicJWKSetQuery) prepareQuery(ctx context.Context) error {
-	for _, f := range pjsq.fields {
+	for _, inter := range pjsq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, pjsq); err != nil {
+				return err
+			}
+		}
+	}
+	for _, f := range pjsq.ctx.Fields {
 		if !publicjwkset.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -334,41 +347,22 @@ func (pjsq *PublicJWKSetQuery) sqlCount(ctx context.Context) (int, error) {
 	if len(pjsq.modifiers) > 0 {
 		_spec.Modifiers = pjsq.modifiers
 	}
-	_spec.Node.Columns = pjsq.fields
-	if len(pjsq.fields) > 0 {
-		_spec.Unique = pjsq.unique != nil && *pjsq.unique
+	_spec.Node.Columns = pjsq.ctx.Fields
+	if len(pjsq.ctx.Fields) > 0 {
+		_spec.Unique = pjsq.ctx.Unique != nil && *pjsq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, pjsq.driver, _spec)
 }
 
-func (pjsq *PublicJWKSetQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := pjsq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (pjsq *PublicJWKSetQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   publicjwkset.Table,
-			Columns: publicjwkset.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: publicjwkset.FieldID,
-			},
-		},
-		From:   pjsq.sql,
-		Unique: true,
-	}
-	if unique := pjsq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(publicjwkset.Table, publicjwkset.Columns, sqlgraph.NewFieldSpec(publicjwkset.FieldID, field.TypeInt))
+	_spec.From = pjsq.sql
+	if unique := pjsq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if pjsq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := pjsq.fields; len(fields) > 0 {
+	if fields := pjsq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, publicjwkset.FieldID)
 		for i := range fields {
@@ -384,10 +378,10 @@ func (pjsq *PublicJWKSetQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := pjsq.limit; limit != nil {
+	if limit := pjsq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pjsq.offset; offset != nil {
+	if offset := pjsq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := pjsq.order; len(ps) > 0 {
@@ -403,7 +397,7 @@ func (pjsq *PublicJWKSetQuery) querySpec() *sqlgraph.QuerySpec {
 func (pjsq *PublicJWKSetQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(pjsq.driver.Dialect())
 	t1 := builder.Table(publicjwkset.Table)
-	columns := pjsq.fields
+	columns := pjsq.ctx.Fields
 	if len(columns) == 0 {
 		columns = publicjwkset.Columns
 	}
@@ -412,7 +406,7 @@ func (pjsq *PublicJWKSetQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = pjsq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pjsq.unique != nil && *pjsq.unique {
+	if pjsq.ctx.Unique != nil && *pjsq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range pjsq.predicates {
@@ -421,12 +415,12 @@ func (pjsq *PublicJWKSetQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range pjsq.order {
 		p(selector)
 	}
-	if offset := pjsq.offset; offset != nil {
+	if offset := pjsq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pjsq.limit; limit != nil {
+	if limit := pjsq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -434,13 +428,8 @@ func (pjsq *PublicJWKSetQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // PublicJWKSetGroupBy is the group-by builder for PublicJWKSet entities.
 type PublicJWKSetGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *PublicJWKSetQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -449,58 +438,46 @@ func (pjsgb *PublicJWKSetGroupBy) Aggregate(fns ...AggregateFunc) *PublicJWKSetG
 	return pjsgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (pjsgb *PublicJWKSetGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := pjsgb.path(ctx)
-	if err != nil {
+	ctx = setContextOp(ctx, pjsgb.build.ctx, "GroupBy")
+	if err := pjsgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pjsgb.sql = query
-	return pjsgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*PublicJWKSetQuery, *PublicJWKSetGroupBy](ctx, pjsgb.build, pjsgb, pjsgb.build.inters, v)
 }
 
-func (pjsgb *PublicJWKSetGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range pjsgb.fields {
-		if !publicjwkset.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (pjsgb *PublicJWKSetGroupBy) sqlScan(ctx context.Context, root *PublicJWKSetQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(pjsgb.fns))
+	for _, fn := range pjsgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := pjsgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*pjsgb.flds)+len(pjsgb.fns))
+		for _, f := range *pjsgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*pjsgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pjsgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := pjsgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (pjsgb *PublicJWKSetGroupBy) sqlQuery() *sql.Selector {
-	selector := pjsgb.sql.Select()
-	aggregation := make([]string, 0, len(pjsgb.fns))
-	for _, fn := range pjsgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(pjsgb.fields)+len(pjsgb.fns))
-		for _, f := range pjsgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(pjsgb.fields...)...)
-}
-
 // PublicJWKSetSelect is the builder for selecting fields of PublicJWKSet entities.
 type PublicJWKSetSelect struct {
 	*PublicJWKSetQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -511,26 +488,27 @@ func (pjss *PublicJWKSetSelect) Aggregate(fns ...AggregateFunc) *PublicJWKSetSel
 
 // Scan applies the selector query and scans the result into the given value.
 func (pjss *PublicJWKSetSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, pjss.ctx, "Select")
 	if err := pjss.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pjss.sql = pjss.PublicJWKSetQuery.sqlQuery(ctx)
-	return pjss.sqlScan(ctx, v)
+	return scanWithInterceptors[*PublicJWKSetQuery, *PublicJWKSetSelect](ctx, pjss.PublicJWKSetQuery, pjss, pjss.inters, v)
 }
 
-func (pjss *PublicJWKSetSelect) sqlScan(ctx context.Context, v any) error {
+func (pjss *PublicJWKSetSelect) sqlScan(ctx context.Context, root *PublicJWKSetQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(pjss.fns))
 	for _, fn := range pjss.fns {
-		aggregation = append(aggregation, fn(pjss.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*pjss.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		pjss.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		pjss.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := pjss.sql.Query()
+	query, args := selector.Query()
 	if err := pjss.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

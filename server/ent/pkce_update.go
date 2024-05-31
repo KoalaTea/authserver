@@ -34,6 +34,14 @@ func (pu *PKCEUpdate) SetCode(s string) *PKCEUpdate {
 	return pu
 }
 
+// SetNillableCode sets the "code" field if the given value is not nil.
+func (pu *PKCEUpdate) SetNillableCode(s *string) *PKCEUpdate {
+	if s != nil {
+		pu.SetCode(*s)
+	}
+	return pu
+}
+
 // SetSessionID sets the "session" edge to the OAuthSession entity by ID.
 func (pu *PKCEUpdate) SetSessionID(id int) *PKCEUpdate {
 	pu.mutation.SetSessionID(id)
@@ -66,34 +74,7 @@ func (pu *PKCEUpdate) ClearSession() *PKCEUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pu *PKCEUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pu.hooks) == 0 {
-		affected, err = pu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PKCEMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pu.mutation = mutation
-			affected, err = pu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pu.hooks) - 1; i >= 0; i-- {
-			if pu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, pu.sqlSave, pu.mutation, pu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -119,16 +100,7 @@ func (pu *PKCEUpdate) ExecX(ctx context.Context) {
 }
 
 func (pu *PKCEUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   pkce.Table,
-			Columns: pkce.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: pkce.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(pkce.Table, pkce.Columns, sqlgraph.NewFieldSpec(pkce.FieldID, field.TypeInt))
 	if ps := pu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -147,10 +119,7 @@ func (pu *PKCEUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{pkce.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -163,10 +132,7 @@ func (pu *PKCEUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{pkce.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -182,6 +148,7 @@ func (pu *PKCEUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	pu.mutation.done = true
 	return n, nil
 }
 
@@ -196,6 +163,14 @@ type PKCEUpdateOne struct {
 // SetCode sets the "code" field.
 func (puo *PKCEUpdateOne) SetCode(s string) *PKCEUpdateOne {
 	puo.mutation.SetCode(s)
+	return puo
+}
+
+// SetNillableCode sets the "code" field if the given value is not nil.
+func (puo *PKCEUpdateOne) SetNillableCode(s *string) *PKCEUpdateOne {
+	if s != nil {
+		puo.SetCode(*s)
+	}
 	return puo
 }
 
@@ -229,6 +204,12 @@ func (puo *PKCEUpdateOne) ClearSession() *PKCEUpdateOne {
 	return puo
 }
 
+// Where appends a list predicates to the PKCEUpdate builder.
+func (puo *PKCEUpdateOne) Where(ps ...predicate.PKCE) *PKCEUpdateOne {
+	puo.mutation.Where(ps...)
+	return puo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (puo *PKCEUpdateOne) Select(field string, fields ...string) *PKCEUpdateOne {
@@ -238,40 +219,7 @@ func (puo *PKCEUpdateOne) Select(field string, fields ...string) *PKCEUpdateOne 
 
 // Save executes the query and returns the updated PKCE entity.
 func (puo *PKCEUpdateOne) Save(ctx context.Context) (*PKCE, error) {
-	var (
-		err  error
-		node *PKCE
-	)
-	if len(puo.hooks) == 0 {
-		node, err = puo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PKCEMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			puo.mutation = mutation
-			node, err = puo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(puo.hooks) - 1; i >= 0; i-- {
-			if puo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = puo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, puo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*PKCE)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PKCEMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, puo.sqlSave, puo.mutation, puo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -297,16 +245,7 @@ func (puo *PKCEUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (puo *PKCEUpdateOne) sqlSave(ctx context.Context) (_node *PKCE, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   pkce.Table,
-			Columns: pkce.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: pkce.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(pkce.Table, pkce.Columns, sqlgraph.NewFieldSpec(pkce.FieldID, field.TypeInt))
 	id, ok := puo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PKCE.id" for update`)}
@@ -342,10 +281,7 @@ func (puo *PKCEUpdateOne) sqlSave(ctx context.Context) (_node *PKCE, err error) 
 			Columns: []string{pkce.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -358,10 +294,7 @@ func (puo *PKCEUpdateOne) sqlSave(ctx context.Context) (_node *PKCE, err error) 
 			Columns: []string{pkce.SessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: oauthsession.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -380,5 +313,6 @@ func (puo *PKCEUpdateOne) sqlSave(ctx context.Context) (_node *PKCE, err error) 
 		}
 		return nil, err
 	}
+	puo.mutation.done = true
 	return _node, nil
 }
