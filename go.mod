@@ -7,6 +7,7 @@ require (
 	entgo.io/ent v0.13.1
 	github.com/99designs/gqlgen v0.17.43
 	github.com/XSAM/otelsql v0.31.0
+	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/mattn/go-sqlite3 v1.14.22
@@ -19,7 +20,6 @@ require (
 	golang.org/x/crypto v0.23.0
 	golang.org/x/oauth2 v0.20.0
 	golang.org/x/sync v0.7.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
 require (
@@ -42,8 +42,6 @@ require (
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-jose/go-jose v2.6.3+incompatible // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/inflect v0.19.0 // indirect
@@ -118,7 +116,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
