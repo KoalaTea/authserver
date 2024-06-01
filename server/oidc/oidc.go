@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ory/fosite"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 
 	"github.com/koalatea/authserver/server/ent"
@@ -23,17 +22,15 @@ type OIDCProvider struct {
 	oauth2      fosite.OAuth2Provider
 }
 
-func (o *OIDCProvider) RegisterHandlers(router *http.ServeMux, chain func(http.Handler) http.Handler) {
+func (o *OIDCProvider) RegisterHandlers(registerHandlerCB func(string, http.Handler)) {
 	// Set up oauth2 endpoints. You could also use gorilla/mux or any other router.
-	router.Handle("/oidc/auth", otelhttp.NewHandler(chain(http.HandlerFunc(o.authEndpoint)), "/oidc/auth"))
-	router.Handle("/oidc/token", otelhttp.NewHandler(chain(http.HandlerFunc(o.tokenEndpoint)), "/oidc/token"))
-
-	// revoke tokens
-	router.Handle("/oidc/revoke", otelhttp.NewHandler(chain(http.HandlerFunc(o.revokeEndpoint)), "/oidc/revoke"))
-	router.Handle("/oidc/introspect", otelhttp.NewHandler(chain(http.HandlerFunc(o.introspectionEndpoint)), "/oidc/introspect"))
+	registerHandlerCB("/oidc/auth", http.HandlerFunc(o.authEndpoint))
+	registerHandlerCB("/oidc/token", http.HandlerFunc(o.tokenEndpoint))
+	registerHandlerCB("/oidc/revoke", http.HandlerFunc(o.revokeEndpoint))
+	registerHandlerCB("/oidc/introspect", http.HandlerFunc(o.introspectionEndpoint))
 
 	// Helper functions for manual testing that things work
-	o.RegisterTestHandlers(router)
+	o.RegisterTestHandlers(registerHandlerCB)
 }
 
 func NewOIDCProvider(client *ent.Client) *OIDCProvider {

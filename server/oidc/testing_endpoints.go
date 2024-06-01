@@ -17,13 +17,12 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/oauth2"
 )
 
-func (o *OIDCProvider) RegisterTestHandlers(router *http.ServeMux) {
-	router.Handle("/", otelhttp.NewHandler(http.HandlerFunc(o.HomeHandler(clientConf)), "/"))
-	router.Handle("/callback", otelhttp.NewHandler(http.HandlerFunc(o.CallbackHandler(clientConf)), "/callback"))
+func (o *OIDCProvider) RegisterTestHandlers(registerHandlerCB func(string, http.Handler)) {
+	registerHandlerCB("/", http.HandlerFunc(o.HomeHandler(clientConf)))
+	registerHandlerCB("/callback", http.HandlerFunc(o.CallbackHandler(clientConf)))
 }
 
 // newBasicClient returns a client which always sends along basic auth

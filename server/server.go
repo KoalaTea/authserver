@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
 
 	"entgo.io/contrib/entgql"
 	"entgo.io/ent/dialect"
@@ -44,7 +45,7 @@ func newMetricsServer() *http.Server {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	return &http.Server{
-		// Localhost to seperate unauthenticated metrics endpoint
+		// Localhost to seperate unauthenticated metrics endpoint and keep that unauthenticated data from exposure to external
 		Addr:    "127.0.0.1:9999",
 		Handler: router,
 	}
@@ -86,13 +87,13 @@ func (srv *Server) Run(ctx context.Context) error {
 	server.Use(entgql.Transactioner{TxOpener: graph})
 	server.Use(&debug.Tracer{})
 
-	router.Handle("/graphql/playground", auth.HandleUser(graph)(otelhttp.NewHandler(playground.Handler("playground", "/graphql"), "/graphql/playground")))
-	router.Handle("/graphql",
-		auth.HandleUser(graph)(otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	registerRoute(graph, router, "/graphql/playground", playground.Handler("playground", "/graphql"))
+	registerRoute(graph, router, "/graphql",
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Headers", "*")
 			server.ServeHTTP(w, req)
-		}), "/graphql")))
+		}))
 
 	oauth := oauth2.Config{
 		ClientID:     cfg.ClientID,
@@ -111,7 +112,14 @@ func (srv *Server) Run(ctx context.Context) error {
 	router.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"))
 
 	oidcProvider := oidc.NewOIDCProvider(graph)
-	oidcProvider.RegisterHandlers(router, auth.HandleUser(graph))
+	registerRouteCBfunc := registerRouteCB(graph, router)
+	oidcProvider.RegisterHandlers(registerRouteCBfunc)
+
+	// IsPProfEnabled returns true if performance profiling has been enabled.
+	if cfg.PProfEnabled {
+		log.Printf("[WARN] Performance profiling is enabled, do not use in production as this may leak sensitive information")
+		registerProfiler(router)
+	}
 
 	metricsHTTP := newMetricsServer()
 	go func() {
@@ -125,4 +133,35 @@ func (srv *Server) Run(ctx context.Context) error {
 		return fmt.Errorf("stopped http server: %w", err)
 	}
 	return nil
+}
+
+func registerRouteCB(graph *ent.Client, router *http.ServeMux) func(string, http.Handler) {
+	return func(pattern string, handler http.Handler) {
+		router.Handle(pattern, applyMiddleware(graph, handler, pattern))
+	}
+}
+
+func registerRoute(graph *ent.Client, router *http.ServeMux, pattern string, handler http.Handler) {
+	router.Handle(pattern, applyMiddleware(graph, handler, pattern))
+}
+
+func applyMiddleware(graph *ent.Client, handler http.Handler, route string) http.Handler {
+	chain := handler
+	chain = otelhttp.NewHandler(chain, route)
+	chain = instrumentHttpMetrics(route, chain)
+	chain = auth.HandleUser(graph)(chain)
+	return chain
+}
+
+func registerProfiler(router *http.ServeMux) {
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+
+	// Manually add support for paths linked to by index page at /debug/pprof/
+	router.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	router.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	router.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	router.Handle("/debug/pprof/block", pprof.Handler("block"))
 }
