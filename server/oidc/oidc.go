@@ -3,13 +3,13 @@ package oidc
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"net/http"
 	"time"
 
 	"github.com/ory/fosite"
 	"go.opentelemetry.io/otel"
 
 	"github.com/koalatea/authserver/server/ent"
+	authserverHttp "github.com/koalatea/authserver/server/http"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -22,17 +22,20 @@ type OIDCProvider struct {
 	oauth2      fosite.OAuth2Provider
 }
 
-func (o *OIDCProvider) RegisterHandlers(registerHandlerCB func(string, http.Handler)) {
-	// Set up oauth2 endpoints. You could also use gorilla/mux or any other router.
-	registerHandlerCB("/oidc/auth", http.HandlerFunc(o.authEndpoint))
-	registerHandlerCB("/oidc/token", http.HandlerFunc(o.tokenEndpoint))
-	registerHandlerCB("/oidc/revoke", http.HandlerFunc(o.revokeEndpoint))
-	registerHandlerCB("/oidc/introspect", http.HandlerFunc(o.introspectionEndpoint))
-
+func (o *OIDCProvider) GetHandlers() authserverHttp.RouteMap {
+	// TODO Set up oauth2 endpoints
+	routes := authserverHttp.RouteMap{}
+	routes.HandleFunc("/oidc/auth", o.authEndpoint)
+	routes.HandleFunc("/oidc/token", o.tokenEndpoint)
+	routes.HandleFunc("/oidc/revoke", o.revokeEndpoint)
+	routes.HandleFunc("/oidc/introspect", o.introspectionEndpoint)
 	// Helper functions for manual testing that things work
-	o.RegisterTestHandlers(registerHandlerCB)
+	test_routes := o.RegisterTestHandlers()
+	routes.Extend(test_routes)
+	return routes
 }
 
+// TODO need the key to be better deal with
 func NewOIDCProvider(client *ent.Client) *OIDCProvider {
 	secret := []byte("some-cool-secret-that-is-32bytes")
 	config := &fosite.Config{

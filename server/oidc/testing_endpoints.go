@@ -17,12 +17,15 @@ import (
 	"strings"
 	"time"
 
+	authserverHttp "github.com/koalatea/authserver/server/http"
 	"golang.org/x/oauth2"
 )
 
-func (o *OIDCProvider) RegisterTestHandlers(registerHandlerCB func(string, http.Handler)) {
-	registerHandlerCB("/", http.HandlerFunc(o.HomeHandler(clientConf)))
-	registerHandlerCB("/callback", http.HandlerFunc(o.CallbackHandler(clientConf)))
+func (o *OIDCProvider) RegisterTestHandlers() authserverHttp.RouteMap {
+	routes := authserverHttp.RouteMap{}
+	routes.HandleFunc("/", o.HomeHandler(clientConf))
+	routes.HandleFunc("/callback", o.CallbackHandler(clientConf))
+	return routes
 }
 
 // newBasicClient returns a client which always sends along basic auth
@@ -181,8 +184,8 @@ func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWri
 		rw.Write([]byte(fmt.Sprintf(`<p>Cool! You are now a proud token owner.<br>
 		<ul>
 			<li>
-				Access token (click to make <a href="%s">authorized call</a>):<br>
-				<code>%s</code>
+				Access token (click to make <a href="/protected?token=%s">authorized call</a>):<br>
+				<code>%+v</code>
 			</li>
 			<li>
 				Refresh token (click <a href="%s">here to use it</a>) (click <a href="%s">here to revoke it</a>):<br>
@@ -190,7 +193,7 @@ func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWri
 			</li>
 			<li>
 				Extra info: <br>
-				<code>%s</code>
+				<code>%+v</code>
 			</li>
 		</ul>`,
 			"/protected?token="+token.AccessToken,

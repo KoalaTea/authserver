@@ -18,6 +18,7 @@ type FileConfig struct {
 		SecretKey string `json:"secret_key"`
 	} `json:"oauth"`
 	PProfEnabled bool `json:"enable_pprof,omitempty"`
+	BypassAuth   bool `json:"bypass_auth,omitempty"`
 }
 
 type Config struct {
@@ -26,6 +27,7 @@ type Config struct {
 	ClientID     string
 	SecretKey    string
 	PProfEnabled bool
+	BypassAuth   bool
 }
 
 func getConfig(fileName string) *Config {
@@ -68,5 +70,5 @@ func getConfig(fileName string) *Config {
 	}
 	secretKey := string(secretKeyBytes)
 
-	return &Config{CA: "", CAPrivKey: "", ClientID: clientID, SecretKey: secretKey, PProfEnabled: cfg.PProfEnabled}
+	return &Config{CA: "", CAPrivKey: "", ClientID: clientID, SecretKey: secretKey, PProfEnabled: cfg.PProfEnabled, BypassAuth: cfg.BypassAuth}
 }

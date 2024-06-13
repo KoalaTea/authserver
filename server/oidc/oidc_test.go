@@ -13,8 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/koalatea/authserver/server/auth"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/koalatea/authserver/server/ent/enttest"
+	"github.com/koalatea/authserver/server/oauthclient"
+	testingutils "github.com/koalatea/authserver/server/testing"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ory/fosite"
 )
@@ -27,22 +30,21 @@ type Response struct {
 	TokenType   string `json:"token_type"`
 }
 
-func TestGettingIDToken(t *testing.T) {
-
+func TestImplicitFlow(t *testing.T) {
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 
 	provider := NewOIDCProvider(graph)
-	router := http.NewServeMux()
 	graph.User.Create().SetName("koalateahardcoded").SetSessionToken("123").SetOAuthID("abc").Save(context.Background())
-	provider.RegisterHandlers(router, auth.HandleUser(graph))
+	routes := provider.GetHandlers()
+	router := testingutils.NewRouter(routes, graph)
 	w := httptest.NewRecorder()
 
 	// these values are hardcoded for testing
 	v := url.Values{}
-	v.Set("username", "peter")
 	v.Set("scopes", "openid") // Sets the scopes the user approved
 	r, _ := http.NewRequest("POST", "/oidc/auth?client_id=my-client&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fcallback&response_type=code&scope=openid&state=some-random-state-foobar&nonce=some-random-nonce", strings.NewReader(v.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.AddCookie(&http.Cookie{Name: oauthclient.SessionCookieName, Value: "123"})
 
 	// Get auth code
 	router.ServeHTTP(w, r)
@@ -74,21 +76,18 @@ func TestGettingIDToken(t *testing.T) {
 	if response.IDToken == "" {
 		t.Error("what")
 	}
-	// current version
-	// {
-	// 	"at_hash": "7jG_bBlmSapKjM1aaUkBFg",
-	// 	"aud": [
-	// 	  "https://my-client.my-application.com",
-	// 	  "my-client"
-	// 	],
-	// 	"auth_time": 1677077516,
-	// 	"exp": 1677099116,
-	// 	"iat": 1677077516,
-	// 	"iss": "https://fosite.my-application.com",
-	// 	"jti": "249c4828-595f-4665-9453-4d8ab2db23b0",
-	// 	"rat": 1677077516,
-	// 	"sub": "peter"
-	//   }
+
+	// decode JWT token without verifying the signature
+	token, err := jwt.ParseSigned(response.IDToken)
+	if err != nil {
+		t.Errorf("%+v", err)
+	}
+	c := &jwt.Claims{}
+	// TODO verification which means correct key access
+	token.UnsafeClaimsWithoutVerification(c)
+	if c.Subject != "koalateahardcoded" {
+		t.Errorf("Incorrect subject %s", c.Subject)
+	}
 }
 
 func TestClientAssertionJWTErrorsOnDupe(t *testing.T) {
