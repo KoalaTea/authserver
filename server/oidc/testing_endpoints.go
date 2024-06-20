@@ -17,13 +17,15 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	authserverHttp "github.com/koalatea/authserver/server/http"
 	"golang.org/x/oauth2"
 )
 
-func (o *OIDCProvider) RegisterTestHandlers(router *http.ServeMux) {
-	router.Handle("/", otelhttp.NewHandler(http.HandlerFunc(o.HomeHandler(clientConf)), "/"))
-	router.Handle("/callback", otelhttp.NewHandler(http.HandlerFunc(o.CallbackHandler(clientConf)), "/callback"))
+func (o *OIDCProvider) RegisterTestHandlers() authserverHttp.RouteMap {
+	routes := authserverHttp.RouteMap{}
+	routes.HandleFunc("/", o.HomeHandler(clientConf))
+	routes.HandleFunc("/callback", o.CallbackHandler(clientConf))
+	return routes
 }
 
 // newBasicClient returns a client which always sends along basic auth
@@ -182,8 +184,8 @@ func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWri
 		rw.Write([]byte(fmt.Sprintf(`<p>Cool! You are now a proud token owner.<br>
 		<ul>
 			<li>
-				Access token (click to make <a href="%s">authorized call</a>):<br>
-				<code>%s</code>
+				Access token (click to make <a href="/protected?token=%s">authorized call</a>):<br>
+				<code>%+v</code>
 			</li>
 			<li>
 				Refresh token (click <a href="%s">here to use it</a>) (click <a href="%s">here to revoke it</a>):<br>
@@ -191,7 +193,7 @@ func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWri
 			</li>
 			<li>
 				Extra info: <br>
-				<code>%s</code>
+				<code>%+v</code>
 			</li>
 		</ul>`,
 			"/protected?token="+token.AccessToken,

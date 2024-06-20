@@ -74,22 +74,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Normally, this would be the place where you would check if the user is logged in and gives his consent.
 	// We're simplifying things and just checking if the request includes a valid username and password
 	req.ParseForm()
-	if req.PostForm.Get("username") != "peter" {
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		rw.Write([]byte(`<h1>Login page</h1>`))
-		rw.Write([]byte(fmt.Sprintf(`
-			<p>Howdy! This is the log in page. For this example, it is enough to supply the username.</p>
-			<form method="post">
-				<p>
-					By logging in, you consent to grant these scopes:
-					<ul>%s</ul>
-				</p>
-				<input type="text" name="username" /> <small>try peter</small><br>
-				<input type="submit">
-			</form>
-		`, requestedScopes)))
-		return
-	}
+	// TODO if not authed redirect to login probably just through the endpoint
 
 	// let's see what scopes the user gave consent to
 	for _, scope := range req.PostForm["scopes"] {
@@ -97,13 +82,13 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		ar.GrantScope(scope)
 	}
 
-	// Now that the user is authorized, we set up a session:
-	mySessionData := newSession("peter")
+	// TODO fix this
 	user, err := auth.UserFromContext(req.Context())
-	if err == nil {
-		fmt.Printf("%+v\n\n", user)
-		mySessionData.Username = user.Name
+	if err != nil {
+		log.Printf("Error occurred in authEndpoint UserFromContext: %+v", err)
+		o.oauth2.WriteAuthorizeError(ctx, rw, ar, err) // TODO probably simplify this not write out error to console
 	}
+	mySessionData := newSession(user.Name)
 
 	// If you're using the JWT strategy, there's currently no distinction between access token and authorize code claims.
 	// Therefore, you both access token and authorize code will have the same "exp" claim. If this is something you
