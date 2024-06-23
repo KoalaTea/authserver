@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/koalatea/authserver/server/ent/authcode"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
@@ -18,7 +19,6 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
-	"github.com/go-jose/go-jose/v3"
 )
 
 // https://github.com/ory/fosite/tree/master/handler/openid
@@ -36,7 +36,6 @@ type OIDCStorage struct {
 // CreateOpenIDConnectSession creates an open id connect session
 // for a given authorize code. This is relevant for explicit open id connect flow.
 func (o *OIDCStorage) CreateOpenIDConnectSession(c context.Context, authorizeCode string, requester fosite.Requester) error {
-	fmt.Println("CreateOpenIDConnectSession RAN")
 	ctx, span := tracer.Start(c, "CreateOpenIDConnectSession")
 	defer span.End()
 	fmt.Printf("%s\n", authorizeCode)
@@ -64,7 +63,6 @@ func (o *OIDCStorage) CreateOpenIDConnectSession(c context.Context, authorizeCod
 // - ErrNoSessionFound if no session was found
 // - or an arbitrary error if an error occurred.
 func (o *OIDCStorage) GetOpenIDConnectSession(c context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
-	fmt.Println("GetOpenIDConnectSession RAN")
 	ctx, span := tracer.Start(c, "GetOpenIDConnectSession")
 	defer span.End()
 	fmt.Printf("%s\n", authorizeCode)
@@ -149,7 +147,6 @@ func toRequest(oauthInfo *ent.OAuthSession, client fosite.Client) (fosite.Reques
 
 // DeleteOpenIDConnectSession removes an open id connect session from the store.
 func (o *OIDCStorage) DeleteOpenIDConnectSession(c context.Context, authorizeCode string) error {
-	fmt.Println("DeleteOpenIDConnectSession RAN")
 	ctx, span := tracer.Start(c, "DeleteOpenIDConnectSession")
 	defer span.End()
 	// remove authorizecode from the db
@@ -167,7 +164,6 @@ func (o *OIDCStorage) DeleteOpenIDConnectSession(c context.Context, authorizeCod
 func (o *OIDCStorage) GetClient(c context.Context, id string) (fosite.Client, error) {
 	// I don't want to actually store clients yet so I will be using a hardcoded one
 	// TODO: fix this lol
-	fmt.Println("GetClient RAN")
 	_, span := tracer.Start(c, "GetClient")
 	defer span.End()
 	return &fosite.DefaultClient{
@@ -189,7 +185,6 @@ func (o *OIDCStorage) SetTokenLifespans(clientID string, lifespans *fosite.Clien
 }
 
 func (o *OIDCStorage) ClientAssertionJWTValid(c context.Context, jti string) error {
-	fmt.Println("ClientAssertionJWTValid RAN")
 	ctx, span := tracer.Start(c, "ClientAssertionJWTValid")
 	defer span.End()
 	_, err := o.client.DenyListedJTI.
@@ -211,7 +206,6 @@ func (o *OIDCStorage) ClientAssertionJWTValid(c context.Context, jti string) err
 }
 
 func (o *OIDCStorage) SetClientAssertionJWT(c context.Context, jti string, exp time.Time) error {
-	fmt.Println("SetClientAssertionJWT RAN")
 	ctx, span := tracer.Start(c, "SetClientAssertionJWT")
 	defer span.End()
 	// Delete expired JTIs
@@ -231,7 +225,6 @@ func (o *OIDCStorage) SetClientAssertionJWT(c context.Context, jti string, exp t
 }
 
 func (o *OIDCStorage) CreateAuthorizeCodeSession(c context.Context, code string, req fosite.Requester) error {
-	fmt.Println("CreateAuthorizeCodeSession RAN")
 	ctx, span := tracer.Start(c, "CreateAuthorizeCodeSession")
 	defer span.End()
 
@@ -259,7 +252,6 @@ func (o *OIDCStorage) CreateAuthorizeCodeSession(c context.Context, code string,
 }
 
 func (o *OIDCStorage) GetAuthorizeCodeSession(c context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
-	fmt.Println("GetAuthorizeCodeSession RAN")
 	ctx, span := tracer.Start(c, "GetAuthorizeCodeSession")
 	defer span.End()
 	fmt.Printf("%s\n", code)
@@ -280,7 +272,6 @@ func (o *OIDCStorage) GetAuthorizeCodeSession(c context.Context, code string, _ 
 }
 
 func (o *OIDCStorage) InvalidateAuthorizeCodeSession(c context.Context, code string) error {
-	fmt.Println("InvalidateAuthorizeCodeSession RAN")
 	ctx, span := tracer.Start(c, "InvalidateAuthorizeCodeSession")
 	defer span.End()
 	stored_authcode, err := o.client.AuthCode.Query().Where(authcode.Code(code)).Only(ctx)
@@ -295,7 +286,6 @@ func (o *OIDCStorage) InvalidateAuthorizeCodeSession(c context.Context, code str
 }
 
 func (o *OIDCStorage) CreatePKCERequestSession(c context.Context, code string, req fosite.Requester) error {
-	fmt.Println("CreatePKCERequestSession RAN") // yes but why
 	ctx, span := tracer.Start(c, "CreatePKCERequestSession")
 	defer span.End()
 	OAuthSession, err := o.toSession(ctx, req)
@@ -314,7 +304,6 @@ func (o *OIDCStorage) CreatePKCERequestSession(c context.Context, code string, r
 }
 
 func (o *OIDCStorage) GetPKCERequestSession(c context.Context, code string, _ fosite.Session) (fosite.Requester, error) {
-	fmt.Println("GetPKCERequestSession RAN")
 	ctx, span := tracer.Start(c, "GetPKCERequestSession")
 	defer span.End()
 	fmt.Printf("%s\n", code)
@@ -336,7 +325,6 @@ func (o *OIDCStorage) GetPKCERequestSession(c context.Context, code string, _ fo
 }
 
 func (o *OIDCStorage) DeletePKCERequestSession(c context.Context, code string) error {
-	fmt.Println("DeletePKCERequestSession RAN")
 	ctx, span := tracer.Start(c, "DeletePKCERequestSession")
 	defer span.End()
 	stored_pkce, err := o.client.PKCE.Query().Where(pkce.Code(code)).Only(ctx)
@@ -351,7 +339,6 @@ func (o *OIDCStorage) DeletePKCERequestSession(c context.Context, code string) e
 }
 
 func (o *OIDCStorage) CreateAccessTokenSession(c context.Context, signature string, req fosite.Requester) error {
-	fmt.Println("CreateAccessTokenSession RAN")
 	ctx, span := tracer.Start(c, "CreateAccessTokenSession")
 	defer span.End()
 
@@ -371,7 +358,6 @@ func (o *OIDCStorage) CreateAccessTokenSession(c context.Context, signature stri
 }
 
 func (o *OIDCStorage) GetAccessTokenSession(c context.Context, signature string, _ fosite.Session) (fosite.Requester, error) {
-	fmt.Println("GetAccessTokenSession RAN")
 	ctx, span := tracer.Start(c, "GetAccessTokenSession")
 	defer span.End()
 
@@ -392,7 +378,6 @@ func (o *OIDCStorage) GetAccessTokenSession(c context.Context, signature string,
 }
 
 func (o *OIDCStorage) DeleteAccessTokenSession(c context.Context, signature string) error {
-	fmt.Println("DeleteAccessTokenSession RAN")
 	ctx, span := tracer.Start(c, "DeleteAccessTokenSession")
 	defer span.End()
 	// remove authorizecode from the db
@@ -408,7 +393,6 @@ func (o *OIDCStorage) DeleteAccessTokenSession(c context.Context, signature stri
 }
 
 func (o *OIDCStorage) CreateRefreshTokenSession(c context.Context, signature string, req fosite.Requester) error {
-	fmt.Println("CreateRefreshTokenSession RAN")
 	ctx, span := tracer.Start(c, "CreateRefreshTokenSession")
 	defer span.End()
 
@@ -428,7 +412,6 @@ func (o *OIDCStorage) CreateRefreshTokenSession(c context.Context, signature str
 }
 
 func (o *OIDCStorage) GetRefreshTokenSession(c context.Context, signature string, _ fosite.Session) (fosite.Requester, error) {
-	fmt.Println("GetRefreshTokenSession RAN")
 	ctx, span := tracer.Start(c, "GetRefreshTokenSession")
 	defer span.End()
 
@@ -449,7 +432,6 @@ func (o *OIDCStorage) GetRefreshTokenSession(c context.Context, signature string
 }
 
 func (o *OIDCStorage) DeleteRefreshTokenSession(c context.Context, signature string) error {
-	fmt.Println("DeleteRefreshTokenSession RAN")
 	ctx, span := tracer.Start(c, "DeleteRefreshTokenSession")
 	defer span.End()
 	// remove authorizecode from the db
@@ -470,12 +452,10 @@ func (o *OIDCStorage) DeleteRefreshTokenSession(c context.Context, signature str
 func (o *OIDCStorage) Authenticate(c context.Context, name string, secret string) error {
 	_, span := tracer.Start(c, "Authenticate")
 	defer span.End()
-	fmt.Println("Authenticate RAN")
 	return nil
 }
 
 func (o *OIDCStorage) RevokeRefreshToken(c context.Context, requestID string) error {
-	fmt.Println("RevokeRefreshToken RAN")
 	ctx, span := tracer.Start(c, "RevokeRefreshToken")
 	defer span.End()
 	// remove authorizecode from the db
@@ -498,7 +478,6 @@ func (o *OIDCStorage) RevokeRefreshTokenMaybeGracePeriod(ctx context.Context, re
 }
 
 func (o *OIDCStorage) RevokeAccessToken(c context.Context, requestID string) error {
-	fmt.Println("RevokeAccessToken RAN")
 	ctx, span := tracer.Start(c, "DeleteAccessTokenSession")
 	defer span.End()
 	// remove authorizecode from the db
@@ -517,7 +496,6 @@ func (o *OIDCStorage) GetPublicKey(c context.Context, issuer string, subject str
 	//https://github.com/ory/hydra/blob/c3af131e131e0e5f5584708a45c5c7e91d31bac9/persistence/sql/persister_jwk.go#L124
 	ctx, span := tracer.Start(c, "GetPublicKey")
 	defer span.End()
-	fmt.Println("GetPublicKey RAN")
 	key, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Kid(keyId), publicjwk.Sid(subject))).Only(ctx)
 	if err != nil {
 		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
@@ -533,7 +511,6 @@ func (o *OIDCStorage) GetPublicKey(c context.Context, issuer string, subject str
 func (o *OIDCStorage) GetPublicKeys(c context.Context, issuer string, subject string) (*jose.JSONWebKeySet, error) {
 	ctx, span := tracer.Start(c, "GetPublicKeys")
 	defer span.End()
-	fmt.Println("GetPublicKeys RAN")
 	keys, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Sid(subject))).All(ctx)
 	if err != nil {
 		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
@@ -555,7 +532,6 @@ func (o *OIDCStorage) GetPublicKeys(c context.Context, issuer string, subject st
 func (o *OIDCStorage) GetPublicKeyScopes(c context.Context, issuer string, subject string, keyId string) ([]string, error) {
 	ctx, span := tracer.Start(c, "GetPublicKeyScopes")
 	defer span.End()
-	fmt.Println("GetPublicKeyScopes RAN")
 	key, err := o.client.PublicJWK.Query().Where(publicjwk.And(publicjwk.Issuer(issuer), publicjwk.Kid(keyId), publicjwk.Sid(subject))).Only(ctx)
 	if err != nil {
 		return nil, err //todo https://github.com/ory/hydra/blob/master/persistence/sql/persister_grant_jwk.go#L120 sqlcon.handleerror? what do
@@ -567,7 +543,6 @@ func (o *OIDCStorage) GetPublicKeyScopes(c context.Context, issuer string, subje
 func (o *OIDCStorage) IsJWTUsed(c context.Context, jti string) (bool, error) {
 	ctx, span := tracer.Start(c, "IsJWTUsed")
 	defer span.End()
-	fmt.Println("IsJWTUsed RAN")
 
 	err := o.ClientAssertionJWTValid(ctx, jti)
 	if err != nil {
@@ -580,7 +555,6 @@ func (o *OIDCStorage) IsJWTUsed(c context.Context, jti string) (bool, error) {
 func (o *OIDCStorage) MarkJWTUsedForTime(c context.Context, jti string, exp time.Time) error {
 	ctx, span := tracer.Start(c, "MarkJWTUsedForTime")
 	defer span.End()
-	fmt.Println("MarkJWTUsedForTime RAN")
 	return o.SetClientAssertionJWT(ctx, jti, exp)
 }
 
