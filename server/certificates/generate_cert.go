@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,15 +13,18 @@ import (
 	"math/big"
 	"os"
 	"time"
+
+	"github.com/koalatea/authserver/server/ent"
 )
 
 type CertProvider struct {
-	ca  *x509.Certificate
-	key *rsa.PrivateKey
+	ca    *x509.Certificate
+	key   *rsa.PrivateKey
+	graph *ent.Client
 }
 
 // TODO put certs in common dir or load certs from configuration
-func NewCertProvider() (*CertProvider, error) {
+func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -66,14 +70,34 @@ func NewCertProvider() (*CertProvider, error) {
 	})
 	os.WriteFile("authserverCAPrivKey.pem", caPrivKeyPEM.Bytes(), 0644)
 
-	provider := &CertProvider{ca: ca, key: caPrivKey}
+	provider := &CertProvider{ca: ca, key: caPrivKey, graph: graph}
 	return provider, nil
 }
 
-func (p *CertProvider) CreateCertificate() (string, error) {
+func (p *CertProvider) CreateCertificate(ctx context.Context) (string, error) {
+	tx, err := p.graph.Tx(ctx)
+	if err != nil {
+		return "", err
+	}
+	client := tx.Client()
+	// Rollback transaction if we panic
+	defer func() {
+		if v := recover(); v != nil {
+			tx.Rollback()
+			panic(v)
+		}
+	}()
+
+	certTracker, err := client.Cert.Create().Save(ctx)
+	if err != nil {
+		fmt.Printf("%+v", err)
+
+	}
+	fmt.Printf("%+v", certTracker)
 	// create cert to sign
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		// TODO Shouldnt this have auto incrimenting serial_number that should be used?
+		SerialNumber: big.NewInt(int64(certTracker.ID)),
 		Subject: pkix.Name{
 			CommonName: "rwhittier",
 		},
@@ -87,12 +111,14 @@ func (p *CertProvider) CreateCertificate() (string, error) {
 	// Create private key for cert
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
+		tx.Rollback()
 		return "", err
 	}
 
 	// sign cert with the CA
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, &certPrivKey.PublicKey, p.key)
 	if err != nil {
+		tx.Rollback()
 		return "", err
 	}
 
@@ -109,6 +135,10 @@ func (p *CertProvider) CreateCertificate() (string, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	})
 
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
 	return certPEM.String(), nil
 }
 

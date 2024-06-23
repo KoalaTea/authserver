@@ -117,7 +117,7 @@ func (srv *Server) Run(ctx context.Context) error {
 	}
 
 	// Create Certificate Provider
-	certProvider, err := certificates.NewCertProvider()
+	certProvider, err := certificates.NewCertProvider(graph)
 	if err != nil {
 		log.Printf("failed to initialize certProvider")
 	}

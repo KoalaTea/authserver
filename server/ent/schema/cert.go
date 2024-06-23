@@ -1,6 +1,8 @@
 package schema
 
-import "entgo.io/ent"
+import (
+	"entgo.io/ent"
+)
 
 // Cert holds the schema definition for the Cert entity.
 type Cert struct {
