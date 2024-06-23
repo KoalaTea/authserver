@@ -74,7 +74,25 @@ func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 	return provider, nil
 }
 
-func (p *CertProvider) CreateCertificate(ctx context.Context, target string) (string, error) {
+// Convert a PEM encoded public key string to rsa.PublicKey
+func pemToPublicKey(pemStr string) (*rsa.PublicKey, error) {
+	// Decode the PEM block
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+
+	// Parse the DER-encoded public key
+	pub, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+	}
+
+	return pub, nil
+}
+
+func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pemPubKey string) (string, error) {
+	// TODO return errors up here
 	tx, err := p.graph.Tx(ctx)
 	if err != nil {
 		return "", err
@@ -87,16 +105,13 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string) (st
 			panic(v)
 		}
 	}()
-
 	certTracker, err := client.Cert.Create().Save(ctx)
 	if err != nil {
 		fmt.Printf("%+v", err)
-
 	}
-	fmt.Printf("%+v", certTracker)
+
 	// create cert to sign
 	cert := &x509.Certificate{
-		// TODO Shouldnt this have auto incrimenting serial_number that should be used?
 		SerialNumber: big.NewInt(int64(certTracker.ID)),
 		Subject: pkix.Name{
 			CommonName: target,
@@ -108,15 +123,13 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string) (st
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 
-	// Create private key for cert
-	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	pubKey, err := pemToPublicKey(pemPubKey)
 	if err != nil {
-		tx.Rollback()
 		return "", err
 	}
 
 	// sign cert with the CA
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, &certPrivKey.PublicKey, p.key)
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, pubKey, p.key)
 	if err != nil {
 		tx.Rollback()
 		return "", err
@@ -127,12 +140,6 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string) (st
 	pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
-
-	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	})
 
 	if err := tx.Commit(); err != nil {

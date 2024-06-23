@@ -12,7 +12,7 @@ import (
 
 // RequestCert is the resolver for the requestCert field.
 func (r *mutationResolver) RequestCert(ctx context.Context, target string, pubKey string) (string, error) {
-	return r.certProvider.CreateCertificate(ctx, target)
+	return r.certProvider.CreateCertificate(ctx, target, pubKey)
 }
 
 // Mutation returns generated.MutationResolver implementation.

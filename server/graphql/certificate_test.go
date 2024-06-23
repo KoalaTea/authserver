@@ -2,8 +2,12 @@ package graphql_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -19,7 +23,6 @@ import (
 
 func TestRequestCertMutation(t *testing.T) {
 	ctx := context.Background()
-	testingUsername := "testinguser"
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer graph.Close()
 	c, _ := certificates.NewCertProvider(graph)
@@ -34,14 +37,28 @@ func TestRequestCertMutation(t *testing.T) {
 	}
 	`
 
-	// TODO gen key here
+	testingUsername := "testinguser"
+	// Generate an example RSA public/private key pair
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		fmt.Printf("Error generating RSA key: %v\n", err)
+		return
+	}
+	pubKey := &privateKey.PublicKey
+	// Convert the RSA public key to PEM format
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: x509.MarshalPKCS1PublicKey(pubKey),
+	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+
 	createCert := func() (string, error) {
 		var resp struct {
 			RequestCert string
 		}
 		err := gqlClient.Post(mut, &resp,
 			client.Var("target", testingUsername),
-			client.Var("pubkey", "aaaa"),
+			client.Var("pubkey", string(pemBytes)),
 		)
 		if err != nil {
 			return "", err
@@ -85,5 +102,17 @@ func TestRequestCertMutation(t *testing.T) {
 	if cert.Subject.CommonName != testingUsername {
 		t.Errorf("requestCert created certificate CommonName does not match the requested target %s != %s", cert.Subject.CommonName, testingUsername)
 	}
+	certPubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+	if !ok {
+		t.Errorf("requestCert created cert PublicKey was not an rsa.PublicKey")
+	}
+	// Compare the public keys
+	if !publicKeysMatch(certPubKey, pubKey) {
+		t.Error("requestCert created cert PublicKey does not match requested public key")
+	}
 
+}
+
+func publicKeysMatch(key1, key2 *rsa.PublicKey) bool {
+	return reflect.DeepEqual(key1, key2)
 }
