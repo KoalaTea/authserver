@@ -30,6 +30,11 @@ var (
 	})
 )
 
+func init() {
+	// Register metrics with Prometheus
+	prometheus.MustRegister(httpRequests, httpLatency, inFlightGauge)
+}
+
 func instrumentHttpMetrics(request_uri string, handler http.Handler) http.Handler {
 	return promhttp.InstrumentHandlerInFlight(inFlightGauge,
 		promhttp.InstrumentHandlerDuration(httpLatency.MustCurryWith(prometheus.Labels{"request_uri": request_uri}),
