@@ -136,6 +136,10 @@ func (srv *Server) Run(ctx context.Context) error {
 
 	// If performance profiling has been enabled, register the profiling routes
 	if cfg.PProfEnabled {
+		// TODO I think recording this as a guage metric that says DEVELOPMENT ONLY FEATURE ENABLED type thing could be interesting
+		// Along with guages for each one following the same preset prefix so people can alert on the metric showing up in production
+		// and see which features are enabled
+		// Currently these would be bypass auth and performance profiling
 		log.Printf("[WARN] Performance profiling is enabled, do not use in production as this may leak sensitive information")
 		registerProfiler(router)
 	}

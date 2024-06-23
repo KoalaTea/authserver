@@ -79,6 +79,7 @@ func TestRequestCertMutation(t *testing.T) {
 		return
 	}
 
+	// TODO returns
 	// Convert to x509 certificate
 	// Step 2: Decode the PEM block
 	block, _ := pem.Decode([]byte(certPEM))
@@ -107,10 +108,10 @@ func TestRequestCertMutation(t *testing.T) {
 		t.Errorf("requestCert created cert PublicKey was not an rsa.PublicKey")
 	}
 	// Compare the public keys
+	// TODO how to properly show they dont match? x != y printing
 	if !publicKeysMatch(certPubKey, pubKey) {
 		t.Error("requestCert created cert PublicKey does not match requested public key")
 	}
-
 }
 
 func publicKeysMatch(key1, key2 *rsa.PublicKey) bool {
