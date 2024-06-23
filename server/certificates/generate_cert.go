@@ -74,7 +74,7 @@ func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 	return provider, nil
 }
 
-func (p *CertProvider) CreateCertificate(ctx context.Context) (string, error) {
+func (p *CertProvider) CreateCertificate(ctx context.Context, target string) (string, error) {
 	tx, err := p.graph.Tx(ctx)
 	if err != nil {
 		return "", err
@@ -99,7 +99,7 @@ func (p *CertProvider) CreateCertificate(ctx context.Context) (string, error) {
 		// TODO Shouldnt this have auto incrimenting serial_number that should be used?
 		SerialNumber: big.NewInt(int64(certTracker.ID)),
 		Subject: pkix.Name{
-			CommonName: "rwhittier",
+			CommonName: target,
 		},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(10, 0, 0),

@@ -19,10 +19,10 @@ import (
 
 func TestRequestCertMutation(t *testing.T) {
 	ctx := context.Background()
+	testingUsername := "testinguser"
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer graph.Close()
 	c, _ := certificates.NewCertProvider(graph)
-	// srv := auth.AuthDisabledMiddleware(handler.NewDefaultServer(graphql.NewSchema(graph)), graph)
 	routes := authServerHttp.RouteMap{}
 	routes.Handle("/graphql", handler.NewDefaultServer(graphql.NewSchema(graph, c)))
 	router := testingutils.NewRouter(routes, graph)
@@ -40,7 +40,7 @@ func TestRequestCertMutation(t *testing.T) {
 			RequestCert string
 		}
 		err := gqlClient.Post(mut, &resp,
-			client.Var("target", "aaaa"),
+			client.Var("target", testingUsername),
 			client.Var("pubkey", "aaaa"),
 		)
 		if err != nil {
@@ -49,8 +49,10 @@ func TestRequestCertMutation(t *testing.T) {
 		return resp.RequestCert, nil
 	}
 
-	// Check cert here
+	// create the Certificate
 	certPEM, err := createCert()
+
+	// Verify that creating the certificate worked
 	if err != nil {
 		t.Errorf("Creating Cert graphql mutation errored with: %+v", err)
 		return
@@ -59,6 +61,8 @@ func TestRequestCertMutation(t *testing.T) {
 		t.Error("Request cert was empty")
 		return
 	}
+
+	// Convert to x509 certificate
 	// Step 2: Decode the PEM block
 	block, _ := pem.Decode([]byte(certPEM))
 	if block == nil || block.Type != "CERTIFICATE" {
@@ -70,13 +74,16 @@ func TestRequestCertMutation(t *testing.T) {
 		t.Errorf("failed to parse certificate: %v", err)
 	}
 
+	// Verify the fields of the certificate
 	trackedCert, err := graph.Cert.Query().First(ctx)
 	if err != nil {
 		t.Errorf("Failed to get the tracked cert created using requestCert mutation from the Database with: %+v", err)
 	}
-
 	if cert.SerialNumber.Uint64() != uint64(trackedCert.ID) {
 		t.Errorf("requestCert certs serialnumber does not match the id of the certificate tracked in the database %s != %d", cert.SerialNumber, trackedCert.ID)
+	}
+	if cert.Subject.CommonName != testingUsername {
+		t.Errorf("requestCert created certificate CommonName does not match the requested target %s != %s", cert.Subject.CommonName, testingUsername)
 	}
 
 }
