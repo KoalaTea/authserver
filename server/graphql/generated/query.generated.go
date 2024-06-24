@@ -330,6 +330,50 @@ func (ec *executionContext) fieldContext_Cert_id(ctx context.Context, field grap
 	return fc, nil
 }
 
+func (ec *executionContext) _Cert_revoked(ctx context.Context, field graphql.CollectedField, obj *ent.Cert) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cert_revoked(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Revoked, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cert_revoked(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cert",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _DenyListedJTI_id(ctx context.Context, field graphql.CollectedField, obj *ent.DenyListedJTI) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_DenyListedJTI_id(ctx, field)
 	if err != nil {
@@ -3235,7 +3279,7 @@ func (ec *executionContext) unmarshalInputCertWhereInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "revoked", "revokedNEQ"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -3319,6 +3363,20 @@ func (ec *executionContext) unmarshalInputCertWhereInput(ctx context.Context, ob
 				return it, err
 			}
 			it.IDLTE = data
+		case "revoked":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("revoked"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Revoked = data
+		case "revokedNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("revokedNEQ"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RevokedNEQ = data
 		}
 	}
 
@@ -6500,6 +6558,11 @@ func (ec *executionContext) _Cert(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Cert")
 		case "id":
 			out.Values[i] = ec._Cert_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revoked":
+			out.Values[i] = ec._Cert_revoked(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

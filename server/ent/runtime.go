@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"github.com/koalatea/authserver/server/ent/cert"
 	"github.com/koalatea/authserver/server/ent/schema"
 	"github.com/koalatea/authserver/server/ent/user"
 )
@@ -11,6 +12,12 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	certFields := schema.Cert{}.Fields()
+	_ = certFields
+	// certDescRevoked is the schema descriptor for revoked field.
+	certDescRevoked := certFields[0].Descriptor()
+	// cert.DefaultRevoked holds the default value on creation for the revoked field.
+	cert.DefaultRevoked = certDescRevoked.Default.(bool)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescName is the schema descriptor for Name field.

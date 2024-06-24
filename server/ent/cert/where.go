@@ -52,6 +52,21 @@ func IDLTE(id int) predicate.Cert {
 	return predicate.Cert(sql.FieldLTE(FieldID, id))
 }
 
+// Revoked applies equality check predicate on the "revoked" field. It's identical to RevokedEQ.
+func Revoked(v bool) predicate.Cert {
+	return predicate.Cert(sql.FieldEQ(FieldRevoked, v))
+}
+
+// RevokedEQ applies the EQ predicate on the "revoked" field.
+func RevokedEQ(v bool) predicate.Cert {
+	return predicate.Cert(sql.FieldEQ(FieldRevoked, v))
+}
+
+// RevokedNEQ applies the NEQ predicate on the "revoked" field.
+func RevokedNEQ(v bool) predicate.Cert {
+	return predicate.Cert(sql.FieldNEQ(FieldRevoked, v))
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Cert) predicate.Cert {
 	return predicate.Cert(sql.AndPredicates(predicates...))

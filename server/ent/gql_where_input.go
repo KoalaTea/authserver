@@ -249,6 +249,10 @@ type CertWhereInput struct {
 	IDGTE   *int  `json:"idGTE,omitempty"`
 	IDLT    *int  `json:"idLT,omitempty"`
 	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "revoked" field predicates.
+	Revoked    *bool `json:"revoked,omitempty"`
+	RevokedNEQ *bool `json:"revokedNEQ,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -345,6 +349,12 @@ func (i *CertWhereInput) P() (predicate.Cert, error) {
 	}
 	if i.IDLTE != nil {
 		predicates = append(predicates, cert.IDLTE(*i.IDLTE))
+	}
+	if i.Revoked != nil {
+		predicates = append(predicates, cert.RevokedEQ(*i.Revoked))
+	}
+	if i.RevokedNEQ != nil {
+		predicates = append(predicates, cert.RevokedNEQ(*i.RevokedNEQ))
 	}
 
 	switch len(predicates) {

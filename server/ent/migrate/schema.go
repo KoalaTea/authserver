@@ -32,6 +32,7 @@ var (
 	// CertsColumns holds the columns for the "certs" table.
 	CertsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "revoked", Type: field.TypeBool, Default: false},
 	}
 	// CertsTable holds the schema information for the "certs" table.
 	CertsTable = &schema.Table{

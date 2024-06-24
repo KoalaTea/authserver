@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/field"
 )
 
 // Cert holds the schema definition for the Cert entity.
@@ -11,7 +12,7 @@ type Cert struct {
 
 // Fields of the Cert.
 func (Cert) Fields() []ent.Field {
-	return nil
+	return []ent.Field{field.Bool("revoked").Default(false)}
 }
 
 // Edges of the Cert.

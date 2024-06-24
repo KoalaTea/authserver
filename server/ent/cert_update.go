@@ -27,6 +27,20 @@ func (cu *CertUpdate) Where(ps ...predicate.Cert) *CertUpdate {
 	return cu
 }
 
+// SetRevoked sets the "revoked" field.
+func (cu *CertUpdate) SetRevoked(b bool) *CertUpdate {
+	cu.mutation.SetRevoked(b)
+	return cu
+}
+
+// SetNillableRevoked sets the "revoked" field if the given value is not nil.
+func (cu *CertUpdate) SetNillableRevoked(b *bool) *CertUpdate {
+	if b != nil {
+		cu.SetRevoked(*b)
+	}
+	return cu
+}
+
 // Mutation returns the CertMutation object of the builder.
 func (cu *CertUpdate) Mutation() *CertMutation {
 	return cu.mutation
@@ -68,6 +82,9 @@ func (cu *CertUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := cu.mutation.Revoked(); ok {
+		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{cert.Label}
@@ -86,6 +103,20 @@ type CertUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *CertMutation
+}
+
+// SetRevoked sets the "revoked" field.
+func (cuo *CertUpdateOne) SetRevoked(b bool) *CertUpdateOne {
+	cuo.mutation.SetRevoked(b)
+	return cuo
+}
+
+// SetNillableRevoked sets the "revoked" field if the given value is not nil.
+func (cuo *CertUpdateOne) SetNillableRevoked(b *bool) *CertUpdateOne {
+	if b != nil {
+		cuo.SetRevoked(*b)
+	}
+	return cuo
 }
 
 // Mutation returns the CertMutation object of the builder.
@@ -158,6 +189,9 @@ func (cuo *CertUpdateOne) sqlSave(ctx context.Context) (_node *Cert, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := cuo.mutation.Revoked(); ok {
+		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
 	}
 	_node = &Cert{config: cuo.config}
 	_spec.Assign = _node.assignValues

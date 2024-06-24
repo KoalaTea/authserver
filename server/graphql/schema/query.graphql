@@ -57,6 +57,7 @@ input AuthCodeWhereInput {
 }
 type Cert implements Node {
   id: ID!
+  revoked: Boolean!
 }
 """
 CertWhereInput is used for filtering Cert objects.
@@ -77,6 +78,11 @@ input CertWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+  """
+  revoked field predicates
+  """
+  revoked: Boolean
+  revokedNEQ: Boolean
 }
 """
 Define a Relay Cursor type:

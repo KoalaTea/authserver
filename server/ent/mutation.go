@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/koalatea/authserver/server/ent/authcode"
+	"github.com/koalatea/authserver/server/ent/cert"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
 	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
 	"github.com/koalatea/authserver/server/ent/oauthclient"
@@ -502,6 +503,7 @@ type CertMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	revoked       *bool
 	clearedFields map[string]struct{}
 	done          bool
 	oldValue      func(context.Context) (*Cert, error)
@@ -606,6 +608,42 @@ func (m *CertMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
+// SetRevoked sets the "revoked" field.
+func (m *CertMutation) SetRevoked(b bool) {
+	m.revoked = &b
+}
+
+// Revoked returns the value of the "revoked" field in the mutation.
+func (m *CertMutation) Revoked() (r bool, exists bool) {
+	v := m.revoked
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevoked returns the old "revoked" field's value of the Cert entity.
+// If the Cert object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CertMutation) OldRevoked(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevoked is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevoked requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevoked: %w", err)
+	}
+	return oldValue.Revoked, nil
+}
+
+// ResetRevoked resets all changes to the "revoked" field.
+func (m *CertMutation) ResetRevoked() {
+	m.revoked = nil
+}
+
 // Where appends a list predicates to the CertMutation builder.
 func (m *CertMutation) Where(ps ...predicate.Cert) {
 	m.predicates = append(m.predicates, ps...)
@@ -640,7 +678,10 @@ func (m *CertMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CertMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 1)
+	if m.revoked != nil {
+		fields = append(fields, cert.FieldRevoked)
+	}
 	return fields
 }
 
@@ -648,6 +689,10 @@ func (m *CertMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *CertMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case cert.FieldRevoked:
+		return m.Revoked()
+	}
 	return nil, false
 }
 
@@ -655,6 +700,10 @@ func (m *CertMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *CertMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case cert.FieldRevoked:
+		return m.OldRevoked(ctx)
+	}
 	return nil, fmt.Errorf("unknown Cert field %s", name)
 }
 
@@ -663,6 +712,13 @@ func (m *CertMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *CertMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case cert.FieldRevoked:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevoked(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Cert field %s", name)
 }
@@ -684,6 +740,8 @@ func (m *CertMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *CertMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Cert numeric field %s", name)
 }
 
@@ -709,6 +767,11 @@ func (m *CertMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *CertMutation) ResetField(name string) error {
+	switch name {
+	case cert.FieldRevoked:
+		m.ResetRevoked()
+		return nil
+	}
 	return fmt.Errorf("unknown Cert field %s", name)
 }
 

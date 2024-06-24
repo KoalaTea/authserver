@@ -13,9 +13,11 @@ import (
 
 // Cert is the model entity for the Cert schema.
 type Cert struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
-	ID           int `json:"id,omitempty"`
+	ID int `json:"id,omitempty"`
+	// Revoked holds the value of the "revoked" field.
+	Revoked      bool `json:"revoked,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -24,6 +26,8 @@ func (*Cert) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case cert.FieldRevoked:
+			values[i] = new(sql.NullBool)
 		case cert.FieldID:
 			values[i] = new(sql.NullInt64)
 		default:
@@ -47,6 +51,12 @@ func (c *Cert) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			c.ID = int(value.Int64)
+		case cert.FieldRevoked:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field revoked", values[i])
+			} else if value.Valid {
+				c.Revoked = value.Bool
+			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
 		}
@@ -82,7 +92,9 @@ func (c *Cert) Unwrap() *Cert {
 func (c *Cert) String() string {
 	var builder strings.Builder
 	builder.WriteString("Cert(")
-	builder.WriteString(fmt.Sprintf("id=%v", c.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
+	builder.WriteString("revoked=")
+	builder.WriteString(fmt.Sprintf("%v", c.Revoked))
 	builder.WriteByte(')')
 	return builder.String()
 }

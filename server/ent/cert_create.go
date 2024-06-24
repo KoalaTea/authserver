@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -18,6 +19,20 @@ type CertCreate struct {
 	hooks    []Hook
 }
 
+// SetRevoked sets the "revoked" field.
+func (cc *CertCreate) SetRevoked(b bool) *CertCreate {
+	cc.mutation.SetRevoked(b)
+	return cc
+}
+
+// SetNillableRevoked sets the "revoked" field if the given value is not nil.
+func (cc *CertCreate) SetNillableRevoked(b *bool) *CertCreate {
+	if b != nil {
+		cc.SetRevoked(*b)
+	}
+	return cc
+}
+
 // Mutation returns the CertMutation object of the builder.
 func (cc *CertCreate) Mutation() *CertMutation {
 	return cc.mutation
@@ -25,6 +40,7 @@ func (cc *CertCreate) Mutation() *CertMutation {
 
 // Save creates the Cert in the database.
 func (cc *CertCreate) Save(ctx context.Context) (*Cert, error) {
+	cc.defaults()
 	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
@@ -50,8 +66,19 @@ func (cc *CertCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (cc *CertCreate) defaults() {
+	if _, ok := cc.mutation.Revoked(); !ok {
+		v := cert.DefaultRevoked
+		cc.mutation.SetRevoked(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (cc *CertCreate) check() error {
+	if _, ok := cc.mutation.Revoked(); !ok {
+		return &ValidationError{Name: "revoked", err: errors.New(`ent: missing required field "Cert.revoked"`)}
+	}
 	return nil
 }
 
@@ -78,6 +105,10 @@ func (cc *CertCreate) createSpec() (*Cert, *sqlgraph.CreateSpec) {
 		_node = &Cert{config: cc.config}
 		_spec = sqlgraph.NewCreateSpec(cert.Table, sqlgraph.NewFieldSpec(cert.FieldID, field.TypeInt))
 	)
+	if value, ok := cc.mutation.Revoked(); ok {
+		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
+		_node.Revoked = value
+	}
 	return _node, _spec
 }
 
@@ -99,6 +130,7 @@ func (ccb *CertCreateBulk) Save(ctx context.Context) ([]*Cert, error) {
 	for i := range ccb.builders {
 		func(i int, root context.Context) {
 			builder := ccb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*CertMutation)
 				if !ok {

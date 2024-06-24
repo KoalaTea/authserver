@@ -1,5 +1,6 @@
 type Mutation {
     requestCert(target: String!, pubKey: String!): String!
+    revokeCert(serialNumber: String!): Boolean!
 }directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 directive @goModel(model: String, models: [String!], forceGenerate: Boolean) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 type AuthCode implements Node {
@@ -59,6 +60,7 @@ input AuthCodeWhereInput {
 }
 type Cert implements Node {
   id: ID!
+  revoked: Boolean!
 }
 """
 CertWhereInput is used for filtering Cert objects.
@@ -79,6 +81,11 @@ input CertWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+  """
+  revoked field predicates
+  """
+  revoked: Boolean
+  revokedNEQ: Boolean
 }
 """
 Define a Relay Cursor type:

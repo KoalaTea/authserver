@@ -35,11 +35,12 @@ func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 			StreetAddress: []string{"Golden Gate Bridge"},
 			PostalCode:    []string{"94016"},
 		},
+		SubjectKeyId:          []byte("temps"),
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
 	}
 
@@ -176,4 +177,33 @@ func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvi
 		return nil, fmt.Errorf("parsekey: %w", e)
 	}
 	return &CertProvider{key: key, ca: crt}, nil
+}
+
+func (p *CertProvider) RevokeCertificate(ctx context.Context, serialNumber int64) error {
+	tx, err := p.graph.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	client := tx.Client()
+	// Rollback transaction if we panic
+	defer func() {
+		if v := recover(); v != nil {
+			tx.Rollback()
+			panic(v)
+		}
+	}()
+	cert, err := client.Cert.Get(ctx, int(serialNumber))
+	if err != nil {
+		return err
+	}
+	_, err = cert.Update().SetRevoked(true).Save(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

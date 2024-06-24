@@ -11,6 +11,8 @@ const (
 	Label = "cert"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldRevoked holds the string denoting the revoked field in the database.
+	FieldRevoked = "revoked"
 	// Table holds the table name of the cert in the database.
 	Table = "certs"
 )
@@ -18,6 +20,7 @@ const (
 // Columns holds all SQL columns for cert fields.
 var Columns = []string{
 	FieldID,
+	FieldRevoked,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -30,10 +33,20 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+var (
+	// DefaultRevoked holds the default value on creation for the "revoked" field.
+	DefaultRevoked bool
+)
+
 // OrderOption defines the ordering options for the Cert queries.
 type OrderOption func(*sql.Selector)
 
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRevoked orders the results by the revoked field.
+func ByRevoked(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRevoked, opts...).ToFunc()
 }

@@ -259,6 +259,18 @@ func (cq *CertQuery) Clone() *CertQuery {
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Revoked bool `json:"revoked,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Cert.Query().
+//		GroupBy(cert.FieldRevoked).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (cq *CertQuery) GroupBy(field string, fields ...string) *CertGroupBy {
 	cq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &CertGroupBy{build: cq}
@@ -270,6 +282,16 @@ func (cq *CertQuery) GroupBy(field string, fields ...string) *CertGroupBy {
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Revoked bool `json:"revoked,omitempty"`
+//	}
+//
+//	client.Cert.Query().
+//		Select(cert.FieldRevoked).
+//		Scan(ctx, &v)
 func (cq *CertQuery) Select(fields ...string) *CertSelect {
 	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
 	sbuild := &CertSelect{CertQuery: cq}
