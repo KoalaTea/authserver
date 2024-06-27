@@ -33,6 +33,18 @@ func (cc *CertCreate) SetNillableRevoked(b *bool) *CertCreate {
 	return cc
 }
 
+// SetPem sets the "pem" field.
+func (cc *CertCreate) SetPem(s string) *CertCreate {
+	cc.mutation.SetPem(s)
+	return cc
+}
+
+// SetSerialNumber sets the "serial_number" field.
+func (cc *CertCreate) SetSerialNumber(i int64) *CertCreate {
+	cc.mutation.SetSerialNumber(i)
+	return cc
+}
+
 // Mutation returns the CertMutation object of the builder.
 func (cc *CertCreate) Mutation() *CertMutation {
 	return cc.mutation
@@ -79,6 +91,12 @@ func (cc *CertCreate) check() error {
 	if _, ok := cc.mutation.Revoked(); !ok {
 		return &ValidationError{Name: "revoked", err: errors.New(`ent: missing required field "Cert.revoked"`)}
 	}
+	if _, ok := cc.mutation.Pem(); !ok {
+		return &ValidationError{Name: "pem", err: errors.New(`ent: missing required field "Cert.pem"`)}
+	}
+	if _, ok := cc.mutation.SerialNumber(); !ok {
+		return &ValidationError{Name: "serial_number", err: errors.New(`ent: missing required field "Cert.serial_number"`)}
+	}
 	return nil
 }
 
@@ -108,6 +126,14 @@ func (cc *CertCreate) createSpec() (*Cert, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.Revoked(); ok {
 		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
 		_node.Revoked = value
+	}
+	if value, ok := cc.mutation.Pem(); ok {
+		_spec.SetField(cert.FieldPem, field.TypeString, value)
+		_node.Pem = value
+	}
+	if value, ok := cc.mutation.SerialNumber(); ok {
+		_spec.SetField(cert.FieldSerialNumber, field.TypeInt64, value)
+		_node.SerialNumber = value
 	}
 	return _node, _spec
 }

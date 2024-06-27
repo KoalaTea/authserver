@@ -106,14 +106,14 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pem
 			panic(v)
 		}
 	}()
-	certTracker, err := client.Cert.Create().Save(ctx)
+	certCount, err := client.Cert.Query().Count(ctx)
 	if err != nil {
 		fmt.Printf("%+v", err)
 	}
 
 	// create cert to sign
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(int64(certTracker.ID)),
+		SerialNumber: big.NewInt(int64(certCount)),
 		Subject: pkix.Name{
 			CommonName: target,
 		},
@@ -142,12 +142,17 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pem
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
+	createdCert, err := client.Cert.Create().SetPem(certPEM.String()).SetSerialNumber(cert.SerialNumber.Int64()).Save(ctx)
+	if err != nil {
+		tx.Rollback()
+		return "", err
+	}
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	return certPEM.String(), nil
+	return createdCert.Pem, nil
 }
 
 // Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine

@@ -41,6 +41,41 @@ func (cu *CertUpdate) SetNillableRevoked(b *bool) *CertUpdate {
 	return cu
 }
 
+// SetPem sets the "pem" field.
+func (cu *CertUpdate) SetPem(s string) *CertUpdate {
+	cu.mutation.SetPem(s)
+	return cu
+}
+
+// SetNillablePem sets the "pem" field if the given value is not nil.
+func (cu *CertUpdate) SetNillablePem(s *string) *CertUpdate {
+	if s != nil {
+		cu.SetPem(*s)
+	}
+	return cu
+}
+
+// SetSerialNumber sets the "serial_number" field.
+func (cu *CertUpdate) SetSerialNumber(i int64) *CertUpdate {
+	cu.mutation.ResetSerialNumber()
+	cu.mutation.SetSerialNumber(i)
+	return cu
+}
+
+// SetNillableSerialNumber sets the "serial_number" field if the given value is not nil.
+func (cu *CertUpdate) SetNillableSerialNumber(i *int64) *CertUpdate {
+	if i != nil {
+		cu.SetSerialNumber(*i)
+	}
+	return cu
+}
+
+// AddSerialNumber adds i to the "serial_number" field.
+func (cu *CertUpdate) AddSerialNumber(i int64) *CertUpdate {
+	cu.mutation.AddSerialNumber(i)
+	return cu
+}
+
 // Mutation returns the CertMutation object of the builder.
 func (cu *CertUpdate) Mutation() *CertMutation {
 	return cu.mutation
@@ -85,6 +120,15 @@ func (cu *CertUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.Revoked(); ok {
 		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
 	}
+	if value, ok := cu.mutation.Pem(); ok {
+		_spec.SetField(cert.FieldPem, field.TypeString, value)
+	}
+	if value, ok := cu.mutation.SerialNumber(); ok {
+		_spec.SetField(cert.FieldSerialNumber, field.TypeInt64, value)
+	}
+	if value, ok := cu.mutation.AddedSerialNumber(); ok {
+		_spec.AddField(cert.FieldSerialNumber, field.TypeInt64, value)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{cert.Label}
@@ -116,6 +160,41 @@ func (cuo *CertUpdateOne) SetNillableRevoked(b *bool) *CertUpdateOne {
 	if b != nil {
 		cuo.SetRevoked(*b)
 	}
+	return cuo
+}
+
+// SetPem sets the "pem" field.
+func (cuo *CertUpdateOne) SetPem(s string) *CertUpdateOne {
+	cuo.mutation.SetPem(s)
+	return cuo
+}
+
+// SetNillablePem sets the "pem" field if the given value is not nil.
+func (cuo *CertUpdateOne) SetNillablePem(s *string) *CertUpdateOne {
+	if s != nil {
+		cuo.SetPem(*s)
+	}
+	return cuo
+}
+
+// SetSerialNumber sets the "serial_number" field.
+func (cuo *CertUpdateOne) SetSerialNumber(i int64) *CertUpdateOne {
+	cuo.mutation.ResetSerialNumber()
+	cuo.mutation.SetSerialNumber(i)
+	return cuo
+}
+
+// SetNillableSerialNumber sets the "serial_number" field if the given value is not nil.
+func (cuo *CertUpdateOne) SetNillableSerialNumber(i *int64) *CertUpdateOne {
+	if i != nil {
+		cuo.SetSerialNumber(*i)
+	}
+	return cuo
+}
+
+// AddSerialNumber adds i to the "serial_number" field.
+func (cuo *CertUpdateOne) AddSerialNumber(i int64) *CertUpdateOne {
+	cuo.mutation.AddSerialNumber(i)
 	return cuo
 }
 
@@ -192,6 +271,15 @@ func (cuo *CertUpdateOne) sqlSave(ctx context.Context) (_node *Cert, err error) 
 	}
 	if value, ok := cuo.mutation.Revoked(); ok {
 		_spec.SetField(cert.FieldRevoked, field.TypeBool, value)
+	}
+	if value, ok := cuo.mutation.Pem(); ok {
+		_spec.SetField(cert.FieldPem, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.SerialNumber(); ok {
+		_spec.SetField(cert.FieldSerialNumber, field.TypeInt64, value)
+	}
+	if value, ok := cuo.mutation.AddedSerialNumber(); ok {
+		_spec.AddField(cert.FieldSerialNumber, field.TypeInt64, value)
 	}
 	_node = &Cert{config: cuo.config}
 	_spec.Assign = _node.assignValues

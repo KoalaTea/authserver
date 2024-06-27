@@ -129,6 +129,16 @@ func (c *CertQuery) collectField(ctx context.Context, oneNode bool, opCtx *graph
 				selectedFields = append(selectedFields, cert.FieldRevoked)
 				fieldSeen[cert.FieldRevoked] = struct{}{}
 			}
+		case "pem":
+			if _, ok := fieldSeen[cert.FieldPem]; !ok {
+				selectedFields = append(selectedFields, cert.FieldPem)
+				fieldSeen[cert.FieldPem] = struct{}{}
+			}
+		case "serialNumber":
+			if _, ok := fieldSeen[cert.FieldSerialNumber]; !ok {
+				selectedFields = append(selectedFields, cert.FieldSerialNumber)
+				fieldSeen[cert.FieldSerialNumber] = struct{}{}
+			}
 		case "id":
 		case "__typename":
 		default:

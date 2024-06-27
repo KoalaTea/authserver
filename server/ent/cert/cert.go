@@ -13,6 +13,10 @@ const (
 	FieldID = "id"
 	// FieldRevoked holds the string denoting the revoked field in the database.
 	FieldRevoked = "revoked"
+	// FieldPem holds the string denoting the pem field in the database.
+	FieldPem = "pem"
+	// FieldSerialNumber holds the string denoting the serial_number field in the database.
+	FieldSerialNumber = "serial_number"
 	// Table holds the table name of the cert in the database.
 	Table = "certs"
 )
@@ -21,6 +25,8 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldRevoked,
+	FieldPem,
+	FieldSerialNumber,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -49,4 +55,14 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByRevoked orders the results by the revoked field.
 func ByRevoked(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRevoked, opts...).ToFunc()
+}
+
+// ByPem orders the results by the pem field.
+func ByPem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPem, opts...).ToFunc()
+}
+
+// BySerialNumber orders the results by the serial_number field.
+func BySerialNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSerialNumber, opts...).ToFunc()
 }

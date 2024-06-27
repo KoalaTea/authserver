@@ -48,8 +48,10 @@ type ComplexityRoot struct {
 	}
 
 	Cert struct {
-		ID      func(childComplexity int) int
-		Revoked func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Pem          func(childComplexity int) int
+		Revoked      func(childComplexity int) int
+		SerialNumber func(childComplexity int) int
 	}
 
 	DenyListedJTI struct {
@@ -206,12 +208,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Cert.ID(childComplexity), true
 
+	case "Cert.pem":
+		if e.complexity.Cert.Pem == nil {
+			break
+		}
+
+		return e.complexity.Cert.Pem(childComplexity), true
+
 	case "Cert.revoked":
 		if e.complexity.Cert.Revoked == nil {
 			break
 		}
 
 		return e.complexity.Cert.Revoked(childComplexity), true
+
+	case "Cert.serialNumber":
+		if e.complexity.Cert.SerialNumber == nil {
+			break
+		}
+
+		return e.complexity.Cert.SerialNumber(childComplexity), true
 
 	case "DenyListedJTI.expiration":
 		if e.complexity.DenyListedJTI.Expiration == nil {
@@ -811,6 +827,8 @@ input AuthCodeWhereInput {
 type Cert implements Node {
   id: ID!
   revoked: Boolean!
+  pem: String!
+  serialNumber: Int!
 }
 """
 CertWhereInput is used for filtering Cert objects.
@@ -836,6 +854,33 @@ input CertWhereInput {
   """
   revoked: Boolean
   revokedNEQ: Boolean
+  """
+  pem field predicates
+  """
+  pem: String
+  pemNEQ: String
+  pemIn: [String!]
+  pemNotIn: [String!]
+  pemGT: String
+  pemGTE: String
+  pemLT: String
+  pemLTE: String
+  pemContains: String
+  pemHasPrefix: String
+  pemHasSuffix: String
+  pemEqualFold: String
+  pemContainsFold: String
+  """
+  serial_number field predicates
+  """
+  serialNumber: Int
+  serialNumberNEQ: Int
+  serialNumberIn: [Int!]
+  serialNumberNotIn: [Int!]
+  serialNumberGT: Int
+  serialNumberGTE: Int
+  serialNumberLT: Int
+  serialNumberLTE: Int
 }
 """
 Define a Relay Cursor type:

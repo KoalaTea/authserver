@@ -12,7 +12,7 @@ type Cert struct {
 
 // Fields of the Cert.
 func (Cert) Fields() []ent.Field {
-	return []ent.Field{field.Bool("revoked").Default(false)}
+	return []ent.Field{field.Bool("revoked").Default(false), field.String("pem"), field.Int64("serial_number").Unique()}
 }
 
 // Edges of the Cert.

@@ -101,7 +101,7 @@ func TestRequestCertMutation(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get the tracked cert created using requestCert mutation from the Database with: %+v", err)
 	}
-	if cert.SerialNumber.Int64() != int64(trackedCert.ID) {
+	if cert.SerialNumber.Int64() != int64(trackedCert.SerialNumber) {
 		t.Errorf("requestCert certs serialnumber does not match the id of the certificate tracked in the database %s != %d", cert.SerialNumber, trackedCert.ID)
 	}
 	if cert.Subject.CommonName != testingUsername {
@@ -131,7 +131,7 @@ func TestRevokeCertMutation(t *testing.T) {
 	routes.Handle("/graphql", handler.NewDefaultServer(graphql.NewSchema(graph, c)))
 	router := testingutils.NewRouter(routes, graph)
 	gqlClient := client.New(router, client.Path("/graphql"))
-	graph.Cert.Create().SaveX(ctx)
+	graph.Cert.Create().SetPem("").SetSerialNumber(int64(1)).SaveX(ctx)
 
 	mut := `
 	mutation revokeCert($serialNumber: String!) {

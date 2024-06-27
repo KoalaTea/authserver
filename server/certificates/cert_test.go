@@ -25,7 +25,7 @@ func TestRevocationCrl(t *testing.T) {
 	router := testingutils.NewRouter(routes, graph)
 	w := httptest.NewRecorder()
 
-	cert := graph.Cert.Create().SaveX(ctx)
+	cert := graph.Cert.Create().SetPem("").SetSerialNumber(int64(1)).SaveX(ctx)
 	err = provider.RevokeCertificate(ctx, int64(cert.ID))
 	if err != nil {
 		t.Fatalf("Failed to revoke test cert: %v", err)

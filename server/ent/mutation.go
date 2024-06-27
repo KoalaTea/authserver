@@ -500,14 +500,17 @@ func (m *AuthCodeMutation) ResetEdge(name string) error {
 // CertMutation represents an operation that mutates the Cert nodes in the graph.
 type CertMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	revoked       *bool
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Cert, error)
-	predicates    []predicate.Cert
+	op               Op
+	typ              string
+	id               *int
+	revoked          *bool
+	pem              *string
+	serial_number    *int64
+	addserial_number *int64
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*Cert, error)
+	predicates       []predicate.Cert
 }
 
 var _ ent.Mutation = (*CertMutation)(nil)
@@ -644,6 +647,98 @@ func (m *CertMutation) ResetRevoked() {
 	m.revoked = nil
 }
 
+// SetPem sets the "pem" field.
+func (m *CertMutation) SetPem(s string) {
+	m.pem = &s
+}
+
+// Pem returns the value of the "pem" field in the mutation.
+func (m *CertMutation) Pem() (r string, exists bool) {
+	v := m.pem
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPem returns the old "pem" field's value of the Cert entity.
+// If the Cert object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CertMutation) OldPem(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPem is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPem requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPem: %w", err)
+	}
+	return oldValue.Pem, nil
+}
+
+// ResetPem resets all changes to the "pem" field.
+func (m *CertMutation) ResetPem() {
+	m.pem = nil
+}
+
+// SetSerialNumber sets the "serial_number" field.
+func (m *CertMutation) SetSerialNumber(i int64) {
+	m.serial_number = &i
+	m.addserial_number = nil
+}
+
+// SerialNumber returns the value of the "serial_number" field in the mutation.
+func (m *CertMutation) SerialNumber() (r int64, exists bool) {
+	v := m.serial_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSerialNumber returns the old "serial_number" field's value of the Cert entity.
+// If the Cert object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CertMutation) OldSerialNumber(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSerialNumber is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSerialNumber requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSerialNumber: %w", err)
+	}
+	return oldValue.SerialNumber, nil
+}
+
+// AddSerialNumber adds i to the "serial_number" field.
+func (m *CertMutation) AddSerialNumber(i int64) {
+	if m.addserial_number != nil {
+		*m.addserial_number += i
+	} else {
+		m.addserial_number = &i
+	}
+}
+
+// AddedSerialNumber returns the value that was added to the "serial_number" field in this mutation.
+func (m *CertMutation) AddedSerialNumber() (r int64, exists bool) {
+	v := m.addserial_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSerialNumber resets all changes to the "serial_number" field.
+func (m *CertMutation) ResetSerialNumber() {
+	m.serial_number = nil
+	m.addserial_number = nil
+}
+
 // Where appends a list predicates to the CertMutation builder.
 func (m *CertMutation) Where(ps ...predicate.Cert) {
 	m.predicates = append(m.predicates, ps...)
@@ -678,9 +773,15 @@ func (m *CertMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CertMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 3)
 	if m.revoked != nil {
 		fields = append(fields, cert.FieldRevoked)
+	}
+	if m.pem != nil {
+		fields = append(fields, cert.FieldPem)
+	}
+	if m.serial_number != nil {
+		fields = append(fields, cert.FieldSerialNumber)
 	}
 	return fields
 }
@@ -692,6 +793,10 @@ func (m *CertMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case cert.FieldRevoked:
 		return m.Revoked()
+	case cert.FieldPem:
+		return m.Pem()
+	case cert.FieldSerialNumber:
+		return m.SerialNumber()
 	}
 	return nil, false
 }
@@ -703,6 +808,10 @@ func (m *CertMutation) OldField(ctx context.Context, name string) (ent.Value, er
 	switch name {
 	case cert.FieldRevoked:
 		return m.OldRevoked(ctx)
+	case cert.FieldPem:
+		return m.OldPem(ctx)
+	case cert.FieldSerialNumber:
+		return m.OldSerialNumber(ctx)
 	}
 	return nil, fmt.Errorf("unknown Cert field %s", name)
 }
@@ -719,6 +828,20 @@ func (m *CertMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRevoked(v)
 		return nil
+	case cert.FieldPem:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPem(v)
+		return nil
+	case cert.FieldSerialNumber:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSerialNumber(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Cert field %s", name)
 }
@@ -726,13 +849,21 @@ func (m *CertMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *CertMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addserial_number != nil {
+		fields = append(fields, cert.FieldSerialNumber)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *CertMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case cert.FieldSerialNumber:
+		return m.AddedSerialNumber()
+	}
 	return nil, false
 }
 
@@ -741,6 +872,13 @@ func (m *CertMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *CertMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case cert.FieldSerialNumber:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSerialNumber(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Cert numeric field %s", name)
 }
@@ -770,6 +908,12 @@ func (m *CertMutation) ResetField(name string) error {
 	switch name {
 	case cert.FieldRevoked:
 		m.ResetRevoked()
+		return nil
+	case cert.FieldPem:
+		m.ResetPem()
+		return nil
+	case cert.FieldSerialNumber:
+		m.ResetSerialNumber()
 		return nil
 	}
 	return fmt.Errorf("unknown Cert field %s", name)
