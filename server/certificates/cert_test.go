@@ -48,7 +48,7 @@ func TestRevocationCrl(t *testing.T) {
 	if crl.Number.Int64() != int64(1) {
 		t.Fatalf("CRL does not have the revoked cert in it crl.Number: %d", crl.Number.Int64())
 	}
-	if crl.RevokedCertificateEntries[0].SerialNumber.Int64() != int64(cert.ID) {
+	if crl.RevokedCertificateEntries[0].SerialNumber.Int64() != cert.SerialNumber {
 		t.Fatal("CRL revoked certificate does not match the test certificates ID")
 	}
 }

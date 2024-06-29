@@ -29,7 +29,7 @@ func (p *CertProvider) buildCrl(ctx context.Context) ([]byte, error) {
 	for _, revokedCertificate := range revokedCertificates {
 		// Create a revoked certificate entry
 		revokedCert := pkix.RevokedCertificate{
-			SerialNumber:   big.NewInt(int64(revokedCertificate.ID)),
+			SerialNumber:   big.NewInt(revokedCertificate.SerialNumber),
 			RevocationTime: time.Now(),
 		}
 		revokedCerts = append(revokedCerts, revokedCert)
