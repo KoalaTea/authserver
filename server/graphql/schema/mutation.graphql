@@ -1,3 +1,4 @@
 type Mutation {
     requestCert(target: String!, pubKey: String!): String!
+    revokeCert(serialNumber: String!): Boolean!
 }

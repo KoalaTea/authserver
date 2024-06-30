@@ -330,6 +330,138 @@ func (ec *executionContext) fieldContext_Cert_id(ctx context.Context, field grap
 	return fc, nil
 }
 
+func (ec *executionContext) _Cert_revoked(ctx context.Context, field graphql.CollectedField, obj *ent.Cert) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cert_revoked(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Revoked, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cert_revoked(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cert",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cert_pem(ctx context.Context, field graphql.CollectedField, obj *ent.Cert) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cert_pem(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Pem, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cert_pem(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cert",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cert_serialNumber(ctx context.Context, field graphql.CollectedField, obj *ent.Cert) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cert_serialNumber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SerialNumber, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cert_serialNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cert",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _DenyListedJTI_id(ctx context.Context, field graphql.CollectedField, obj *ent.DenyListedJTI) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_DenyListedJTI_id(ctx, field)
 	if err != nil {
@@ -3235,7 +3367,7 @@ func (ec *executionContext) unmarshalInputCertWhereInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "revoked", "revokedNEQ", "pem", "pemNEQ", "pemIn", "pemNotIn", "pemGT", "pemGTE", "pemLT", "pemLTE", "pemContains", "pemHasPrefix", "pemHasSuffix", "pemEqualFold", "pemContainsFold", "serialNumber", "serialNumberNEQ", "serialNumberIn", "serialNumberNotIn", "serialNumberGT", "serialNumberGTE", "serialNumberLT", "serialNumberLTE"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -3319,6 +3451,167 @@ func (ec *executionContext) unmarshalInputCertWhereInput(ctx context.Context, ob
 				return it, err
 			}
 			it.IDLTE = data
+		case "revoked":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("revoked"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Revoked = data
+		case "revokedNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("revokedNEQ"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RevokedNEQ = data
+		case "pem":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pem"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Pem = data
+		case "pemNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemNEQ = data
+		case "pemIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemIn = data
+		case "pemNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemNotIn = data
+		case "pemGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemGT = data
+		case "pemGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemGTE = data
+		case "pemLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemLT = data
+		case "pemLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemLTE = data
+		case "pemContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemContains = data
+		case "pemHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemHasPrefix = data
+		case "pemHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemHasSuffix = data
+		case "pemEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemEqualFold = data
+		case "pemContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pemContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PemContainsFold = data
+		case "serialNumber":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumber"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumber = data
+		case "serialNumberNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberNEQ"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberNEQ = data
+		case "serialNumberIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberIn"))
+			data, err := ec.unmarshalOInt2ᚕint64ᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberIn = data
+		case "serialNumberNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberNotIn"))
+			data, err := ec.unmarshalOInt2ᚕint64ᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberNotIn = data
+		case "serialNumberGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberGT"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberGT = data
+		case "serialNumberGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberGTE"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberGTE = data
+		case "serialNumberLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberLT"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberLT = data
+		case "serialNumberLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serialNumberLTE"))
+			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SerialNumberLTE = data
 		}
 	}
 
@@ -6500,6 +6793,21 @@ func (ec *executionContext) _Cert(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Cert")
 		case "id":
 			out.Values[i] = ec._Cert_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revoked":
+			out.Values[i] = ec._Cert_revoked(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pem":
+			out.Values[i] = ec._Cert_pem(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "serialNumber":
+			out.Values[i] = ec._Cert_serialNumber(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

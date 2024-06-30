@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,15 +13,18 @@ import (
 	"math/big"
 	"os"
 	"time"
+
+	"github.com/koalatea/authserver/server/ent"
 )
 
 type CertProvider struct {
-	ca  *x509.Certificate
-	key *rsa.PrivateKey
+	ca    *x509.Certificate
+	key   *rsa.PrivateKey
+	graph *ent.Client
 }
 
 // TODO put certs in common dir or load certs from configuration
-func NewCertProvider() (*CertProvider, error) {
+func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -31,11 +35,12 @@ func NewCertProvider() (*CertProvider, error) {
 			StreetAddress: []string{"Golden Gate Bridge"},
 			PostalCode:    []string{"94016"},
 		},
+		SubjectKeyId:          []byte("temps"),
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
 	}
 
@@ -66,16 +71,51 @@ func NewCertProvider() (*CertProvider, error) {
 	})
 	os.WriteFile("authserverCAPrivKey.pem", caPrivKeyPEM.Bytes(), 0644)
 
-	provider := &CertProvider{ca: ca, key: caPrivKey}
+	provider := &CertProvider{ca: ca, key: caPrivKey, graph: graph}
 	return provider, nil
 }
 
-func (p *CertProvider) CreateCertificate() (string, error) {
+// Convert a PEM encoded public key string to rsa.PublicKey
+func pemToPublicKey(pemStr string) (*rsa.PublicKey, error) {
+	// Decode the PEM block
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+
+	// Parse the DER-encoded public key
+	pub, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+	}
+
+	return pub, nil
+}
+
+func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pemPubKey string) (string, error) {
+	// TODO return errors up here
+	tx, err := p.graph.Tx(ctx)
+	if err != nil {
+		return "", err
+	}
+	client := tx.Client()
+	// Rollback transaction if we panic
+	defer func() {
+		if v := recover(); v != nil {
+			tx.Rollback()
+			panic(v)
+		}
+	}()
+	certCount, err := client.Cert.Query().Count(ctx)
+	if err != nil {
+		fmt.Printf("%+v", err)
+	}
+
 	// create cert to sign
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		SerialNumber: big.NewInt(int64(certCount)),
 		Subject: pkix.Name{
-			CommonName: "rwhittier",
+			CommonName: target,
 		},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(10, 0, 0),
@@ -84,15 +124,15 @@ func (p *CertProvider) CreateCertificate() (string, error) {
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 
-	// Create private key for cert
-	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	pubKey, err := pemToPublicKey(pemPubKey)
 	if err != nil {
 		return "", err
 	}
 
 	// sign cert with the CA
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, &certPrivKey.PublicKey, p.key)
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, pubKey, p.key)
 	if err != nil {
+		tx.Rollback()
 		return "", err
 	}
 
@@ -102,14 +142,17 @@ func (p *CertProvider) CreateCertificate() (string, error) {
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
+	createdCert, err := client.Cert.Create().SetPem(certPEM.String()).SetSerialNumber(cert.SerialNumber.Int64()).Save(ctx)
+	if err != nil {
+		tx.Rollback()
+		return "", err
+	}
 
-	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
-
-	return certPEM.String(), nil
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return createdCert.Pem, nil
 }
 
 // Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine
@@ -139,4 +182,33 @@ func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvi
 		return nil, fmt.Errorf("parsekey: %w", e)
 	}
 	return &CertProvider{key: key, ca: crt}, nil
+}
+
+func (p *CertProvider) RevokeCertificate(ctx context.Context, serialNumber int64) error {
+	tx, err := p.graph.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	client := tx.Client()
+	// Rollback transaction if we panic
+	defer func() {
+		if v := recover(); v != nil {
+			tx.Rollback()
+			panic(v)
+		}
+	}()
+	cert, err := client.Cert.Get(ctx, int(serialNumber))
+	if err != nil {
+		return err
+	}
+	_, err = cert.Update().SetRevoked(true).Save(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

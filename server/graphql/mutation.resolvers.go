@@ -6,13 +6,28 @@ package graphql
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/koalatea/authserver/server/graphql/generated"
 )
 
 // RequestCert is the resolver for the requestCert field.
 func (r *mutationResolver) RequestCert(ctx context.Context, target string, pubKey string) (string, error) {
-	return r.certProvider.CreateCertificate()
+	return r.certProvider.CreateCertificate(ctx, target, pubKey)
+}
+
+// RevokeCert is the resolver for the revokeCert field.
+func (r *mutationResolver) RevokeCert(ctx context.Context, serialNumber string) (bool, error) {
+	serial, err := strconv.ParseInt(serialNumber, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("provided serialNumber is not a uint64: %s", serialNumber)
+	}
+	err = r.certProvider.RevokeCertificate(ctx, serial)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

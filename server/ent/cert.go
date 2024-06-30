@@ -13,9 +13,15 @@ import (
 
 // Cert is the model entity for the Cert schema.
 type Cert struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
-	ID           int `json:"id,omitempty"`
+	ID int `json:"id,omitempty"`
+	// Revoked holds the value of the "revoked" field.
+	Revoked bool `json:"revoked,omitempty"`
+	// Pem holds the value of the "pem" field.
+	Pem string `json:"pem,omitempty"`
+	// SerialNumber holds the value of the "serial_number" field.
+	SerialNumber int64 `json:"serial_number,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -24,8 +30,12 @@ func (*Cert) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case cert.FieldID:
+		case cert.FieldRevoked:
+			values[i] = new(sql.NullBool)
+		case cert.FieldID, cert.FieldSerialNumber:
 			values[i] = new(sql.NullInt64)
+		case cert.FieldPem:
+			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -47,6 +57,24 @@ func (c *Cert) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			c.ID = int(value.Int64)
+		case cert.FieldRevoked:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field revoked", values[i])
+			} else if value.Valid {
+				c.Revoked = value.Bool
+			}
+		case cert.FieldPem:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field pem", values[i])
+			} else if value.Valid {
+				c.Pem = value.String
+			}
+		case cert.FieldSerialNumber:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field serial_number", values[i])
+			} else if value.Valid {
+				c.SerialNumber = value.Int64
+			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
 		}
@@ -82,7 +110,15 @@ func (c *Cert) Unwrap() *Cert {
 func (c *Cert) String() string {
 	var builder strings.Builder
 	builder.WriteString("Cert(")
-	builder.WriteString(fmt.Sprintf("id=%v", c.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
+	builder.WriteString("revoked=")
+	builder.WriteString(fmt.Sprintf("%v", c.Revoked))
+	builder.WriteString(", ")
+	builder.WriteString("pem=")
+	builder.WriteString(c.Pem)
+	builder.WriteString(", ")
+	builder.WriteString("serial_number=")
+	builder.WriteString(fmt.Sprintf("%v", c.SerialNumber))
 	builder.WriteByte(')')
 	return builder.String()
 }

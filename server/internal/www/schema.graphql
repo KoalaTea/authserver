@@ -1,4 +1,7 @@
-directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+type Mutation {
+    requestCert(target: String!, pubKey: String!): String!
+    revokeCert(serialNumber: String!): Boolean!
+}directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 directive @goModel(model: String, models: [String!], forceGenerate: Boolean) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 type AuthCode implements Node {
   id: ID!
@@ -58,8 +61,6 @@ input AuthCodeWhereInput {
 type Cert implements Node {
   id: ID!
   revoked: Boolean!
-  pem: String!
-  serialNumber: Int!
 }
 """
 CertWhereInput is used for filtering Cert objects.
@@ -85,33 +86,6 @@ input CertWhereInput {
   """
   revoked: Boolean
   revokedNEQ: Boolean
-  """
-  pem field predicates
-  """
-  pem: String
-  pemNEQ: String
-  pemIn: [String!]
-  pemNotIn: [String!]
-  pemGT: String
-  pemGTE: String
-  pemLT: String
-  pemLTE: String
-  pemContains: String
-  pemHasPrefix: String
-  pemHasSuffix: String
-  pemEqualFold: String
-  pemContainsFold: String
-  """
-  serial_number field predicates
-  """
-  serialNumber: Int
-  serialNumberNEQ: Int
-  serialNumberIn: [Int!]
-  serialNumberNotIn: [Int!]
-  serialNumberGT: Int
-  serialNumberGTE: Int
-  serialNumberLT: Int
-  serialNumberLTE: Int
 }
 """
 Define a Relay Cursor type:
@@ -858,3 +832,4 @@ input UserWhereInput {
   isactivated: Boolean
   isactivatedNEQ: Boolean
 }
+scalar Time

@@ -281,15 +281,9 @@ func (o *OIDCProvider) HomeHandler(c oauth2.Config) func(rw http.ResponseWriter,
 		rw.Write([]byte(fmt.Sprintf(`
 		<p>You can obtain an access token using various methods</p>
 		<ul>
-			<li>
-				<a href="%s">Authorize code grant (with OpenID Connect)</a>
-			</li>
-			<li>
-				<a href="%s" onclick="setPKCE()">Authorize code grant (with OpenID Connect) with PKCE</a>
-			</li>
-			<li>
-				<a href="%s">Implicit grant (with OpenID Connect)</a>
-			</li>
+			%s
+			%s
+			%s
 			<li>
 				Client credentials grant <a href="/client">using primary secret</a> or <a href="/client-new">using rotateted secret</a>
 			</li>
@@ -315,11 +309,36 @@ func (o *OIDCProvider) HomeHandler(c oauth2.Config) func(rw http.ResponseWriter,
 				document.cookie = '`+cookiePKCE+`=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 			})();
 		</script>`,
+			AuthorizeCodeGrantWithOpenIDConnect(c),
+			AuthorizeCodeGrantWithOpenIDConnectWithPKCE(c),
+			ImplicitGrantWithOpenIDConnect(),
 			c.AuthCodeURL("some-random-state-foobar")+"&nonce=some-random-nonce",
-			c.AuthCodeURL("some-random-state-foobar")+"&nonce=some-random-nonce&code_challenge="+pkceCodeChallenge+"&code_challenge_method=S256",
-			"http://localhost:8080/oidc/auth?client_id=my-client&redirect_uri=http%3A%2F%2Flocalhost%3A3846%2Fcallback&response_type=token%20id_token&scope=fosite%20openid&state=some-random-state-foobar&nonce=some-random-nonce",
-			c.AuthCodeURL("some-random-state-foobar")+"&nonce=some-random-nonce",
-			"/oauth2/auth?client_id=my-client&scope=fosite&response_type=123&redirect_uri=http://localhost:3846/callback",
+			"/oauth2/auth?client_id=my-client&scope=fosite&response_type=123&redirect_uri=http://localhost:8080/callback",
 		)))
 	}
+}
+
+func AuthorizeCodeGrantWithOpenIDConnect(c oauth2.Config) string {
+	return fmt.Sprintf(`
+			<li>
+				<a href="%s">Authorize code grant (with OpenID Connect)</a>
+			</li>
+	`, c.AuthCodeURL("some-random-state-foobar")+"&nonce=some-random-nonce")
+}
+
+func AuthorizeCodeGrantWithOpenIDConnectWithPKCE(c oauth2.Config) string {
+	return fmt.Sprintf(`
+			<li>
+				<a href="%s" onclick="setPKCE()">Authorize code grant (with OpenID Connect) with PKCE</a>
+			</li>
+	`, c.AuthCodeURL("some-random-state-foobar")+"&nonce=some-random-nonce&code_challenge="+pkceCodeChallenge+"&code_challenge_method=S256")
+}
+
+func ImplicitGrantWithOpenIDConnect() string {
+	url := "http://localhost:8080/oidc/auth?client_id=my-client&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fcallback&response_type=token%20id_token&scope=fosite%20openid&state=some-random-state-foobar&nonce=some-random-nonce"
+	return fmt.Sprintf(`
+			<li>
+				<a href="%s">Implicit grant (with OpenID Connect)</a>
+			</li>
+	`, url)
 }

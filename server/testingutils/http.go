@@ -1,9 +1,10 @@
-package testing
+package testingutils
 
 import (
 	"github.com/koalatea/authserver/server/auth"
 	"github.com/koalatea/authserver/server/ent"
 	authserverHttp "github.com/koalatea/authserver/server/http"
+	"github.com/koalatea/authserver/server/oauthclient"
 
 	"net/http"
 )
@@ -15,4 +16,8 @@ func NewRouter(rm authserverHttp.RouteMap, graph *ent.Client) *http.ServeMux {
 		router.Handle(r, auth.HandleUser(graph)(m))
 	}
 	return router
+}
+
+func AddUserAuthToRequest(r *http.Request, user *ent.User) {
+	r.AddCookie(&http.Cookie{Name: oauthclient.SessionCookieName, Value: user.SessionToken})
 }

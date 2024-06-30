@@ -48,7 +48,10 @@ type ComplexityRoot struct {
 	}
 
 	Cert struct {
-		ID func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Pem          func(childComplexity int) int
+		Revoked      func(childComplexity int) int
+		SerialNumber func(childComplexity int) int
 	}
 
 	DenyListedJTI struct {
@@ -59,6 +62,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		RequestCert func(childComplexity int, target string, pubKey string) int
+		RevokeCert  func(childComplexity int, serialNumber string) int
 	}
 
 	OAuthAccessToken struct {
@@ -204,6 +208,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Cert.ID(childComplexity), true
 
+	case "Cert.pem":
+		if e.complexity.Cert.Pem == nil {
+			break
+		}
+
+		return e.complexity.Cert.Pem(childComplexity), true
+
+	case "Cert.revoked":
+		if e.complexity.Cert.Revoked == nil {
+			break
+		}
+
+		return e.complexity.Cert.Revoked(childComplexity), true
+
+	case "Cert.serialNumber":
+		if e.complexity.Cert.SerialNumber == nil {
+			break
+		}
+
+		return e.complexity.Cert.SerialNumber(childComplexity), true
+
 	case "DenyListedJTI.expiration":
 		if e.complexity.DenyListedJTI.Expiration == nil {
 			break
@@ -236,6 +261,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RequestCert(childComplexity, args["target"].(string), args["pubKey"].(string)), true
+
+	case "Mutation.revokeCert":
+		if e.complexity.Mutation.RevokeCert == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revokeCert_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RevokeCert(childComplexity, args["serialNumber"].(string)), true
 
 	case "OAuthAccessToken.id":
 		if e.complexity.OAuthAccessToken.ID == nil {
@@ -789,6 +826,9 @@ input AuthCodeWhereInput {
 }
 type Cert implements Node {
   id: ID!
+  revoked: Boolean!
+  pem: String!
+  serialNumber: Int!
 }
 """
 CertWhereInput is used for filtering Cert objects.
@@ -809,6 +849,38 @@ input CertWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+  """
+  revoked field predicates
+  """
+  revoked: Boolean
+  revokedNEQ: Boolean
+  """
+  pem field predicates
+  """
+  pem: String
+  pemNEQ: String
+  pemIn: [String!]
+  pemNotIn: [String!]
+  pemGT: String
+  pemGTE: String
+  pemLT: String
+  pemLTE: String
+  pemContains: String
+  pemHasPrefix: String
+  pemHasSuffix: String
+  pemEqualFold: String
+  pemContainsFold: String
+  """
+  serial_number field predicates
+  """
+  serialNumber: Int
+  serialNumberNEQ: Int
+  serialNumberIn: [Int!]
+  serialNumberNotIn: [Int!]
+  serialNumberGT: Int
+  serialNumberGTE: Int
+  serialNumberLT: Int
+  serialNumberLTE: Int
 }
 """
 Define a Relay Cursor type:
@@ -1559,6 +1631,7 @@ input UserWhereInput {
 	{Name: "../schema/scalars.graphql", Input: `scalar Time`, BuiltIn: false},
 	{Name: "../schema/mutation.graphql", Input: `type Mutation {
     requestCert(target: String!, pubKey: String!): String!
+    revokeCert(serialNumber: String!): Boolean!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

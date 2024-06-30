@@ -7,6 +7,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/koalatea/authserver/server/ent/authcode"
+	"github.com/koalatea/authserver/server/ent/cert"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
 	"github.com/koalatea/authserver/server/ent/oauthaccesstoken"
 	"github.com/koalatea/authserver/server/ent/oauthclient"
@@ -116,6 +117,37 @@ func (c *CertQuery) CollectFields(ctx context.Context, satisfies ...string) (*Ce
 
 func (c *CertQuery) collectField(ctx context.Context, oneNode bool, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
 	path = append([]string(nil), path...)
+	var (
+		unknownSeen    bool
+		fieldSeen      = make(map[string]struct{}, len(cert.Columns))
+		selectedFields = []string{cert.FieldID}
+	)
+	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
+		switch field.Name {
+		case "revoked":
+			if _, ok := fieldSeen[cert.FieldRevoked]; !ok {
+				selectedFields = append(selectedFields, cert.FieldRevoked)
+				fieldSeen[cert.FieldRevoked] = struct{}{}
+			}
+		case "pem":
+			if _, ok := fieldSeen[cert.FieldPem]; !ok {
+				selectedFields = append(selectedFields, cert.FieldPem)
+				fieldSeen[cert.FieldPem] = struct{}{}
+			}
+		case "serialNumber":
+			if _, ok := fieldSeen[cert.FieldSerialNumber]; !ok {
+				selectedFields = append(selectedFields, cert.FieldSerialNumber)
+				fieldSeen[cert.FieldSerialNumber] = struct{}{}
+			}
+		case "id":
+		case "__typename":
+		default:
+			unknownSeen = true
+		}
+	}
+	if !unknownSeen {
+		c.Select(selectedFields...)
+	}
 	return nil
 }
 

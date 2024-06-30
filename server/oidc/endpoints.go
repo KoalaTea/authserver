@@ -74,6 +74,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Normally, this would be the place where you would check if the user is logged in and gives his consent.
 	// We're simplifying things and just checking if the request includes a valid username and password
 	req.ParseForm()
+	// TODO I don't have a way of providing the openid scope at this moment Probably should have the confirmation of scopes page here
 	// TODO if not authed redirect to login probably just through the endpoint
 
 	// let's see what scopes the user gave consent to

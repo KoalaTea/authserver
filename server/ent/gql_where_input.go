@@ -249,6 +249,35 @@ type CertWhereInput struct {
 	IDGTE   *int  `json:"idGTE,omitempty"`
 	IDLT    *int  `json:"idLT,omitempty"`
 	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "revoked" field predicates.
+	Revoked    *bool `json:"revoked,omitempty"`
+	RevokedNEQ *bool `json:"revokedNEQ,omitempty"`
+
+	// "pem" field predicates.
+	Pem             *string  `json:"pem,omitempty"`
+	PemNEQ          *string  `json:"pemNEQ,omitempty"`
+	PemIn           []string `json:"pemIn,omitempty"`
+	PemNotIn        []string `json:"pemNotIn,omitempty"`
+	PemGT           *string  `json:"pemGT,omitempty"`
+	PemGTE          *string  `json:"pemGTE,omitempty"`
+	PemLT           *string  `json:"pemLT,omitempty"`
+	PemLTE          *string  `json:"pemLTE,omitempty"`
+	PemContains     *string  `json:"pemContains,omitempty"`
+	PemHasPrefix    *string  `json:"pemHasPrefix,omitempty"`
+	PemHasSuffix    *string  `json:"pemHasSuffix,omitempty"`
+	PemEqualFold    *string  `json:"pemEqualFold,omitempty"`
+	PemContainsFold *string  `json:"pemContainsFold,omitempty"`
+
+	// "serial_number" field predicates.
+	SerialNumber      *int64  `json:"serialNumber,omitempty"`
+	SerialNumberNEQ   *int64  `json:"serialNumberNEQ,omitempty"`
+	SerialNumberIn    []int64 `json:"serialNumberIn,omitempty"`
+	SerialNumberNotIn []int64 `json:"serialNumberNotIn,omitempty"`
+	SerialNumberGT    *int64  `json:"serialNumberGT,omitempty"`
+	SerialNumberGTE   *int64  `json:"serialNumberGTE,omitempty"`
+	SerialNumberLT    *int64  `json:"serialNumberLT,omitempty"`
+	SerialNumberLTE   *int64  `json:"serialNumberLTE,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -345,6 +374,75 @@ func (i *CertWhereInput) P() (predicate.Cert, error) {
 	}
 	if i.IDLTE != nil {
 		predicates = append(predicates, cert.IDLTE(*i.IDLTE))
+	}
+	if i.Revoked != nil {
+		predicates = append(predicates, cert.RevokedEQ(*i.Revoked))
+	}
+	if i.RevokedNEQ != nil {
+		predicates = append(predicates, cert.RevokedNEQ(*i.RevokedNEQ))
+	}
+	if i.Pem != nil {
+		predicates = append(predicates, cert.PemEQ(*i.Pem))
+	}
+	if i.PemNEQ != nil {
+		predicates = append(predicates, cert.PemNEQ(*i.PemNEQ))
+	}
+	if len(i.PemIn) > 0 {
+		predicates = append(predicates, cert.PemIn(i.PemIn...))
+	}
+	if len(i.PemNotIn) > 0 {
+		predicates = append(predicates, cert.PemNotIn(i.PemNotIn...))
+	}
+	if i.PemGT != nil {
+		predicates = append(predicates, cert.PemGT(*i.PemGT))
+	}
+	if i.PemGTE != nil {
+		predicates = append(predicates, cert.PemGTE(*i.PemGTE))
+	}
+	if i.PemLT != nil {
+		predicates = append(predicates, cert.PemLT(*i.PemLT))
+	}
+	if i.PemLTE != nil {
+		predicates = append(predicates, cert.PemLTE(*i.PemLTE))
+	}
+	if i.PemContains != nil {
+		predicates = append(predicates, cert.PemContains(*i.PemContains))
+	}
+	if i.PemHasPrefix != nil {
+		predicates = append(predicates, cert.PemHasPrefix(*i.PemHasPrefix))
+	}
+	if i.PemHasSuffix != nil {
+		predicates = append(predicates, cert.PemHasSuffix(*i.PemHasSuffix))
+	}
+	if i.PemEqualFold != nil {
+		predicates = append(predicates, cert.PemEqualFold(*i.PemEqualFold))
+	}
+	if i.PemContainsFold != nil {
+		predicates = append(predicates, cert.PemContainsFold(*i.PemContainsFold))
+	}
+	if i.SerialNumber != nil {
+		predicates = append(predicates, cert.SerialNumberEQ(*i.SerialNumber))
+	}
+	if i.SerialNumberNEQ != nil {
+		predicates = append(predicates, cert.SerialNumberNEQ(*i.SerialNumberNEQ))
+	}
+	if len(i.SerialNumberIn) > 0 {
+		predicates = append(predicates, cert.SerialNumberIn(i.SerialNumberIn...))
+	}
+	if len(i.SerialNumberNotIn) > 0 {
+		predicates = append(predicates, cert.SerialNumberNotIn(i.SerialNumberNotIn...))
+	}
+	if i.SerialNumberGT != nil {
+		predicates = append(predicates, cert.SerialNumberGT(*i.SerialNumberGT))
+	}
+	if i.SerialNumberGTE != nil {
+		predicates = append(predicates, cert.SerialNumberGTE(*i.SerialNumberGTE))
+	}
+	if i.SerialNumberLT != nil {
+		predicates = append(predicates, cert.SerialNumberLT(*i.SerialNumberLT))
+	}
+	if i.SerialNumberLTE != nil {
+		predicates = append(predicates, cert.SerialNumberLTE(*i.SerialNumberLTE))
 	}
 
 	switch len(predicates) {
