@@ -23,6 +23,21 @@ type CertProvider struct {
 	graph *ent.Client
 }
 
+// generateRandomInt64 generates a random int64 value using crypto/rand
+func generateRandomInt64() (int64, error) {
+	// Create a big.Int with the maximum value for int64
+	max := big.NewInt(1<<63 - 1)
+
+	// Generate a random big.Int value between 0 and max
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+
+	// Convert the big.Int value to int64
+	return n.Int64(), nil
+}
+
 // TODO put certs in common dir or load certs from configuration
 func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 	ca := &x509.Certificate{
@@ -94,26 +109,14 @@ func pemToPublicKey(pemStr string) (*rsa.PublicKey, error) {
 
 func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pemPubKey string) (string, error) {
 	// TODO return errors up here
-	tx, err := p.graph.Tx(ctx)
-	if err != nil {
-		return "", err
-	}
-	client := tx.Client()
-	// Rollback transaction if we panic
-	defer func() {
-		if v := recover(); v != nil {
-			tx.Rollback()
-			panic(v)
-		}
-	}()
-	certCount, err := client.Cert.Query().Count(ctx)
-	if err != nil {
-		fmt.Printf("%+v", err)
-	}
 
+	serialNumber, err := generateRandomInt64()
+	if err != nil {
+		return "", fmt.Errorf("error generating random int64 for serialNumber: %w", err)
+	}
 	// create cert to sign
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(int64(certCount)),
+		SerialNumber: big.NewInt(serialNumber),
 		Subject: pkix.Name{
 			CommonName: target,
 		},
@@ -132,7 +135,6 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pem
 	// sign cert with the CA
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p.ca, pubKey, p.key)
 	if err != nil {
-		tx.Rollback()
 		return "", err
 	}
 
@@ -142,16 +144,11 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pem
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
-	createdCert, err := client.Cert.Create().SetPem(certPEM.String()).SetSerialNumber(cert.SerialNumber.Int64()).Save(ctx)
+	createdCert, err := p.graph.Cert.Create().SetPem(certPEM.String()).SetSerialNumber(cert.SerialNumber.Int64()).Save(ctx)
 	if err != nil {
-		tx.Rollback()
 		return "", err
 	}
 
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return "", fmt.Errorf("failed to commit transaction: %w", err)
-	}
 	return createdCert.Pem, nil
 }
 
