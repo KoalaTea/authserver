@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -14,8 +14,8 @@ type FileConfig struct {
 		CAPrivKey string `json:"ca_priv_key"`
 	} `json:"certificates"`
 	OAuth struct {
-		ClientID  string `json:"client_id"`
-		SecretKey string `json:"secret_key"`
+		ClientIDFile  string `json:"client_id_file"`
+		SecretKeyFile string `json:"secret_key_file"`
 	} `json:"oauth"`
 	PProfEnabled bool `json:"enable_pprof,omitempty"`
 	BypassAuth   bool `json:"bypass_auth,omitempty"`
@@ -33,40 +33,40 @@ type Config struct {
 func getConfig(fileName string) *Config {
 	f, err := os.Open(fileName)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to open config file '%s': %v", fileName, err)
 	}
 	defer f.Close()
 
 	jsonBytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to read config file '%s': %v", fileName, err)
 	}
 
 	cfg := &FileConfig{}
 	err = json.Unmarshal(jsonBytes, cfg)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to parse config file '%s': %v", err)
 	}
 
-	f, err = os.Open(cfg.OAuth.ClientID)
+	f, err = os.Open(cfg.OAuth.ClientIDFile)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to open configured client_id_file '%s': %v", cfg.OAuth.ClientIDFile, err)
 	}
 	defer f.Close()
 	clientIDBytes, err := io.ReadAll(f)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to read configured client_id_file '%s': %v", cfg.OAuth.ClientIDFile, err)
 	}
 	clientID := string(clientIDBytes)
 
-	f, err = os.Open(cfg.OAuth.SecretKey)
+	f, err = os.Open(cfg.OAuth.SecretKeyFile)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to open configured secret_key_file '%s': %v", cfg.OAuth.SecretKeyFile, err)
 	}
 	defer f.Close()
 	secretKeyBytes, err := io.ReadAll(f)
 	if err != nil {
-		fmt.Errorf("%w", err)
+		log.Fatalf("Failed to read configured secret_key_file '%s': %v", cfg.OAuth.SecretKeyFile, err)
 	}
 	secretKey := string(secretKeyBytes)
 
