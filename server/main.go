@@ -2,14 +2,21 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"log/slog"
+	"net/http"
 	"os"
 
 	_ "github.com/koalatea/authserver/server/ent/runtime"
+	"go.opentelemetry.io/otel"
 
 	_ "github.com/mattn/go-sqlite3"
-	"go.opentelemetry.io/otel"
 )
+
+func init() {
+	configureLogging()
+}
 
 func main() {
 	ctx := context.Background()
@@ -26,12 +33,15 @@ func main() {
 	}
 	tp := newTraceProvider(exp)
 	defer func() { _ = tp.Shutdown(ctx) }()
+	slog.InfoContext(ctx, "Starting tracing")
 	otel.SetTracerProvider(tp)
 
 	// Run AuthServer
-	server := newServer(ctx)
-	log.Println("starting server")
-	if err := server.Run(ctx); err != nil {
-		log.Fatalf("server fatal error: %v", err)
+	server, err := newServer(ctx, configureFromFile("server/nopush/config.json"))
+	if err != nil {
+		log.Fatalf("AuthServer failed to initialize: %v", err)
+	}
+	if err := server.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("AuthServer fatal error: %v", err)
 	}
 }

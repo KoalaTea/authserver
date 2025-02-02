@@ -30,45 +30,50 @@ type Config struct {
 	BypassAuth   bool
 }
 
-func getConfig(fileName string) *Config {
-	f, err := os.Open(fileName)
-	if err != nil {
-		log.Fatalf("Failed to open config file '%s': %v", fileName, err)
-	}
-	defer f.Close()
+func configureFromFile(fileName string) func(*Config) {
+	return func(cfg *Config) {
+		f, err := os.Open(fileName)
+		if err != nil {
+			log.Fatalf("Failed to open config file '%s': %v", fileName, err)
+		}
+		defer f.Close()
 
-	jsonBytes, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Fatalf("Failed to read config file '%s': %v", fileName, err)
-	}
+		jsonBytes, err := ioutil.ReadAll(f)
+		if err != nil {
+			log.Fatalf("Failed to read config file '%s': %v", fileName, err)
+		}
 
-	cfg := &FileConfig{}
-	err = json.Unmarshal(jsonBytes, cfg)
-	if err != nil {
-		log.Fatalf("Failed to parse config file '%s': %v", err)
-	}
+		fileCFG := &FileConfig{}
+		err = json.Unmarshal(jsonBytes, fileCFG)
+		if err != nil {
+			log.Fatalf("Failed to parse config file '%s': %v", err)
+		}
 
-	f, err = os.Open(cfg.OAuth.ClientIDFile)
-	if err != nil {
-		log.Fatalf("Failed to open configured client_id_file '%s': %v", cfg.OAuth.ClientIDFile, err)
-	}
-	defer f.Close()
-	clientIDBytes, err := io.ReadAll(f)
-	if err != nil {
-		log.Fatalf("Failed to read configured client_id_file '%s': %v", cfg.OAuth.ClientIDFile, err)
-	}
-	clientID := string(clientIDBytes)
+		cfg.PProfEnabled = fileCFG.PProfEnabled
+		cfg.BypassAuth = fileCFG.BypassAuth
 
-	f, err = os.Open(cfg.OAuth.SecretKeyFile)
-	if err != nil {
-		log.Fatalf("Failed to open configured secret_key_file '%s': %v", cfg.OAuth.SecretKeyFile, err)
-	}
-	defer f.Close()
-	secretKeyBytes, err := io.ReadAll(f)
-	if err != nil {
-		log.Fatalf("Failed to read configured secret_key_file '%s': %v", cfg.OAuth.SecretKeyFile, err)
-	}
-	secretKey := string(secretKeyBytes)
+		f, err = os.Open(fileCFG.OAuth.ClientIDFile)
+		if err != nil {
+			log.Fatalf("Failed to open configured client_id_file '%s': %v", fileCFG.OAuth.ClientIDFile, err)
+		}
+		defer f.Close()
+		clientIDBytes, err := io.ReadAll(f)
+		if err != nil {
+			log.Fatalf("Failed to read configured client_id_file '%s': %v", fileCFG.OAuth.ClientIDFile, err)
+		}
+		clientID := string(clientIDBytes)
+		cfg.ClientID = clientID
 
-	return &Config{CA: "", CAPrivKey: "", ClientID: clientID, SecretKey: secretKey, PProfEnabled: cfg.PProfEnabled, BypassAuth: cfg.BypassAuth}
+		f, err = os.Open(fileCFG.OAuth.SecretKeyFile)
+		if err != nil {
+			log.Fatalf("Failed to open configured secret_key_file '%s': %v", fileCFG.OAuth.SecretKeyFile, err)
+		}
+		defer f.Close()
+		secretKeyBytes, err := io.ReadAll(f)
+		if err != nil {
+			log.Fatalf("Failed to read configured secret_key_file '%s': %v", fileCFG.OAuth.SecretKeyFile, err)
+		}
+		secretKey := string(secretKeyBytes)
+		cfg.SecretKey = secretKey
+	}
 }

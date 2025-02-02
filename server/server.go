@@ -5,7 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/pprof"
 
@@ -29,15 +29,71 @@ import (
 )
 
 type Server struct {
-	client *ent.Client
+	HTTP        *http.Server
+	MetricsHTTP *http.Server
+	graph       *ent.Client
 }
 
-func newServer(ctx context.Context, options ...func(*Server)) *Server {
-	s := &Server{}
+func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
+	cfg := &Config{}
 	for _, opt := range options {
-		opt(s)
+		opt(cfg)
 	}
-	return s
+
+	// Initialize oauth config
+	oauth := oauth2.Config{
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.SecretKey,
+		RedirectURL:  "http://localhost:8080/oauth/authorize",
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+		Endpoint: google.Endpoint,
+	}
+	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to generate keys for usage in oauth flow", "err", err)
+	}
+
+	// Create Ent Client and Initialize graph schema
+	graph, err := dbConnect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create Certificate Provider
+	certProvider, err := certificates.NewCertProvider(graph)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to initialize certProvider", "err", err)
+	}
+
+	// Create OIDC Provider
+	oidcProvider := oidc.NewOIDCProvider(graph)
+	// This is for the actual handlers of the server itsself
+	// httpLogger := log.New(os.Stderr, "[HTTP] ", log.Flags())
+	// Setup routes
+	routes := authserverHttp.RouteMap{}
+	routes.Handle("/graphql/playground", playground.Handler("playground", "/graphql"))
+	routes.Handle("/graphql", newGraphqlHandler(graph, certProvider))
+	routes.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey), authserverHttp.AllowUnauthenticated())
+	routes.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"), authserverHttp.AllowUnauthenticated())
+	routes.Extend(oidcProvider.GetHandlers())
+	router := authserverHttp.NewRouter(graph, routes, cfg.BypassAuth)
+
+	// If performance profiling has been enabled, register the profiling routes
+	if cfg.PProfEnabled {
+		// TODO I think recording this as a guage metric that says DEVELOPMENT ONLY FEATURE ENABLED type thing could be interesting
+		// Along with guages for each one following the same preset prefix so people can alert on the metric showing up in production
+		// and see which features are enabled
+		// Currently these would be bypass auth and performance profiling
+		slog.WarnContext(ctx, "performance profiling is enabled, do not use in production as this may leak sensitive information")
+		registerProfiler(router)
+	}
+
+	// run the Metric server and the authserver
+	metricsHTTP := newMetricsServer()
+	s := &Server{MetricsHTTP: metricsHTTP, HTTP: &http.Server{Addr: "0.0.0.0:8080", Handler: router}}
+	return s, nil
 }
 
 func newMetricsServer() *http.Server {
@@ -50,7 +106,7 @@ func newMetricsServer() *http.Server {
 	}
 }
 
-func initEnt() (*ent.Client, error) {
+func dbConnect(ctx context.Context) (*ent.Client, error) {
 	// in memory
 	mysqlDSN := "file:ent?mode=memory&cache=shared&_fk=1"
 	// file on disk
@@ -75,7 +131,8 @@ func initEnt() (*ent.Client, error) {
 		context.Background(),
 		migrate.WithGlobalUniqueID(true),
 	); err != nil {
-		log.Printf("failed to initialize graph schema: %s", err)
+		graph.Close()
+		return nil, fmt.Errorf("failed to initialize graph schema: %w", err)
 	}
 	return graph, nil
 }
@@ -92,71 +149,26 @@ func newGraphqlHandler(graph *ent.Client, certProvider *certificates.CertProvide
 }
 
 func (srv *Server) Run(ctx context.Context) error {
-	// Initialize config
-	cfg := getConfig("server/nopush/config.json")
-
-	// Initialize oauth config
-	oauth := oauth2.Config{
-		ClientID:     cfg.ClientID,
-		ClientSecret: cfg.SecretKey,
-		RedirectURL:  "http://localhost:8080/oauth/authorize",
-		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.profile",
-		},
-		Endpoint: google.Endpoint,
-	}
-	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		log.Printf("Failed to generate keys for usage in oauth flow: %s", err)
-	}
-
-	// Create Ent Client and Initialize graph schema
-	graph, err := initEnt()
-	if err != nil {
-		return err
-	}
-
-	// Create Certificate Provider
-	certProvider, err := certificates.NewCertProvider(graph)
-	if err != nil {
-		log.Printf("failed to initialize certProvider")
-	}
-
-	// Create OIDC Provider
-	oidcProvider := oidc.NewOIDCProvider(graph)
-
-	// Setup routes
-	routes := authserverHttp.RouteMap{}
-	routes.Handle("/graphql/playground", playground.Handler("playground", "/graphql"))
-	routes.Handle("/graphql", newGraphqlHandler(graph, certProvider))
-	routes.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey), authserverHttp.AllowUnauthenticated())
-	routes.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"), authserverHttp.AllowUnauthenticated())
-	routes.Extend(oidcProvider.GetHandlers())
-	router := authserverHttp.NewRouter(graph, routes, cfg.BypassAuth)
-
-	// If performance profiling has been enabled, register the profiling routes
-	if cfg.PProfEnabled {
-		// TODO I think recording this as a guage metric that says DEVELOPMENT ONLY FEATURE ENABLED type thing could be interesting
-		// Along with guages for each one following the same preset prefix so people can alert on the metric showing up in production
-		// and see which features are enabled
-		// Currently these would be bypass auth and performance profiling
-		log.Printf("[WARN] Performance profiling is enabled, do not use in production as this may leak sensitive information")
-		registerProfiler(router)
-	}
-
-	// run the Metric server and the authserver
-	metricsHTTP := newMetricsServer()
+	defer srv.Close()
 	go func() {
-		log.Printf("Metrics HTTP Server started on %s", metricsHTTP.Addr)
-		if err := metricsHTTP.ListenAndServe(); err != nil {
-			log.Printf("[WARN] stopped metrics http server: %v", err)
+		slog.InfoContext(ctx, "Metrics HTTP started", "metrics_addr", srv.MetricsHTTP.Addr)
+		if err := srv.MetricsHTTP.ListenAndServe(); err != nil {
+			slog.WarnContext(ctx, "stopped metrics http server", "err", err)
 		}
 	}()
-	log.Printf("Starting HTTP server on %s", "0.0.0.0:8080")
-	if err := http.ListenAndServe("0.0.0.0:8080", router); err != nil {
+	slog.InfoContext(ctx, "AutherServer HHTP started", "http_addr", srv.HTTP.Addr)
+	if err := srv.HTTP.ListenAndServe(); err != nil {
 		return fmt.Errorf("stopped http server: %w", err)
 	}
 	return nil
+}
+
+func (srv *Server) Close() error {
+	srv.HTTP.Shutdown(context.Background())
+	if srv.MetricsHTTP != nil {
+		srv.MetricsHTTP.Shutdown(context.Background())
+	}
+	return srv.graph.Close()
 }
 
 func registerProfiler(router *http.ServeMux) {

@@ -61,6 +61,8 @@ func registerRoute(graph *ent.Client, router *http.ServeMux, bypassAuth bool, pa
 	router.Handle(pattern, applyMiddleware(graph, bypassAuth, handler, pattern))
 }
 
+// Adds the middleware that handles authenication and context user injection
+// if bypassAuth is requested then ensures a user is in injected in every requests
 func applyAuth(graph *ent.Client, chain http.Handler, bypassAuth bool) http.Handler {
 	if bypassAuth {
 		chain = auth.AuthenticationBypass(graph)(chain)
@@ -71,6 +73,7 @@ func applyAuth(graph *ent.Client, chain http.Handler, bypassAuth bool) http.Hand
 }
 
 func applyMiddleware(graph *ent.Client, bypassAuth bool, handler http.Handler, route string) http.Handler {
+	// otelhttp -> httpMetrics -> auth -> applogic
 	chain := handler
 	chain = applyAuth(graph, chain, bypassAuth)
 	chain = instrumentHttpMetrics(route, chain)
