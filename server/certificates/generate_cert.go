@@ -182,6 +182,8 @@ func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvi
 }
 
 func (p *CertProvider) RevokeCertificate(ctx context.Context, serialNumber int64) error {
+	// Should this be in the graphql stuff? Want to walk through this with kyle actually
+	// Should this have a TX or is transactionator dealing with this?
 	tx, err := p.graph.Tx(ctx)
 	if err != nil {
 		return err
