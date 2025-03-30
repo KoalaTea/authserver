@@ -7,11 +7,14 @@ const router = createBrowserRouter([
     path: "/",
     element: <UserList />,
   }
-])
+], { basename: "/www" })
 
 function App() {
   return (
-    <RouterProvider router={router} />
+    <div>
+      <RouterProvider router={router} />
+      <p>WHAT</p>
+    </div>
   );
 }
 
