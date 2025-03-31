@@ -5,9 +5,11 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"net/http/pprof"
+	"os"
 
 	"entgo.io/contrib/entgql"
 	"entgo.io/ent/dialect"
@@ -21,6 +23,7 @@ import (
 	"github.com/koalatea/authserver/server/ent/migrate"
 	"github.com/koalatea/authserver/server/graphql"
 	authserverHttp "github.com/koalatea/authserver/server/http"
+	"github.com/koalatea/authserver/server/internal/www"
 	"github.com/koalatea/authserver/server/oauthclient"
 	"github.com/koalatea/authserver/server/oidc"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -69,14 +72,14 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 
 	// Create OIDC Provider
 	oidcProvider := oidc.NewOIDCProvider(graph)
-	// This is for the actual handlers of the server itsself
-	// httpLogger := log.New(os.Stderr, "[HTTP] ", log.Flags())
+	httpLogger := log.New(os.Stderr, "[HTTP] ", log.Flags())
 	// Setup routes
 	routes := authserverHttp.RouteMap{}
 	routes.Handle("/graphql/playground", playground.Handler("playground", "/graphql"))
 	routes.Handle("/graphql", newGraphqlHandler(graph, certProvider))
 	routes.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey), authserverHttp.AllowUnauthenticated())
 	routes.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"), authserverHttp.AllowUnauthenticated())
+	routes.Handle("/www/", www.NewHandler(httpLogger)) // last slash is required to work with react
 	routes.Extend(oidcProvider.GetHandlers())
 	router := authserverHttp.NewRouter(graph, routes, cfg.BypassAuth)
 
@@ -156,7 +159,7 @@ func (srv *Server) Run(ctx context.Context) error {
 			slog.WarnContext(ctx, "stopped metrics http server", "err", err)
 		}
 	}()
-	slog.InfoContext(ctx, "AutherServer HHTP started", "http_addr", srv.HTTP.Addr)
+	slog.InfoContext(ctx, "AutherServer HTTP started", "http_addr", srv.HTTP.Addr)
 	if err := srv.HTTP.ListenAndServe(); err != nil {
 		return fmt.Errorf("stopped http server: %w", err)
 	}

@@ -7,7 +7,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <UserList />,
   }
-])
+], { basename: "/www" })
 
 function App() {
   return (
