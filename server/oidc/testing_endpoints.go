@@ -23,7 +23,7 @@ import (
 
 func (o *OIDCProvider) RegisterTestHandlers() authserverHttp.RouteMap {
 	routes := authserverHttp.RouteMap{}
-	// routes.HandleFunc("/", o.HomeHandler(clientConf))
+	routes.HandleFunc("/", o.HomeHandler(clientConf))
 	routes.HandleFunc("/callback", o.CallbackHandler(clientConf))
 	return routes
 }
