@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var (
@@ -39,4 +40,12 @@ func instrumentHttpMetrics(request_uri string, handler http.Handler) http.Handle
 	return promhttp.InstrumentHandlerInFlight(inFlightGauge,
 		promhttp.InstrumentHandlerDuration(httpLatency.MustCurryWith(prometheus.Labels{"request_uri": request_uri}),
 			promhttp.InstrumentHandlerCounter(httpRequests.MustCurryWith(prometheus.Labels{"request_uri": request_uri}), handler)))
+}
+
+func addHttpTelemetry(route string, handler http.Handler) http.Handler {
+	return otelhttp.NewHandler(
+		instrumentHttpMetrics(route,
+			handler,
+		),
+		route)
 }

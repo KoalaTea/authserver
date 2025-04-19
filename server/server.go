@@ -22,7 +22,7 @@ import (
 	"github.com/koalatea/authserver/server/ent"
 	"github.com/koalatea/authserver/server/ent/migrate"
 	"github.com/koalatea/authserver/server/graphql"
-	authserverHttp "github.com/koalatea/authserver/server/http"
+	internalHttp "github.com/koalatea/authserver/server/internal/http"
 	"github.com/koalatea/authserver/server/internal/www"
 	"github.com/koalatea/authserver/server/oauthclient"
 	"github.com/koalatea/authserver/server/oidc"
@@ -73,15 +73,27 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 	// Create OIDC Provider
 	oidcProvider := oidc.NewOIDCProvider(graph)
 	httpLogger := log.New(os.Stderr, "[HTTP] ", log.Flags())
-	// Setup routes
-	routes := authserverHttp.RouteMap{}
-	routes.Handle("/graphql/playground", playground.Handler("playground", "/graphql"))
-	routes.Handle("/graphql", newGraphqlHandler(graph, certProvider))
-	routes.Handle("/oauth/login", oauthclient.NewOAuthLoginHandler(oauth, privKey), authserverHttp.AllowUnauthenticated())
-	routes.Handle("/oauth/authorize", oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"), authserverHttp.AllowUnauthenticated())
-	routes.Handle("/www/", www.NewHandler(httpLogger)) // last slash is required to work with react
+	routes := internalHttp.RouteMap{
+		"/graphql/playground": internalHttp.Endpoint{
+			Handler: playground.Handler("playground", "/graphql"),
+		},
+		"/graphql": internalHttp.Endpoint{
+			Handler: newGraphqlHandler(graph, certProvider),
+		},
+		"/oauth/login": internalHttp.Endpoint{
+			Handler:              oauthclient.NewOAuthLoginHandler(oauth, privKey),
+			AllowUnauthenticated: true,
+		},
+		"/oauth/authorize": internalHttp.Endpoint{
+			Handler:              oauthclient.NewOAuthAuthorizationHandler(oauth, pubKey, graph, "https://www.googleapis.com/oauth2/v3/userinfo"),
+			AllowUnauthenticated: true,
+		},
+		// trailing slash is required to work with react
+		"/www/": internalHttp.Endpoint{
+			Handler: www.NewHandler(httpLogger),
+		},
+	}
 	routes.Extend(oidcProvider.GetHandlers())
-	router := authserverHttp.NewRouter(graph, routes, cfg.BypassAuth)
 
 	// If performance profiling has been enabled, register the profiling routes
 	if cfg.PProfEnabled {
@@ -90,8 +102,10 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 		// and see which features are enabled
 		// Currently these would be bypass auth and performance profiling
 		slog.WarnContext(ctx, "performance profiling is enabled, do not use in production as this may leak sensitive information")
-		registerProfiler(router)
+		registerProfiler(routes)
 	}
+
+	router := internalHttp.NewServer(routes, internalHttp.WithAuthenticationBypass(graph))
 
 	// run the Metric server and the authserver
 	metricsHTTP := newMetricsServer()
@@ -174,7 +188,7 @@ func (srv *Server) Close() error {
 	return srv.graph.Close()
 }
 
-func registerProfiler(router *http.ServeMux) {
+func registerProfiler(router internalHttp.RouteMap) {
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	router.HandleFunc("/debug/pprof/profile", pprof.Profile)

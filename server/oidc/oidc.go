@@ -3,13 +3,15 @@ package oidc
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"net/http"
 	"time"
 
 	"github.com/ory/fosite"
 	"go.opentelemetry.io/otel"
 
 	"github.com/koalatea/authserver/server/ent"
-	authserverHttp "github.com/koalatea/authserver/server/http"
+	internalHttp "github.com/koalatea/authserver/server/internal/http"
+
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
@@ -22,13 +24,22 @@ type OIDCProvider struct {
 	oauth2      fosite.OAuth2Provider
 }
 
-func (o *OIDCProvider) GetHandlers() authserverHttp.RouteMap {
+func (o *OIDCProvider) GetHandlers() internalHttp.RouteMap {
 	// TODO Set up oauth2 endpoints
-	routes := authserverHttp.RouteMap{}
-	routes.HandleFunc("/oidc/auth", o.authEndpoint)
-	routes.HandleFunc("/oidc/token", o.tokenEndpoint)
-	routes.HandleFunc("/oidc/revoke", o.revokeEndpoint)
-	routes.HandleFunc("/oidc/introspect", o.introspectionEndpoint)
+	routes := internalHttp.RouteMap{
+		"/oidc/auth": internalHttp.Endpoint{
+			Handler: http.HandlerFunc(o.authEndpoint),
+		},
+		"/oidc/token": internalHttp.Endpoint{
+			Handler: http.HandlerFunc(o.tokenEndpoint),
+		},
+		"/oidc/revoke": internalHttp.Endpoint{
+			Handler: http.HandlerFunc(o.revokeEndpoint),
+		},
+		"/oidc/introspect": internalHttp.Endpoint{
+			Handler: http.HandlerFunc(o.introspectionEndpoint),
+		},
+	}
 	// Helper functions for manual testing that things work
 	test_routes := o.RegisterTestHandlers()
 	routes.Extend(test_routes)
