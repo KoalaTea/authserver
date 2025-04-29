@@ -142,6 +142,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		Me    func(childComplexity int) int
 		Node  func(childComplexity int, id int) int
 		Nodes func(childComplexity int, ids []int) int
 		Users func(childComplexity int) int
@@ -596,6 +597,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PublicJWKSet.ID(childComplexity), true
 
+	case "Query.me":
+		if e.complexity.Query.Me == nil {
+			break
+		}
+
+		return e.complexity.Query.Me(childComplexity), true
+
 	case "Query.node":
 		if e.complexity.Query.Node == nil {
 			break
@@ -767,7 +775,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema/query.graphql", Input: `directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+	{Name: "../schema/ent.graphql", Input: `directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 directive @goModel(model: String, models: [String!], forceGenerate: Boolean) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 type AuthCode implements Node {
   id: ID!
@@ -1628,6 +1636,9 @@ input UserWhereInput {
   isactivatedNEQ: Boolean
 }
 `, BuiltIn: false},
+	{Name: "../schema/query.graphql", Input: `extend type Query {
+  me: User!
+}`, BuiltIn: false},
 	{Name: "../schema/scalars.graphql", Input: `scalar Time`, BuiltIn: false},
 	{Name: "../schema/mutation.graphql", Input: `type Mutation {
     requestCert(target: String!, pubKey: String!): String!

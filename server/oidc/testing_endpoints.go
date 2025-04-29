@@ -17,14 +17,24 @@ import (
 	"strings"
 	"time"
 
-	authserverHttp "github.com/koalatea/authserver/server/http"
+	internalHttp "github.com/koalatea/authserver/server/internal/http"
+
 	"golang.org/x/oauth2"
 )
 
-func (o *OIDCProvider) RegisterTestHandlers() authserverHttp.RouteMap {
-	routes := authserverHttp.RouteMap{}
-	routes.HandleFunc("/", o.HomeHandler(clientConf))
-	routes.HandleFunc("/callback", o.CallbackHandler(clientConf))
+func (o *OIDCProvider) RegisterTestHandlers() internalHttp.RouteMap {
+	routes := internalHttp.RouteMap{
+		"/": internalHttp.Endpoint{
+			Handler:              http.HandlerFunc(o.HomeHandler(clientConf)),
+			AllowUnauthenticated: true,
+			AllowUnactivated:     true,
+		},
+		"/callback": internalHttp.Endpoint{
+			Handler:              http.HandlerFunc(o.CallbackHandler(clientConf)),
+			AllowUnauthenticated: true,
+			AllowUnactivated:     true,
+		},
+	}
 	return routes
 }
 

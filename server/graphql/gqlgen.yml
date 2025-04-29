@@ -1,4 +1,5 @@
 schema:
+  - schema/ent.graphql
   - schema/query.graphql
   - schema/scalars.graphql
   - schema/mutation.graphql

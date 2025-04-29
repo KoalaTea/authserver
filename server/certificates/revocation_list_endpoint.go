@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/koalatea/authserver/server/ent/cert"
-	authserverHttp "github.com/koalatea/authserver/server/http"
+	internalHttp "github.com/koalatea/authserver/server/internal/http"
 )
 
 func (p *CertProvider) buildCrl(ctx context.Context) ([]byte, error) {
@@ -69,8 +69,11 @@ func (p *CertProvider) crlHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(crlBytes)
 }
 
-func Endpoints(p *CertProvider) authserverHttp.RouteMap {
-	routes := authserverHttp.RouteMap{}
-	routes.HandleFunc("/certs/crl", p.crlHandler)
+func Endpoints(p *CertProvider) internalHttp.RouteMap {
+	routes := internalHttp.RouteMap{
+		"/certs/crl": internalHttp.Endpoint{
+			Handler: http.HandlerFunc(p.crlHandler),
+		},
+	}
 	return routes
 }

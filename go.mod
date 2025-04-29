@@ -14,6 +14,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/ory/fosite v0.46.1
 	github.com/prometheus/client_golang v1.19.1
+	github.com/stretchr/testify v1.9.0
 	github.com/vektah/gqlparser/v2 v2.5.11
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
 	go.opentelemetry.io/otel v1.27.0
@@ -92,7 +93,6 @@ require (
 	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.9 // indirect

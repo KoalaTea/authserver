@@ -15,7 +15,7 @@ import (
 	"github.com/koalatea/authserver/server/certificates"
 	"github.com/koalatea/authserver/server/ent/enttest"
 	"github.com/koalatea/authserver/server/graphql"
-	authServerHttp "github.com/koalatea/authserver/server/http"
+	authServerHttp "github.com/koalatea/authserver/server/internal/http"
 	"github.com/koalatea/authserver/server/testingutils"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -38,7 +38,7 @@ func TestRequestCertMutation(t *testing.T) {
 	c, _ := certificates.NewCertProvider(graph)
 	routes := authServerHttp.RouteMap{}
 	routes.Handle("/graphql", handler.NewDefaultServer(graphql.NewSchema(graph, c)))
-	router := testingutils.NewRouter(routes, graph)
+	router := authServerHttp.NewServer(routes, authServerHttp.WithAuthenticationBypass(graph))
 	gqlClient := client.New(router, client.Path("/graphql"))
 
 	mut := `

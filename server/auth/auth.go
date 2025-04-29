@@ -32,19 +32,14 @@ func FromContext(ctx context.Context) Viewer {
 	return v
 }
 
-// UserFromContext returns an User viewer from a context.
-// If the viewer was not a user, returns an error.
-func UserFromContext(ctx context.Context) (*ent.User, error) {
-	v := FromContext(ctx)
-	if v == nil {
-		return &ent.User{}, ErrNoViewer
+// UserFromContext returns the user identity associated with the provided context, or nil if no user identity or a different identity type is associated.
+func UserFromContext(ctx context.Context) *ent.User {
+	val := ctx.Value(ctxKey{})
+	u, ok := val.(*ent.User)
+	if !ok || u == nil {
+		return nil
 	}
-
-	user, ok := v.(*ent.User)
-	if !ok {
-		return &ent.User{}, ErrInvalidViewer
-	}
-	return user, nil
+	return u
 }
 
 // NewContext returns a copy of parent context with the given Viewer attached with it.
@@ -140,8 +135,14 @@ func resetAuthCookie(w http.ResponseWriter) {
 
 // IsAuthenticatedContext returns true if the context is associated with an authenticated identity, false otherwise.
 func IsAuthenticated(ctx context.Context) bool {
-	u, err := UserFromContext(ctx)
-	if err != nil {
+	u := UserFromContext(ctx)
+	return u != nil
+}
+
+// IsAuthenticatedContext returns true if the context is associated with an authenticated identity, false otherwise.
+func IsActivated(ctx context.Context) bool {
+	u := UserFromContext(ctx)
+	if u == nil {
 		return false
 	}
 

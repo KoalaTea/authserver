@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/koalatea/authserver/server/auth"
+	"github.com/koalatea/authserver/server/ent"
 	"github.com/ory/fosite"
 )
 
@@ -84,10 +85,11 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO fix this
-	user, err := auth.UserFromContext(req.Context())
-	if err != nil {
-		log.Printf("Error occurred in authEndpoint UserFromContext: %+v", err)
+	user := auth.UserFromContext(req.Context())
+	if user == nil {
+		log.Printf("No user: %+v")
 		o.oauth2.WriteAuthorizeError(ctx, rw, ar, err) // TODO probably simplify this not write out error to console
+		user = &ent.User{}
 	}
 	mySessionData := newSession(user.Name)
 

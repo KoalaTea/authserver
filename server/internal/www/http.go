@@ -15,29 +15,33 @@ type Handler struct {
 
 // Content embedded from the application's build directory, includes the latest build of the UI.
 //
-//go:embed build/*.png build/*.html build/*.json build/*.txt build/*.ico
-//go:embed build/static/*
+
+//go:embed dist/*.html dist/*.svg
+//go:embed dist/assets/*
 var Content embed.FS
 
 // ServeHTTP provides the Authserver UI, if the requested file does not exist it will serve index.html
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	// TODO for now this is served on /www/ which has 4 places it is set.
-	// Here for the path trim for static files, package.json for hostname, app.tsx for basename
+	// TODO for now this is served on /www/ which has 5 places it is set.
+	// Here for the path trim for static files, package.json for hostname, app.tsx for basename, and vite.config.js
 	// and server.go for the http handler path
 	// Serve the requested file
-	path := fmt.Sprintf("build/%s", strings.TrimPrefix(r.URL.Path, "/www/"))
+	path := fmt.Sprintf("dist/%s", strings.TrimPrefix(r.URL.Path, "/www/"))
 	content, err := Content.ReadFile(path)
 	if err == nil {
 		if strings.HasSuffix(path, ".css") {
 			w.Header().Add("Content-Type", "text/css")
+		}
+		if strings.HasSuffix(path, ".js") {
+			w.Header().Add("Content-Type", "text/javascript")
 		}
 		w.Write(content)
 		return
 	}
 
 	// Otherwise serve index.html
-	index, err := Content.ReadFile("build/index.html")
+	index, err := Content.ReadFile("dist/index.html")
 	if err != nil {
 		h.logger.Printf("fatal error: failed to read index.html: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)

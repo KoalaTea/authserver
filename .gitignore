@@ -24,3 +24,5 @@ cmd/devtools/bootstrap/bootstrap
 node_modules
 nopush
 result
+# as per vite recommendations
+*.local
