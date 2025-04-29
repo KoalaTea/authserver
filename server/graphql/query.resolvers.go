@@ -6,33 +6,16 @@ package graphql
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/koalatea/authserver/server/auth"
 	"github.com/koalatea/authserver/server/ent"
-	"github.com/koalatea/authserver/server/graphql/generated"
 )
 
-// Node is the resolver for the node field.
-func (r *queryResolver) Node(ctx context.Context, id int) (ent.Noder, error) {
-	ctx, span := tracer.Start(ctx, "Node")
-	defer span.End()
-	return r.client.Noder(ctx, id)
+// Me is the resolver for the me field.
+func (r *queryResolver) Me(ctx context.Context) (*ent.User, error) {
+	if authUser := auth.UserFromContext(ctx); authUser != nil {
+		return authUser, nil
+	}
+	return nil, fmt.Errorf("no authenticated user present in request context")
 }
-
-// Nodes is the resolver for the nodes field.
-func (r *queryResolver) Nodes(ctx context.Context, ids []int) ([]ent.Noder, error) {
-	ctx, span := tracer.Start(ctx, "Nodes")
-	defer span.End()
-	return r.client.Noders(ctx, ids)
-}
-
-// Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context) ([]*ent.User, error) {
-	ctx, span := tracer.Start(ctx, "Users")
-	defer span.End()
-	return r.client.User.Query().All(ctx)
-}
-
-// Query returns generated.QueryResolver implementation.
-func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
-
-type queryResolver struct{ *Resolver }

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/koalatea/authserver/server/ent/enttest"
-	"github.com/koalatea/authserver/server/testingutils"
+	internalHttp "github.com/koalatea/authserver/server/internal/http"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -22,7 +22,7 @@ func TestRevocationCrl(t *testing.T) {
 		t.Fatalf("Failed to create cert provider: %v", err)
 	}
 	routes := Endpoints(provider)
-	router := testingutils.NewRouter(routes, graph)
+	router := internalHttp.NewServer(routes, internalHttp.WithAuthenticationBypass(graph))
 	w := httptest.NewRecorder()
 
 	cert := graph.Cert.Create().SetPem("").SetSerialNumber(int64(1)).SaveX(ctx)

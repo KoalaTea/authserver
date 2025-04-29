@@ -26,11 +26,6 @@ type Viewer interface{}
 
 type ctxKey struct{}
 
-type userIdentity struct {
-	Authenticated bool
-	*ent.User
-}
-
 // FromContext returns the Viewer stored in a context.
 func FromContext(ctx context.Context) Viewer {
 	v, _ := ctx.Value(ctxKey{}).(Viewer)

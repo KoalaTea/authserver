@@ -75,7 +75,8 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 	httpLogger := log.New(os.Stderr, "[HTTP] ", log.Flags())
 	routes := internalHttp.RouteMap{
 		"/graphql/playground": internalHttp.Endpoint{
-			Handler: playground.Handler("playground", "/graphql"),
+			Handler:              playground.Handler("playground", "/graphql"),
+			AllowUnauthenticated: true,
 		},
 		"/graphql": internalHttp.Endpoint{
 			Handler: newGraphqlHandler(graph, certProvider),
@@ -105,6 +106,7 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 		registerProfiler(routes)
 	}
 
+	// TODO use cfg.Bypassauth in some way
 	router := internalHttp.NewServer(routes, internalHttp.WithAuthenticationBypass(graph))
 
 	// run the Metric server and the authserver
