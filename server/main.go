@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 
 	_ "github.com/koalatea/authserver/server/ent/runtime"
 	"go.opentelemetry.io/otel"
@@ -22,12 +21,15 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize Tracing
-	f, err := os.Create("traces.txt")
-	if err != nil {
-		log.Fatalf("Failed to open traces.txt for tracing: %v", err)
-	}
-	defer f.Close()
-	exp, err := newExporter(f)
+	// TODO Need to figure out how to configure tracing
+	exp, err := newGRPCExporter(ctx)
+	// TODO Need to figure out when to do trackes local
+	// f, err := os.Create("traces.txt")
+	// if err != nil {
+	// 	log.Fatalf("Failed to open traces.txt for tracing: %v", err)
+	// }
+	// defer f.Close()
+	// exp, err := newTXTExporter(f)
 	if err != nil {
 		log.Fatalf("Failed to initialize tracing exporter: %v", err)
 	}

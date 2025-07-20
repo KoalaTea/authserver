@@ -1,22 +1,26 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 )
 
 var tracer = otel.Tracer("authserver")
 
-func newExporter(w io.Writer) (sdktrace.SpanExporter, error) {
+func newTXTExporter(w io.Writer) (sdktrace.SpanExporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
 		// Use human-readable output.
@@ -24,6 +28,19 @@ func newExporter(w io.Writer) (sdktrace.SpanExporter, error) {
 		// Do not print timestamps for the demo.
 		stdouttrace.WithoutTimestamps(),
 	)
+}
+
+func newGRPCExporter(ctx context.Context) (*otlptrace.Exporter, error) {
+	// Create the OTLP gRPC exporter pointing to Tempo
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint("192.168.1.45:4317"),
+		// otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())), // Tempo usually doesn't require TLS by default
+		otlptracegrpc.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return exporter, nil
 }
 
 func newTraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
