@@ -20,6 +20,8 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.11
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
 	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0
 	go.opentelemetry.io/otel/sdk v1.37.0
 	golang.org/x/crypto v0.39.0
@@ -57,6 +59,7 @@ require (
 	github.com/golang/glog v1.2.4 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/renameio v1.0.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -108,8 +111,6 @@ require (
 	go.opentelemetry.io/contrib/propagators/jaeger v1.27.0 // indirect
 	go.opentelemetry.io/contrib/samplers/jaegerremote v0.21.0 // indirect
 	go.opentelemetry.io/otel/exporters/jaeger v1.17.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0 // indirect
 	go.opentelemetry.io/otel/exporters/zipkin v1.27.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
