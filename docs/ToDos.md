@@ -4,3 +4,5 @@
 - Auth will be my first next piece
 - certs in playground a pubkey pem with \n newlines works
 - test rollback things
+
+- https://github.com/uptrace/opentelemetry-go-extra/tree/main/otelgraphql worth looking into
