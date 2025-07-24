@@ -11,7 +11,8 @@ import (
 	"math/big"
 	"os"
 	"time"
-	"zymkeystuff/signer"
+
+	"github.com/koalatea/authserver/zymkey"
 )
 
 func main() {
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	// Step 5: Load Zymkey signer
-	signer, err := signer.NewZymkeySigner(0)
+	signer, err := zymkey.NewSigner(0)
 	if err != nil {
 		panic(fmt.Errorf("failed to init Zymkey signer: %w", err))
 	}

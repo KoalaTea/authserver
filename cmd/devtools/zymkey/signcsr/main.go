@@ -8,7 +8,8 @@ import (
 	"math/big"
 	"os"
 	"time"
-	"zymkeystuff/signer"
+
+	"github.com/koalatea/authserver/zymkey"
 )
 
 func main() {
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	// Use ZymkeySigner in slot 0 (private key is securely held)
-	signer, err := signer.NewZymkeySigner(0)
+	signer, err := zymkey.NewSigner(0)
 	if err != nil {
 		panic(fmt.Errorf("failed to init Zymkey signer: %w", err))
 	}

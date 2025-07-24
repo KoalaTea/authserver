@@ -10,12 +10,13 @@ import (
 	"math/big"
 	"os"
 	"time"
-	"zymkeystuff/signer"
+
+	"github.com/koalatea/authserver/zymkey"
 )
 
 func main() {
 	// Generate key in Zymkey slot 0
-	signer, err := signer.NewZymkeySigner(0)
+	signer, err := zymkey.NewSigner(0)
 	if err != nil {
 		panic(fmt.Errorf("Zymkey signer error: %w", err))
 	}
