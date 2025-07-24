@@ -1,4 +1,4 @@
-package signer
+package zymkey
 
 /*
 #cgo CFLAGS: -I/usr/include/zymkey
@@ -26,13 +26,13 @@ import (
 // #include "zk_app_utils.h"
 import "C"
 
-type ZymkeySigner struct {
+type Signer struct {
 	ctx     C.zkCTX
 	pubKey  crypto.PublicKey
 	keySlot C.int
 }
 
-func NewZymkeySigner(slot int) (*ZymkeySigner, error) {
+func NewSigner(slot int) (*Signer, error) {
 	var ctx C.zkCTX
 	rc := C.zkOpen(&ctx)
 	if rc != 0 {
@@ -64,18 +64,18 @@ func NewZymkeySigner(slot int) (*ZymkeySigner, error) {
 		Y:     y,
 	}
 
-	return &ZymkeySigner{
+	return &Signer{
 		ctx:     ctx,
 		pubKey:  pubKey,
 		keySlot: C.int(slot),
 	}, nil
 }
 
-func (z *ZymkeySigner) Public() crypto.PublicKey {
+func (z *Signer) Public() crypto.PublicKey {
 	return z.pubKey
 }
 
-func (z *ZymkeySigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+func (z *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	var sig *C.uint8_t
 	var sigLen C.int
 
@@ -99,7 +99,7 @@ func (z *ZymkeySigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpt
 	}{r, s})
 }
 
-func (z *ZymkeySigner) Close() error {
+func (z *Signer) Close() error {
 	if z == nil {
 		return fmt.Errorf("ZymkeySigner is nil")
 	}
