@@ -1,11 +1,9 @@
 package graphql
 
 import (
-	"crypto"
-
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/koalatea/authserver/certificatevendor/certificates"
 	"github.com/koalatea/authserver/certificatevendor/graphql/generated"
-	"github.com/koalatea/authserver/certificatevendor/serial"
 )
 
 // This file will not be regenerated automatically.
@@ -13,12 +11,11 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	serial *serial.Serial
-	signer crypto.Signer
+	certificates *certificates.CertProvider
 }
 
-func NewSchema(s *serial.Serial, signer crypto.Signer) graphql.ExecutableSchema {
+func NewSchema(certs *certificates.CertProvider) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{
-		Resolvers: &Resolver{s, signer},
+		Resolvers: &Resolver{certificates: certs},
 	})
 }

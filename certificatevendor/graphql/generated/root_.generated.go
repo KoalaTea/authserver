@@ -40,8 +40,8 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Mutation struct {
-		RequestClientCert func(childComplexity int, target string, pubKey string) int
-		RequestHTTPSCert  func(childComplexity int, target string, pubkey string) int
+		RequestClientCert func(childComplexity int, hostname string, pubKey string) int
+		RequestHTTPSCert  func(childComplexity int, url string, pubkey string) int
 	}
 
 	Query struct {
@@ -77,7 +77,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RequestClientCert(childComplexity, args["target"].(string), args["pubKey"].(string)), true
+		return e.complexity.Mutation.RequestClientCert(childComplexity, args["hostname"].(string), args["pubKey"].(string)), true
 
 	case "Mutation.requestHTTPSCert":
 		if e.complexity.Mutation.RequestHTTPSCert == nil {
@@ -89,7 +89,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RequestHTTPSCert(childComplexity, args["target"].(string), args["pubkey"].(string)), true
+		return e.complexity.Mutation.RequestHTTPSCert(childComplexity, args["url"].(string), args["pubkey"].(string)), true
 
 	}
 	return 0, false
@@ -196,8 +196,8 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema/mutation.graphql", Input: `type Mutation {
-    requestClientCert(target: String!, pubKey: String!): String!
-    requestHTTPSCert(target: String!, pubkey: String!): String!
+    requestClientCert(hostname: String!, pubKey: String!): String!
+    requestHTTPSCert(url: String!, pubkey: String!): String!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

@@ -53,12 +53,11 @@ func loadSerial() (uint64, error) {
 	return v, nil
 }
 
-func (s *Serial) GetSerial() uint64 {
+func (s *Serial) NextSerial() (uint64, error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	serial := s.serial.Add(1)
-	saveSerial(serial)
-	return serial
+	return serial, saveSerial(serial)
 }
 
 func saveSerial(serial uint64) error {

@@ -1,4 +1,4 @@
 type Mutation {
-    requestClientCert(target: String!, pubKey: String!): String!
-    requestHTTPSCert(target: String!, pubkey: String!): String!
+    requestClientCert(hostname: String!, pubKey: String!): String!
+    requestHTTPSCert(url: String!, pubkey: String!): String!
 }

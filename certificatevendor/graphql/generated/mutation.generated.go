@@ -15,8 +15,8 @@ import (
 // region    ************************** generated!.gotpl **************************
 
 type MutationResolver interface {
-	RequestClientCert(ctx context.Context, target string, pubKey string) (string, error)
-	RequestHTTPSCert(ctx context.Context, target string, pubkey string) (string, error)
+	RequestClientCert(ctx context.Context, hostname string, pubKey string) (string, error)
+	RequestHTTPSCert(ctx context.Context, url string, pubkey string) (string, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -27,14 +27,14 @@ func (ec *executionContext) field_Mutation_requestClientCert_args(ctx context.Co
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["target"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("target"))
+	if tmp, ok := rawArgs["hostname"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hostname"))
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["target"] = arg0
+	args["hostname"] = arg0
 	var arg1 string
 	if tmp, ok := rawArgs["pubKey"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pubKey"))
@@ -51,14 +51,14 @@ func (ec *executionContext) field_Mutation_requestHTTPSCert_args(ctx context.Con
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["target"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("target"))
+	if tmp, ok := rawArgs["url"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("url"))
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["target"] = arg0
+	args["url"] = arg0
 	var arg1 string
 	if tmp, ok := rawArgs["pubkey"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pubkey"))
@@ -93,7 +93,7 @@ func (ec *executionContext) _Mutation_requestClientCert(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().RequestClientCert(rctx, fc.Args["target"].(string), fc.Args["pubKey"].(string))
+		return ec.resolvers.Mutation().RequestClientCert(rctx, fc.Args["hostname"].(string), fc.Args["pubKey"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -148,7 +148,7 @@ func (ec *executionContext) _Mutation_requestHTTPSCert(ctx context.Context, fiel
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().RequestHTTPSCert(rctx, fc.Args["target"].(string), fc.Args["pubkey"].(string))
+		return ec.resolvers.Mutation().RequestHTTPSCert(rctx, fc.Args["url"].(string), fc.Args["pubkey"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

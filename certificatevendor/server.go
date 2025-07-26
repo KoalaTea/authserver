@@ -2,26 +2,23 @@ package main
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
+	"github.com/koalatea/authserver/certificatevendor/certificates"
 	"github.com/koalatea/authserver/certificatevendor/graphql"
-	"github.com/koalatea/authserver/certificatevendor/serial"
-	"github.com/koalatea/authserver/zymkey"
 )
 
 type Server struct {
-	serial *serial.Serial
-	signer crypto.Signer
-	HTTP   *http.Server
+	Certificates *certificates.CertProvider
+	HTTP         *http.Server
 }
 
-func newGraphqlHandler(serialNum *serial.Serial, signer crypto.Signer) http.Handler {
-	server := handler.NewDefaultServer(graphql.NewSchema(serialNum, signer))
+func newGraphqlHandler(certs *certificates.CertProvider) http.Handler {
+	server := handler.NewDefaultServer(graphql.NewSchema(certs))
 	server.Use(&debug.Tracer{})
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -31,27 +28,20 @@ func newGraphqlHandler(serialNum *serial.Serial, signer crypto.Signer) http.Hand
 }
 
 func NewServer() (*Server, error) {
-	signer, err := zymkey.NewSigner(0)
-	if err != nil {
-		return nil, err
-	}
-
-	serialNum, err := serial.New()
+	certs, err := certificates.New()
 	if err != nil {
 		return nil, err
 	}
 
 	router := http.NewServeMux()
-	router.Handle("/graphql", newGraphqlHandler(serialNum, signer))
+	router.Handle("/graphql", newGraphqlHandler(certs))
 	httpSrv := &http.Server{
 		Addr:    "0.0.0.0:8080",
 		Handler: router,
 	}
 
 	return &Server{
-		serial: serialNum,
-		signer: signer,
-		HTTP:   httpSrv,
+		HTTP: httpSrv,
 	}, nil
 }
 

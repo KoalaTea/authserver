@@ -21,3 +21,5 @@ AES-256 (FIPS 197) - encryption
 my model is ZYMKEY 4i
 
 there might already be 3 keys generated. check if this is true or if I make a new one
+
+maybe should be specific instead of being a crypto.Signer but not sure tbh returning ecdsa.PublicKey instead of crypto.Publickey

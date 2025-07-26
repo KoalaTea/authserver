@@ -11,9 +11,9 @@ func main() {
 	ctx := context.Background()
 	server, err := NewServer()
 	if err != nil {
-		log.Fatalf("Failed to initialize tracing exporter: %v", err)
+		log.Fatalf("Failed to make server: %v", err)
 	}
 	if err := server.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("AuthServer fatal error: %v", err)
+		log.Fatalf("certificatevendor fatal error: %v", err)
 	}
 }
