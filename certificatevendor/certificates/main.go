@@ -27,12 +27,12 @@ type CertProvider struct {
 }
 
 func New() (*CertProvider, error) {
-	ca, err := getCA()
+	signer, err := zymkey.NewSigner(0)
 	if err != nil {
 		return nil, err
 	}
 
-	signer, err := zymkey.NewSigner(0)
+	ca, err := getCA(signer)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func New() (*CertProvider, error) {
 	}, nil
 }
 
-func getCA(signer zymkey.Signer) (*x509.Certificate, error) {
+func getCA(signer *zymkey.Signer) (*x509.Certificate, error) {
 	caFilePath := "CA.pem"
 	// Check if the file exists
 	_, err := os.Stat(caFilePath)
