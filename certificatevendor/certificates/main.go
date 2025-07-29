@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -11,6 +12,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"math/big"
 	"os"
@@ -27,12 +29,7 @@ type CertProvider struct {
 }
 
 func New() (*CertProvider, error) {
-	signer, err := zymkey.NewSigner(0)
-	if err != nil {
-		return nil, err
-	}
-
-	ca, err := getCA(signer)
+	signer, err := zymkey.NewSigner(zymkey.Slot0)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +39,12 @@ func New() (*CertProvider, error) {
 		return nil, err
 	}
 
+	ca, err := getCA(signer, serialNum)
+	if err != nil {
+		return nil, err
+	}
+	genAuthCerts(ca, signer, serialNum)
+
 	return &CertProvider{
 		serial: serialNum,
 		signer: signer,
@@ -49,7 +52,7 @@ func New() (*CertProvider, error) {
 	}, nil
 }
 
-func getCA(signer *zymkey.Signer) (*x509.Certificate, error) {
+func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
 	caFilePath := "CA.pem"
 	// Check if the file exists
 	_, err := os.Stat(caFilePath)
@@ -80,8 +83,12 @@ func getCA(signer *zymkey.Signer) (*x509.Certificate, error) {
 		slog.Info("CA does not exist generating one now", "path", caFilePath)
 	}
 
+	caSerial, err := serialNum.NextSerial()
+	if err != nil {
+		return nil, err
+	}
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(2019),
+		SerialNumber: big.NewInt(caSerial),
 		Subject: pkix.Name{
 			Organization:  []string{"Company, INC."},
 			Country:       []string{"US"},
@@ -101,7 +108,7 @@ func getCA(signer *zymkey.Signer) (*x509.Certificate, error) {
 
 	pubKey, ok := signer.Public().(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("zynkey signer was not an ecdsa publickey")
+		return nil, errors.New("zymkey signer was not an ecdsa publickey")
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, pubKey, signer)
 	if err != nil {
@@ -119,6 +126,92 @@ func getCA(signer *zymkey.Signer) (*x509.Certificate, error) {
 	return ca, nil
 }
 
+func writePem(path string, block *pem.Block) {
+	f, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("failed to create file %s: %v", path, err)
+	}
+	defer f.Close()
+	if err := pem.Encode(f, block); err != nil {
+		log.Fatalf("failed to write PEM to %s: %v", path, err)
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func removeIfExists(paths ...string) {
+	for _, path := range paths {
+		if fileExists(path) {
+			os.Remove(path)
+		}
+	}
+}
+
+func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *serial.Serial) error {
+	os.MkdirAll("vendorauth", 0700)
+	// === Server cert ===
+	serverCertPath := "vendorauth/server.pem"
+	serverKeyPath := "vendorauth/server.key"
+	if !fileExists(serverCertPath) || !fileExists(serverKeyPath) {
+		log.Println("Generating new server certificate because either the key and/or certificate are missing...")
+		removeIfExists(serverCertPath, serverKeyPath)
+
+		serverCertSerial, err := serialNum.NextSerial()
+		if err != nil {
+			return err
+		}
+		serverPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		serverTemplate := &x509.Certificate{
+			SerialNumber: big.NewInt(serverCertSerial),
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			NotBefore:   time.Now(),
+			NotAfter:    time.Now().AddDate(1, 0, 0),
+			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			KeyUsage:    x509.KeyUsageDigitalSignature,
+		}
+		serverBytes, _ := x509.CreateCertificate(rand.Reader, serverTemplate, ca, &serverPriv.PublicKey, caSigner)
+		writePem(serverCertPath, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes})
+		serverPrivBytes, _ := x509.MarshalECPrivateKey(serverPriv)
+		writePem(serverKeyPath, &pem.Block{Type: "EC PRIVATE KEY", Bytes: serverPrivBytes})
+	}
+
+	// === Client cert ===
+	clientCertPath := "vendorauth/client.pem"
+	clientKeyPath := "vendorauth/client.key"
+	if !fileExists(clientCertPath) || !fileExists(clientKeyPath) {
+		log.Println("Generating new client certificate because either the key and/or certificate are missing......")
+		removeIfExists(clientCertPath, clientKeyPath)
+
+		clientCertSerial, err := serialNum.NextSerial()
+		if err != nil {
+			return err
+		}
+		clientPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		clientTemplate := &x509.Certificate{
+			SerialNumber: big.NewInt(clientCertSerial),
+			Subject: pkix.Name{
+				CommonName: "vendor-client",
+			},
+			NotBefore:   time.Now(),
+			NotAfter:    time.Now().AddDate(1, 0, 0),
+			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+			KeyUsage:    x509.KeyUsageDigitalSignature,
+		}
+		clientBytes, _ := x509.CreateCertificate(rand.Reader, clientTemplate, ca, &clientPriv.PublicKey, caSigner)
+		writePem(clientCertPath, &pem.Block{Type: "CERTIFICATE", Bytes: clientBytes})
+		clientPrivBytes, _ := x509.MarshalECPrivateKey(clientPriv)
+		writePem("vendorauth/client.key", &pem.Block{Type: "EC PRIVATE KEY", Bytes: clientPrivBytes})
+	}
+
+	log.Println("Certificates generated in vendorauth/")
+	return nil
+}
+
 // create a new user certificate using the provided username and public key signed by the CA
 func (cp *CertProvider) NewUserCert(username string, pemPubKey string) (*x509.Certificate, error) {
 	serialNumber, err := cp.serial.NextSerial()
@@ -126,7 +219,7 @@ func (cp *CertProvider) NewUserCert(username string, pemPubKey string) (*x509.Ce
 		return nil, fmt.Errorf("failed to get next serial number: %w", err)
 	}
 
-	serialNumberBig := big.NewInt(int64(serialNumber))
+	serialNumberBig := big.NewInt(serialNumber)
 
 	cert := &x509.Certificate{
 		SerialNumber:          serialNumberBig,
@@ -158,7 +251,7 @@ func (cp *CertProvider) NewHTTPSCert(domain string, pemPubKey string) (*x509.Cer
 		return nil, fmt.Errorf("failed to get next serial number: %w", err)
 	}
 
-	serialNumberBig := big.NewInt(int64(serialNumber))
+	serialNumberBig := big.NewInt(serialNumber)
 
 	cert := &x509.Certificate{
 		SerialNumber:          serialNumberBig,
@@ -191,7 +284,7 @@ func (cp *CertProvider) NewDeviceCert(deviceID string, pemPubKey string) (*x509.
 		return nil, fmt.Errorf("failed to get next serial number: %w", err)
 	}
 
-	serialNumberBig := big.NewInt(int64(serialNumber))
+	serialNumberBig := big.NewInt(serialNumber)
 
 	cert := &x509.Certificate{
 		SerialNumber:          serialNumberBig,

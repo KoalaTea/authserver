@@ -9,12 +9,12 @@ import (
 )
 
 type Serial struct {
-	serial  *atomic.Uint64
+	serial  *atomic.Int64
 	writeMu sync.Mutex
 }
 
 func New() (*Serial, error) {
-	serial := &atomic.Uint64{}
+	serial := &atomic.Int64{}
 	storedSerial, err := loadSerial()
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func New() (*Serial, error) {
 // loadSerial reads in a stored serial number.
 // Returns 0 if the serial number doesn't exist.
 // Returns an error if there’s a problem reading or decoding the file.
-func loadSerial() (uint64, error) {
+func loadSerial() (int64, error) {
 	// Check if the file exists
 	path := "serial_number"
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -45,7 +45,7 @@ func loadSerial() (uint64, error) {
 	defer f.Close()
 
 	// Read 8 bytes into a uint64
-	var v uint64
+	var v int64
 	if err := binary.Read(f, binary.BigEndian, &v); err != nil {
 		return 0, fmt.Errorf("decode %q: %w", path, err)
 	}
@@ -53,14 +53,14 @@ func loadSerial() (uint64, error) {
 	return v, nil
 }
 
-func (s *Serial) NextSerial() (uint64, error) {
+func (s *Serial) NextSerial() (int64, error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	serial := s.serial.Add(1)
 	return serial, saveSerial(serial)
 }
 
-func saveSerial(serial uint64) error {
+func saveSerial(serial int64) error {
 	path := "serial_number"
 	tmp := path + ".tmp"
 
