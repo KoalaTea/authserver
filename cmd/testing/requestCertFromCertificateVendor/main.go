@@ -14,7 +14,7 @@ import (
 	"os"
 )
 
-const graphqlEndpoint = "http://192.168.1.101:8080/graphql"
+const graphqlEndpoint = "https://192.168.1.101:8080/graphql"
 const query = `
 mutation RequestHTTPSCert($url: String!, $pubkey: String!) {
     requestHTTPSCert(url: $url, pubkey: $pubkey)
@@ -70,7 +70,7 @@ func main() {
 	tlsConfig := &tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		RootCAs:            caPool,
-		InsecureSkipVerify: false, // verify server
+		InsecureSkipVerify: true, // verify server
 		MinVersion:         tls.VersionTLS13,
 	}
 	client := &http.Client{
@@ -109,6 +109,4 @@ func main() {
 	}
 
 	fmt.Printf("Response: %s\n", string(body))
-
-	// TODO: Save the private key and certificate for future use
 }

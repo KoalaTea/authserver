@@ -42,10 +42,15 @@ func RequireClientCertMiddleware(caPool *x509.CertPool, next http.Handler) http.
 
 		cert := r.TLS.PeerCertificates[0]
 		_, err := cert.Verify(x509.VerifyOptions{
-			Roots: caPool,
+			Roots:     caPool,
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {
 			http.Error(w, "invalid client certificate", http.StatusForbidden)
+			return
+		}
+		if cert.Subject.CommonName != "certificatevendor-client" {
+			http.Error(w, "invalid client certificate CN", http.StatusForbidden)
 			return
 		}
 
