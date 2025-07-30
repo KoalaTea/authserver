@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"github.com/koalatea/authserver/certificatevendor/certificates"
@@ -14,6 +16,7 @@ import (
 type Server struct {
 	Certificates *certificates.CertProvider
 	HTTP         *http.Server
+	TLSConfig    *tls.Config
 }
 
 func getTLSConfig(certProvider *certificates.CertProvider) *tls.Config {
@@ -68,14 +71,23 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		HTTP: httpSrv,
+		HTTP:      httpSrv,
+		TLSConfig: tlsConfig,
 	}, nil
 }
 
 func (srv *Server) Run(ctx context.Context) error {
 	defer srv.Close()
 	slog.InfoContext(ctx, "CertificateVendor HTTP started", "http_addr", srv.HTTP.Addr)
-	if err := srv.HTTP.ListenAndServe(); err != nil {
+	ln, err := net.Listen("tcp", srv.HTTP.Addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ln.Close()
+
+	tlsListener := tls.NewListener(ln, srv.TLSConfig)
+	defer tlsListener.Close()
+	if err := srv.HTTP.Serve(tlsListener); err != nil {
 		return fmt.Errorf("stopped http server: %w", err)
 	}
 	return nil

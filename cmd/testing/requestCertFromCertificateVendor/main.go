@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"log"
 	"net/http"
+	"os"
 )
 
 const graphqlEndpoint = "http://192.168.1.101:8080/graphql"
@@ -51,6 +54,31 @@ func pubKeyToPem(pubKey *rsa.PublicKey) string {
 // }
 
 func main() {
+	// Load client cert and key
+	cert, err := tls.LoadX509KeyPair("nopush/client.pem", "nopush/client.key")
+	if err != nil {
+		log.Fatalf("Failed to load client cert: %v", err)
+	}
+	// Load CA cert to verify server
+	caCert, err := os.ReadFile("nopush/ca.pem")
+	if err != nil {
+		log.Fatalf("Failed to read CA cert: %v", err)
+	}
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(caCert)
+	// TLS config for client
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caPool,
+		InsecureSkipVerify: false, // verify server
+		MinVersion:         tls.VersionTLS13,
+	}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("Error generating RSA key: %v\n", err)
@@ -68,14 +96,14 @@ func main() {
     }`, query, pubKey)
 
 	// Send request to GraphQL server
-	resp, err := http.Post(graphqlEndpoint, "application/json", bytes.NewBufferString(requestBody))
+	resp, err := client.Post(graphqlEndpoint, "application/json", bytes.NewBufferString(requestBody))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to send request: %v", err))
 	}
 	defer resp.Body.Close()
 
 	// Read response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read response: %v", err))
 	}

@@ -66,6 +66,7 @@ func (cp *CertProvider) ServerCert() *tls.Certificate {
 	return &tls.Certificate{
 		Certificate: [][]byte{cp.serverCertificate.Raw},
 		PrivateKey:  cp.signer,
+		Leaf:        cp.serverCertificate,
 	}
 }
 
