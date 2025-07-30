@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -23,9 +24,10 @@ import (
 )
 
 type CertProvider struct {
-	serial *serial.Serial
-	signer crypto.Signer
-	ca     *x509.Certificate
+	serial            *serial.Serial
+	signer            crypto.Signer
+	ca                *x509.Certificate
+	serverCertificate *x509.Certificate
 }
 
 func New() (*CertProvider, error) {
@@ -43,13 +45,28 @@ func New() (*CertProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	genAuthCerts(ca, signer, serialNum)
+	serverCert, err := genAuthCerts(ca, signer, serialNum)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CertProvider{
-		serial: serialNum,
-		signer: signer,
-		ca:     ca,
+		serial:            serialNum,
+		signer:            signer,
+		ca:                ca,
+		serverCertificate: serverCert,
 	}, nil
+}
+
+func (cp *CertProvider) CA() *x509.Certificate {
+	return cp.ca
+}
+
+func (cp *CertProvider) ServerCert() *tls.Certificate {
+	return &tls.Certificate{
+		Certificate: [][]byte{cp.serverCertificate.Raw},
+		PrivateKey:  cp.signer,
+	}
 }
 
 func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
@@ -150,34 +167,43 @@ func removeIfExists(paths ...string) {
 	}
 }
 
-func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *serial.Serial) error {
+func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
 	os.MkdirAll("vendorauth", 0700)
 	// === Server cert ===
+	var serverCertificate *x509.Certificate
 	serverCertPath := "vendorauth/server.pem"
-	serverKeyPath := "vendorauth/server.key"
-	if !fileExists(serverCertPath) || !fileExists(serverKeyPath) {
+	// serverKeyPath := "vendorauth/server.key"
+	// if !fileExists(serverCertPath) || !fileExists(serverKeyPath) {
+	if !fileExists(serverCertPath) {
 		log.Println("Generating new server certificate because either the key and/or certificate are missing...")
-		removeIfExists(serverCertPath, serverKeyPath)
+		// removeIfExists(serverCertPath, serverKeyPath)
+		removeIfExists(serverCertPath)
 
 		serverCertSerial, err := serialNum.NextSerial()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		serverPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		// serverPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		serverTemplate := &x509.Certificate{
 			SerialNumber: big.NewInt(serverCertSerial),
 			Subject: pkix.Name{
-				CommonName: "localhost",
+				CommonName: "certificatevendor",
 			},
 			NotBefore:   time.Now(),
 			NotAfter:    time.Now().AddDate(1, 0, 0),
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 		}
-		serverBytes, _ := x509.CreateCertificate(rand.Reader, serverTemplate, ca, &serverPriv.PublicKey, caSigner)
+		pubKey, ok := caSigner.Public().(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.New("zymkey signer was not an ecdsa publickey")
+		}
+		serverBytes, _ := x509.CreateCertificate(rand.Reader, serverTemplate, ca, pubKey, caSigner)
 		writePem(serverCertPath, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes})
-		serverPrivBytes, _ := x509.MarshalECPrivateKey(serverPriv)
-		writePem(serverKeyPath, &pem.Block{Type: "EC PRIVATE KEY", Bytes: serverPrivBytes})
+		serverCertificate, err = x509.ParseCertificate(serverBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created server certificate: %w", err)
+		}
 	}
 
 	// === Client cert ===
@@ -189,13 +215,13 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 
 		clientCertSerial, err := serialNum.NextSerial()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		clientPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		clientTemplate := &x509.Certificate{
 			SerialNumber: big.NewInt(clientCertSerial),
 			Subject: pkix.Name{
-				CommonName: "vendor-client",
+				CommonName: "certificatevendor-client",
 			},
 			NotBefore:   time.Now(),
 			NotAfter:    time.Now().AddDate(1, 0, 0),
@@ -209,7 +235,8 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 	}
 
 	log.Println("Certificates generated in vendorauth/")
-	return nil
+
+	return serverCertificate, nil
 }
 
 // create a new user certificate using the provided username and public key signed by the CA

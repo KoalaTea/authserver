@@ -76,7 +76,7 @@ func main() {
 		log.Fatal("One or more keys are nil")
 	}
 	if !publicKeysEqual(key0, key1) && !publicKeysEqual(key0, key2) && !publicKeysEqual(key1, key2) {
-		log.Fatal("All keys are different")
+		log.Println("All keys are different")
 	} else {
 		log.Println("Some keys are the same")
 	}

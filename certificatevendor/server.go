@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net/http"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/koalatea/authserver/certificatevendor/certificates"
-	"github.com/koalatea/authserver/certificatevendor/graphql"
 )
 
 type Server struct {
@@ -17,13 +16,37 @@ type Server struct {
 	HTTP         *http.Server
 }
 
-func newGraphqlHandler(certs *certificates.CertProvider) http.Handler {
-	server := handler.NewDefaultServer(graphql.NewSchema(certs))
-	server.Use(&debug.Tracer{})
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		server.ServeHTTP(w, req)
+func getTLSConfig(certProvider *certificates.CertProvider) *tls.Config {
+	ca := certProvider.CA()
+	caCertPool := x509.NewCertPool()
+	caCertPool.AddCert(ca)
+	cert := certProvider.ServerCert()
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+		ClientAuth:   tls.RequestClientCert,
+		ClientCAs:    caCertPool,
+		MinVersion:   tls.VersionTLS12,
+	}
+	return tlsConfig
+}
+
+func RequireClientCertMiddleware(caPool *x509.CertPool, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+			http.Error(w, "client certificate required", http.StatusUnauthorized)
+			return
+		}
+
+		cert := r.TLS.PeerCertificates[0]
+		_, err := cert.Verify(x509.VerifyOptions{
+			Roots: caPool,
+		})
+		if err != nil {
+			http.Error(w, "invalid client certificate", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -33,11 +56,15 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
+	tlsConfig := getTLSConfig(certs)
+
 	router := http.NewServeMux()
-	router.Handle("/graphql", newGraphqlHandler(certs))
+	router.Handle("/graphql", RequireClientCertMiddleware(tlsConfig.ClientCAs, newGraphqlHandler(certs)))
+	router.Handle("/CA", CAHandler(certs))
 	httpSrv := &http.Server{
-		Addr:    "0.0.0.0:8080",
-		Handler: router,
+		Addr:      "0.0.0.0:8080",
+		Handler:   router,
+		TLSConfig: tlsConfig,
 	}
 
 	return &Server{
