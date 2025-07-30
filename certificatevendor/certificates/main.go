@@ -205,6 +205,20 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse created server certificate: %w", err)
 		}
+	} else {
+		slog.Info("Server certificate exists, loading", "path", serverCertPath)
+		pemData, err := os.ReadFile(serverCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read server cert file: %w", err)
+		}
+		block, _ := pem.Decode(pemData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			return nil, fmt.Errorf("failed to decode PEM block containing server certificate")
+		}
+		serverCertificate, err = x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse server certificate: %w", err)
+		}
 	}
 
 	// === Client cert ===
