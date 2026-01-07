@@ -1,0 +1,18 @@
+schema:
+  - schema/mutation.graphql
+
+model:
+  package: graphql
+
+exec:
+  layout: follow-schema
+  dir: ./generated
+  package: generated
+
+resolver:
+  # Tell gqlgen to generate resolvers next to the schema file.
+  layout: follow-schema
+  dir: .
+  package: graphql
+
+struct_tag: json
