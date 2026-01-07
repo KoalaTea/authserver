@@ -32,7 +32,15 @@ type Signer struct {
 	keySlot C.int
 }
 
-func NewSigner(slot int) (*Signer, error) {
+type Slot int
+
+const (
+	Slot0 Slot = iota
+	Slot1
+	Slot2
+)
+
+func NewSigner(slot Slot) (*Signer, error) {
 	var ctx C.zkCTX
 	rc := C.zkOpen(&ctx)
 	if rc != 0 {

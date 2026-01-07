@@ -183,30 +183,13 @@ func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvi
 
 func (p *CertProvider) RevokeCertificate(ctx context.Context, serialNumber int64) error {
 	// Should this be in the graphql stuff? Want to walk through this with kyle actually
-	// Should this have a TX or is transactionator dealing with this?
-	tx, err := p.graph.Tx(ctx)
-	if err != nil {
-		return err
-	}
-	client := tx.Client()
-	// Rollback transaction if we panic
-	defer func() {
-		if v := recover(); v != nil {
-			tx.Rollback()
-			panic(v)
-		}
-	}()
-	cert, err := client.Cert.Get(ctx, int(serialNumber))
+	cert, err := p.graph.Cert.Get(ctx, int(serialNumber))
 	if err != nil {
 		return err
 	}
 	_, err = cert.Update().SetRevoked(true).Save(ctx)
 	if err != nil {
 		return err
-	}
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

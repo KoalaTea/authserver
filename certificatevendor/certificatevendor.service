@@ -1,0 +1,15 @@
+[Unit]
+Description=CertificateVendor
+Documentation=https://github.com/koalatea/authserver/certificatevendor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=certificatevendor
+ExecStart=/home/koalatea/authserver/certificatevendor/certificatevendor
+Restart=on-failure
+WorkingDirectory=/home/certificatevendor
+
+[Install]
+WantedBy=multi-user.target
