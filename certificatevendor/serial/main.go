@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 )
 
+const SERIALNUMPATH = "serial_number"
+
 type Serial struct {
 	serial  *atomic.Int64
 	writeMu sync.Mutex
@@ -30,24 +32,23 @@ func New() (*Serial, error) {
 // Returns an error if there’s a problem reading or decoding the file.
 func loadSerial() (int64, error) {
 	// Check if the file exists
-	path := "serial_number"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(SERIALNUMPATH); os.IsNotExist(err) {
 		return 0, nil
 	} else if err != nil {
-		return 0, fmt.Errorf("stat %q: %w", path, err)
+		return 0, fmt.Errorf("stat %q: %w", SERIALNUMPATH, err)
 	}
 
 	// Open the file for reading
-	f, err := os.Open(path)
+	f, err := os.Open(SERIALNUMPATH)
 	if err != nil {
-		return 0, fmt.Errorf("open %q: %w", path, err)
+		return 0, fmt.Errorf("open %q: %w", SERIALNUMPATH, err)
 	}
 	defer f.Close()
 
 	// Read 8 bytes into a uint64
 	var v int64
 	if err := binary.Read(f, binary.BigEndian, &v); err != nil {
-		return 0, fmt.Errorf("decode %q: %w", path, err)
+		return 0, fmt.Errorf("decode %q: %w", SERIALNUMPATH, err)
 	}
 
 	return v, nil

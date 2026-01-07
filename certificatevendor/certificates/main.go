@@ -23,6 +23,9 @@ import (
 	"github.com/koalatea/authserver/zymkey"
 )
 
+const CAPATH = "CA.pem"
+const SERVERCERTPATH = "vendorauth/server.pem"
+
 type CertProvider struct {
 	serial            *serial.Serial
 	signer            crypto.Signer
@@ -70,35 +73,38 @@ func (cp *CertProvider) ServerCert() *tls.Certificate {
 	}
 }
 
+func loadCA(caPath string) (*x509.Certificate, error) {
+	// Read the file
+	pemData, err := os.ReadFile(caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %v", err)
+	}
+
+	// Decode the PEM block
+	block, _ := pem.Decode(pemData)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("failed to decode PEM block containing certificate")
+	}
+
+	// Parse the certificate
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	return cert, nil
+}
+
 func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
-	caFilePath := "CA.pem"
 	// Check if the file exists
-	_, err := os.Stat(caFilePath)
+	_, err := fileExists(CAPATH)
 	if err == nil {
-		slog.Info("CA exists so loading CA", "path", caFilePath)
-		// Read the file
-		pemData, err := os.ReadFile(caFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file: %v", err)
-		}
-
-		// Decode the PEM block
-		block, _ := pem.Decode(pemData)
-		if block == nil || block.Type != "CERTIFICATE" {
-			return nil, fmt.Errorf("failed to decode PEM block containing certificate")
-		}
-
-		// Parse the certificate
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse certificate: %v", err)
-		}
-
-		return cert, nil
+		slog.Info("CA exists so loading CA", "path", CAPATH)
+		loadCA(CAPATH)
 	}
 
 	if os.IsNotExist(err) {
-		slog.Info("CA does not exist generating one now", "path", caFilePath)
+		slog.Info("CA does not exist generating one now", "path", CAPATH)
 	}
 
 	caSerial, err := serialNum.NextSerial()
@@ -139,7 +145,7 @@ func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, 
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
-	os.WriteFile(caFilePath, caPEM.Bytes(), 0644)
+	os.WriteFile(CAPATH, caPEM.Bytes(), 0644)
 
 	return ca, nil
 }
@@ -172,13 +178,12 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 	os.MkdirAll("vendorauth", 0700)
 	// === Server cert ===
 	var serverCertificate *x509.Certificate
-	serverCertPath := "vendorauth/server.pem"
 	// serverKeyPath := "vendorauth/server.key"
-	// if !fileExists(serverCertPath) || !fileExists(serverKeyPath) {
-	if !fileExists(serverCertPath) {
+	// if !fileExists(SERVERCERTPATH) || !fileExists(serverKeyPath) {
+	if !fileExists(SERVERCERTPATH) {
 		log.Println("Generating new server certificate because either the key and/or certificate are missing...")
-		// removeIfExists(serverCertPath, serverKeyPath)
-		removeIfExists(serverCertPath)
+		// removeIfExists(SERVERCERTPATH, serverKeyPath)
+		removeIfExists(SERVERCERTPATH)
 
 		serverCertSerial, err := serialNum.NextSerial()
 		if err != nil {
@@ -200,14 +205,14 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 			return nil, errors.New("zymkey signer was not an ecdsa publickey")
 		}
 		serverBytes, _ := x509.CreateCertificate(rand.Reader, serverTemplate, ca, pubKey, caSigner)
-		writePem(serverCertPath, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes})
+		writePem(SERVERCERTPATH, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes})
 		serverCertificate, err = x509.ParseCertificate(serverBytes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse created server certificate: %w", err)
 		}
 	} else {
-		slog.Info("Server certificate exists, loading", "path", serverCertPath)
-		pemData, err := os.ReadFile(serverCertPath)
+		slog.Info("Server certificate exists, loading", "path", SERVERCERTPATH)
+		pemData, err := os.ReadFile(SERVERCERTPATH)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read server cert file: %w", err)
 		}

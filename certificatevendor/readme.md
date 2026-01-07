@@ -5,8 +5,6 @@ potentially rename zymkey certificate vendor
 
 next
 certprovider here?
-auth
-pub ca key
 hackershelter.internal
 
 # setting up the raspberry pi
