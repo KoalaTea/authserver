@@ -46,7 +46,7 @@ func configureFromFile(fileName string) func(*Config) {
 		fileCFG := &FileConfig{}
 		err = json.Unmarshal(jsonBytes, fileCFG)
 		if err != nil {
-			log.Fatalf("Failed to parse config file '%s': %v", err)
+			log.Fatalf("Failed to parse config file '%s': %v", fileName, err)
 		}
 
 		cfg.PProfEnabled = fileCFG.PProfEnabled
