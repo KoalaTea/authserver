@@ -1,8 +1,11 @@
+//go:build zymkey
+
 package zymkey
 
 /*
 #cgo CFLAGS: -I/usr/include/zymkey
 #cgo LDFLAGS: -L/usr/lib -lzk_app_utils
+#include <stdbool.h>
 #include <stdlib.h>
 #include "zk_app_utils.h"
 */
@@ -19,28 +22,15 @@ import (
 	"unsafe"
 )
 
-// #cgo LDFLAGS: -L/usr/lib -lzk_app_utils
-// #cgo CFLAGS: -I/usr/include/zymkey
-// #include <stdbool.h>
-// #include <stdlib.h>
-// #include "zk_app_utils.h"
-import "C"
-
-type Signer struct {
+// ZymkeySigner implements the Signer interface for a hardware-based zymkey.
+type ZymkeySigner struct {
 	ctx     C.zkCTX
 	pubKey  crypto.PublicKey
 	keySlot C.int
 }
 
-type Slot int
-
-const (
-	Slot0 Slot = iota
-	Slot1
-	Slot2
-)
-
-func NewSigner(slot Slot) (*Signer, error) {
+// NewZymkeySigner creates a new ZymkeySigner.
+func NewZymkeySigner(slot Slot) (*ZymkeySigner, error) {
 	var ctx C.zkCTX
 	rc := C.zkOpen(&ctx)
 	if rc != 0 {
@@ -72,18 +62,20 @@ func NewSigner(slot Slot) (*Signer, error) {
 		Y:     y,
 	}
 
-	return &Signer{
+	return &ZymkeySigner{
 		ctx:     ctx,
 		pubKey:  pubKey,
 		keySlot: C.int(slot),
 	}, nil
 }
 
-func (z *Signer) Public() crypto.PublicKey {
+// Public returns the public key of the zymkey.
+func (z *ZymkeySigner) Public() crypto.PublicKey {
 	return z.pubKey
 }
 
-func (z *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+// Sign signs the given digest with the zymkey.
+func (z *ZymkeySigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	var sig *C.uint8_t
 	var sigLen C.int
 
@@ -107,7 +99,8 @@ func (z *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	}{r, s})
 }
 
-func (z *Signer) Close() error {
+// Close closes the zymkey context.
+func (z *ZymkeySigner) Close() error {
 	if z == nil {
 		return fmt.Errorf("ZymkeySigner is nil")
 	}

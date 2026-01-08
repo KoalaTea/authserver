@@ -87,7 +87,7 @@ func (o *OIDCProvider) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// TODO fix this
 	user := auth.UserFromContext(req.Context())
 	if user == nil {
-		log.Printf("No user: %+v")
+		log.Printf("No user: %+v", user)
 		o.oauth2.WriteAuthorizeError(ctx, rw, ar, err) // TODO probably simplify this not write out error to console
 		user = &ent.User{}
 	}
