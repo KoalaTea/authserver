@@ -6,9 +6,13 @@ import { useState } from 'react';
 const GET_USERS = gql`
   query GetUsers {
     users {
-      id
-      name
-      isactivated
+      edges {
+        node {
+          id
+          name
+          isactivated
+        }
+      }
     }
   }
 `;
@@ -43,7 +47,7 @@ export const InactiveUserList = () => {
   if (loading) return <Loader />;
   if (error) return <Text color="red">Error: Could not fetch users.</Text>;
 
-  const inactiveUsers = data?.users?.filter((user: User) => !user.isactivated) || [];
+  const inactiveUsers = data?.users?.edges?.map((edge: any) => edge.node).filter((user: User) => !user.isactivated) || [];
 
   const rows = inactiveUsers.map((user: User) => (
     <Table.Tr key={user.id}>
