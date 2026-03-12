@@ -22,7 +22,7 @@ resolver:
 # ent package. If they match it will use them, otherwise it will new ones.
 autobind:
   - github.com/koalatea/authserver/server/ent
-  # - github.com/koalatea/authserver/server/ent/user
+  - github.com/koalatea/authserver/server/ent/user
 
 struct_tag: json
 
