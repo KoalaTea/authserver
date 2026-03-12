@@ -2,6 +2,7 @@
 import './App.css'
 import { ExamplePage } from './pages/example';
 import { UserList } from './pages/user-list';
+import { InactiveUserList } from './pages/inactive-user-list';
 import { createBrowserRouter, RouterProvider } from "react-router";
 // Import styles of packages that you've installed.
 // All packages except `@mantine/hooks` require styles imports
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
   {
     path: "/users/",
     element: <UserList />,
+  },
+  {
+    path: "/inactive-users/",
+    element: <InactiveUserList />,
   }
   // ])
 ], { basename: "/www" })

@@ -33,7 +33,7 @@ func TestImplicitFlow(t *testing.T) {
 	username := "testuser"
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	provider := NewOIDCProvider(graph)
-	user, _ := graph.User.Create().SetName(username).SetSessionToken("123").SetOAuthID("abc").Save(context.Background())
+	user, _ := graph.User.Create().SetName(username).SetSessionToken("123").SetOAuthID("abc").SetIsActivated(true).Save(context.Background())
 	routes := provider.GetHandlers()
 	router := testingutils.NewRouter(routes, graph)
 	w := httptest.NewRecorder()

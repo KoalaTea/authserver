@@ -8,8 +8,10 @@ import (
 	"errors"
 	"sync/atomic"
 
+	"entgo.io/contrib/entgql"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/koalatea/authserver/server/ent"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -145,13 +147,24 @@ type ComplexityRoot struct {
 		Me    func(childComplexity int) int
 		Node  func(childComplexity int, id int) int
 		Nodes func(childComplexity int, ids []int) int
-		Users func(childComplexity int) int
+		Users func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, where *ent.UserWhereInput) int
 	}
 
 	User struct {
 		ID          func(childComplexity int) int
 		IsActivated func(childComplexity int) int
 		Name        func(childComplexity int) int
+	}
+
+	UserConnection struct {
+		Edges      func(childComplexity int) int
+		PageInfo   func(childComplexity int) int
+		TotalCount func(childComplexity int) int
+	}
+
+	UserEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
 	}
 }
 
@@ -169,7 +182,7 @@ func (e *executableSchema) Schema() *ast.Schema {
 	return parsedSchema
 }
 
-func (e *executableSchema) Complexity(typeName, field string, childComplexity int, rawArgs map[string]interface{}) (int, bool) {
+func (e *executableSchema) Complexity(ctx context.Context, typeName, field string, childComplexity int, rawArgs map[string]any) (int, bool) {
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
@@ -256,7 +269,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Mutation_requestCert_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_requestCert_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
@@ -268,7 +281,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Mutation_revokeCert_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_revokeCert_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
@@ -609,7 +622,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_node_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_node_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
@@ -621,7 +634,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_nodes_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_nodes_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
@@ -633,7 +646,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Users(childComplexity), true
+		args, err := ec.field_Query_users_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Users(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["where"].(*ent.UserWhereInput)), true
 
 	case "User.id":
 		if e.complexity.User.ID == nil {
@@ -656,16 +674,52 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Name(childComplexity), true
 
+	case "UserConnection.edges":
+		if e.complexity.UserConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.UserConnection.Edges(childComplexity), true
+
+	case "UserConnection.pageInfo":
+		if e.complexity.UserConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.UserConnection.PageInfo(childComplexity), true
+
+	case "UserConnection.totalCount":
+		if e.complexity.UserConnection.TotalCount == nil {
+			break
+		}
+
+		return e.complexity.UserConnection.TotalCount(childComplexity), true
+
+	case "UserEdge.cursor":
+		if e.complexity.UserEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.UserEdge.Cursor(childComplexity), true
+
+	case "UserEdge.node":
+		if e.complexity.UserEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.UserEdge.Node(childComplexity), true
+
 	}
 	return 0, false
 }
 
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
-	rc := graphql.GetOperationContext(ctx)
-	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
+	opCtx := graphql.GetOperationContext(ctx)
+	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAuthCodeWhereInput,
 		ec.unmarshalInputCertWhereInput,
+		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDenyListedJTIWhereInput,
 		ec.unmarshalInputOAuthAccessTokenWhereInput,
 		ec.unmarshalInputOAuthClientWhereInput,
@@ -681,7 +735,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	)
 	first := true
 
-	switch rc.Operation.Operation {
+	switch opCtx.Operation.Operation {
 	case ast.Query:
 		return func(ctx context.Context) *graphql.Response {
 			var response graphql.Response
@@ -689,7 +743,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			if first {
 				first = false
 				ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
-				data = ec._Query(ctx, rc.Operation.SelectionSet)
+				data = ec._Query(ctx, opCtx.Operation.SelectionSet)
 			} else {
 				if atomic.LoadInt32(&ec.pendingDeferred) > 0 {
 					result := <-ec.deferredResults
@@ -719,7 +773,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			first = false
 			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
-			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			data := ec._Mutation(ctx, opCtx.Operation.SelectionSet)
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 
@@ -889,6 +943,24 @@ input CertWhereInput {
   serialNumberGTE: Int
   serialNumberLT: Int
   serialNumberLTE: Int
+}
+"""
+CreateUserInput is used for create User object.
+Input was generated by ent.
+"""
+input CreateUserInput {
+  """
+  The name displayed for the user
+  """
+  name: String!
+  """
+  OAuth Subject ID of the user
+  """
+  oauthid: String!
+  """
+  True if the user is active and able to authenticate
+  """
+  isactivated: Boolean
 }
 """
 Define a Relay Cursor type:
@@ -1567,7 +1639,32 @@ type Query {
     """
     ids: [ID!]!
   ): [Node]!
-  users: [User!]!
+  users(
+    """
+    Returns the elements in the list that come after the specified cursor.
+    """
+    after: Cursor
+
+    """
+    Returns the first _n_ elements from the list.
+    """
+    first: Int
+
+    """
+    Returns the elements in the list that come before the specified cursor.
+    """
+    before: Cursor
+
+    """
+    Returns the last _n_ elements from the list.
+    """
+    last: Int
+
+    """
+    Filtering options for Users returned from the connection.
+    """
+    where: UserWhereInput
+  ): UserConnection!
 }
 """
 UpdateUserInput is used for update User object.
@@ -1593,6 +1690,36 @@ type User implements Node {
   True if the user is active and able to authenticate
   """
   isactivated: Boolean! @goField(name: "IsActivated", forceResolver: false)
+}
+"""
+A connection to a list of items.
+"""
+type UserConnection {
+  """
+  A list of edges.
+  """
+  edges: [UserEdge]
+  """
+  Information to aid in pagination.
+  """
+  pageInfo: PageInfo!
+  """
+  Identifies the total count of items in the connection.
+  """
+  totalCount: Int!
+}
+"""
+An edge in a connection.
+"""
+type UserEdge {
+  """
+  The item at the end of the edge.
+  """
+  node: User
+  """
+  A cursor for use in pagination.
+  """
+  cursor: Cursor!
 }
 """
 UserWhereInput is used for filtering User objects.
