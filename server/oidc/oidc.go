@@ -31,7 +31,9 @@ func (o *OIDCProvider) GetHandlers() internalHttp.RouteMap {
 			Handler: http.HandlerFunc(o.authEndpoint),
 		},
 		"/oidc/token": internalHttp.Endpoint{
-			Handler: http.HandlerFunc(o.tokenEndpoint),
+			Handler:              http.HandlerFunc(o.tokenEndpoint),
+			AllowUnauthenticated: true,
+			AllowUnactivated:     true,
 		},
 		"/oidc/revoke": internalHttp.Endpoint{
 			Handler: http.HandlerFunc(o.revokeEndpoint),

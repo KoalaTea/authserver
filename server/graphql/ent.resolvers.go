@@ -7,7 +7,6 @@ package graphql
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/contrib/entgql"
 	"github.com/koalatea/authserver/server/ent"
@@ -30,7 +29,10 @@ func (r *queryResolver) Nodes(ctx context.Context, ids []int) ([]ent.Noder, erro
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, where *ent.UserWhereInput) (*ent.UserConnection, error) {
-	panic(fmt.Errorf("not implemented: Users - users"))
+	return r.client.User.Query().
+		Paginate(ctx, after, first, before, last,
+			ent.WithUserFilter(where.Filter),
+		)
 }
 
 // Query returns generated.QueryResolver implementation.

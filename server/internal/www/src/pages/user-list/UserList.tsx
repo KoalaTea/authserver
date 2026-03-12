@@ -2,9 +2,13 @@ import { gql, useQuery } from "@apollo/client";
 
 const query = gql`
     query GetUsers {
-        users{
-            id
-            name
+        users {
+            edges {
+                node {
+                    id
+                    name
+                }
+            }
         }
     }
 `
@@ -19,7 +23,8 @@ export const UserList = () => {
         <>
             <p>Testing 123</p>
             <div>
-                {data?.users?.map((item: any) => {
+                {data?.users?.edges?.map((edge: any) => {
+                    const item = edge.node;
                     return <div key={item?.id}>{item?.name}</div>
                 })}
             </div>
