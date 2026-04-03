@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/denylistedjti"
@@ -18,6 +19,7 @@ type DenyListedJTICreate struct {
 	config
 	mutation *DenyListedJTIMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetJti sets the "jti" field.
@@ -98,6 +100,7 @@ func (dljc *DenyListedJTICreate) createSpec() (*DenyListedJTI, *sqlgraph.CreateS
 		_node = &DenyListedJTI{config: dljc.config}
 		_spec = sqlgraph.NewCreateSpec(denylistedjti.Table, sqlgraph.NewFieldSpec(denylistedjti.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = dljc.conflict
 	if value, ok := dljc.mutation.Jti(); ok {
 		_spec.SetField(denylistedjti.FieldJti, field.TypeString, value)
 		_node.Jti = value
@@ -109,11 +112,186 @@ func (dljc *DenyListedJTICreate) createSpec() (*DenyListedJTI, *sqlgraph.CreateS
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.DenyListedJTI.Create().
+//		SetJti(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DenyListedJTIUpsert) {
+//			SetJti(v+v).
+//		}).
+//		Exec(ctx)
+func (dljc *DenyListedJTICreate) OnConflict(opts ...sql.ConflictOption) *DenyListedJTIUpsertOne {
+	dljc.conflict = opts
+	return &DenyListedJTIUpsertOne{
+		create: dljc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (dljc *DenyListedJTICreate) OnConflictColumns(columns ...string) *DenyListedJTIUpsertOne {
+	dljc.conflict = append(dljc.conflict, sql.ConflictColumns(columns...))
+	return &DenyListedJTIUpsertOne{
+		create: dljc,
+	}
+}
+
+type (
+	// DenyListedJTIUpsertOne is the builder for "upsert"-ing
+	//  one DenyListedJTI node.
+	DenyListedJTIUpsertOne struct {
+		create *DenyListedJTICreate
+	}
+
+	// DenyListedJTIUpsert is the "OnConflict" setter.
+	DenyListedJTIUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetJti sets the "jti" field.
+func (u *DenyListedJTIUpsert) SetJti(v string) *DenyListedJTIUpsert {
+	u.Set(denylistedjti.FieldJti, v)
+	return u
+}
+
+// UpdateJti sets the "jti" field to the value that was provided on create.
+func (u *DenyListedJTIUpsert) UpdateJti() *DenyListedJTIUpsert {
+	u.SetExcluded(denylistedjti.FieldJti)
+	return u
+}
+
+// SetExpiration sets the "expiration" field.
+func (u *DenyListedJTIUpsert) SetExpiration(v time.Time) *DenyListedJTIUpsert {
+	u.Set(denylistedjti.FieldExpiration, v)
+	return u
+}
+
+// UpdateExpiration sets the "expiration" field to the value that was provided on create.
+func (u *DenyListedJTIUpsert) UpdateExpiration() *DenyListedJTIUpsert {
+	u.SetExcluded(denylistedjti.FieldExpiration)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *DenyListedJTIUpsertOne) UpdateNewValues() *DenyListedJTIUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *DenyListedJTIUpsertOne) Ignore() *DenyListedJTIUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DenyListedJTIUpsertOne) DoNothing() *DenyListedJTIUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DenyListedJTICreate.OnConflict
+// documentation for more info.
+func (u *DenyListedJTIUpsertOne) Update(set func(*DenyListedJTIUpsert)) *DenyListedJTIUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DenyListedJTIUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetJti sets the "jti" field.
+func (u *DenyListedJTIUpsertOne) SetJti(v string) *DenyListedJTIUpsertOne {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.SetJti(v)
+	})
+}
+
+// UpdateJti sets the "jti" field to the value that was provided on create.
+func (u *DenyListedJTIUpsertOne) UpdateJti() *DenyListedJTIUpsertOne {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.UpdateJti()
+	})
+}
+
+// SetExpiration sets the "expiration" field.
+func (u *DenyListedJTIUpsertOne) SetExpiration(v time.Time) *DenyListedJTIUpsertOne {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.SetExpiration(v)
+	})
+}
+
+// UpdateExpiration sets the "expiration" field to the value that was provided on create.
+func (u *DenyListedJTIUpsertOne) UpdateExpiration() *DenyListedJTIUpsertOne {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.UpdateExpiration()
+	})
+}
+
+// Exec executes the query.
+func (u *DenyListedJTIUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DenyListedJTICreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DenyListedJTIUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *DenyListedJTIUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *DenyListedJTIUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // DenyListedJTICreateBulk is the builder for creating many DenyListedJTI entities in bulk.
 type DenyListedJTICreateBulk struct {
 	config
 	err      error
 	builders []*DenyListedJTICreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the DenyListedJTI entities in the database.
@@ -142,6 +320,7 @@ func (dljcb *DenyListedJTICreateBulk) Save(ctx context.Context) ([]*DenyListedJT
 					_, err = mutators[i+1].Mutate(root, dljcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = dljcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, dljcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -192,6 +371,138 @@ func (dljcb *DenyListedJTICreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (dljcb *DenyListedJTICreateBulk) ExecX(ctx context.Context) {
 	if err := dljcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.DenyListedJTI.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DenyListedJTIUpsert) {
+//			SetJti(v+v).
+//		}).
+//		Exec(ctx)
+func (dljcb *DenyListedJTICreateBulk) OnConflict(opts ...sql.ConflictOption) *DenyListedJTIUpsertBulk {
+	dljcb.conflict = opts
+	return &DenyListedJTIUpsertBulk{
+		create: dljcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (dljcb *DenyListedJTICreateBulk) OnConflictColumns(columns ...string) *DenyListedJTIUpsertBulk {
+	dljcb.conflict = append(dljcb.conflict, sql.ConflictColumns(columns...))
+	return &DenyListedJTIUpsertBulk{
+		create: dljcb,
+	}
+}
+
+// DenyListedJTIUpsertBulk is the builder for "upsert"-ing
+// a bulk of DenyListedJTI nodes.
+type DenyListedJTIUpsertBulk struct {
+	create *DenyListedJTICreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *DenyListedJTIUpsertBulk) UpdateNewValues() *DenyListedJTIUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.DenyListedJTI.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *DenyListedJTIUpsertBulk) Ignore() *DenyListedJTIUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DenyListedJTIUpsertBulk) DoNothing() *DenyListedJTIUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DenyListedJTICreateBulk.OnConflict
+// documentation for more info.
+func (u *DenyListedJTIUpsertBulk) Update(set func(*DenyListedJTIUpsert)) *DenyListedJTIUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DenyListedJTIUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetJti sets the "jti" field.
+func (u *DenyListedJTIUpsertBulk) SetJti(v string) *DenyListedJTIUpsertBulk {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.SetJti(v)
+	})
+}
+
+// UpdateJti sets the "jti" field to the value that was provided on create.
+func (u *DenyListedJTIUpsertBulk) UpdateJti() *DenyListedJTIUpsertBulk {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.UpdateJti()
+	})
+}
+
+// SetExpiration sets the "expiration" field.
+func (u *DenyListedJTIUpsertBulk) SetExpiration(v time.Time) *DenyListedJTIUpsertBulk {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.SetExpiration(v)
+	})
+}
+
+// UpdateExpiration sets the "expiration" field to the value that was provided on create.
+func (u *DenyListedJTIUpsertBulk) UpdateExpiration() *DenyListedJTIUpsertBulk {
+	return u.Update(func(s *DenyListedJTIUpsert) {
+		s.UpdateExpiration()
+	})
+}
+
+// Exec executes the query.
+func (u *DenyListedJTIUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DenyListedJTICreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DenyListedJTICreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DenyListedJTIUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

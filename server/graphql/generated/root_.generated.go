@@ -63,8 +63,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		CreateUser  func(childComplexity int, input ent.CreateUserInput) int
 		RequestCert func(childComplexity int, target string, pubKey string) int
 		RevokeCert  func(childComplexity int, serialNumber string) int
+		UpdateUser  func(childComplexity int, id int, input ent.UpdateUserInput) int
 	}
 
 	OAuthAccessToken struct {
@@ -264,6 +266,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.DenyListedJTI.Jti(childComplexity), true
 
+	case "Mutation.createUser":
+		if e.complexity.Mutation.CreateUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createUser_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateUser(childComplexity, args["input"].(ent.CreateUserInput)), true
+
 	case "Mutation.requestCert":
 		if e.complexity.Mutation.RequestCert == nil {
 			break
@@ -287,6 +301,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RevokeCert(childComplexity, args["serialNumber"].(string)), true
+
+	case "Mutation.updateUser":
+		if e.complexity.Mutation.UpdateUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateUser_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateUser(childComplexity, args["id"].(int), args["input"].(ent.UpdateUserInput)), true
 
 	case "OAuthAccessToken.id":
 		if e.complexity.OAuthAccessToken.ID == nil {
@@ -1770,6 +1796,8 @@ input UserWhereInput {
 	{Name: "../schema/mutation.graphql", Input: `type Mutation {
     requestCert(target: String!, pubKey: String!): String!
     revokeCert(serialNumber: String!): Boolean!
+    createUser(input: CreateUserInput!): User!
+    updateUser(id: ID!, input: UpdateUserInput!): User!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)

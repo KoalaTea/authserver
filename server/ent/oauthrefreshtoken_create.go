@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/oauthrefreshtoken"
@@ -18,6 +19,7 @@ type OAuthRefreshTokenCreate struct {
 	config
 	mutation *OAuthRefreshTokenMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetSignature sets the "signature" field.
@@ -108,6 +110,7 @@ func (ortc *OAuthRefreshTokenCreate) createSpec() (*OAuthRefreshToken, *sqlgraph
 		_node = &OAuthRefreshToken{config: ortc.config}
 		_spec = sqlgraph.NewCreateSpec(oauthrefreshtoken.Table, sqlgraph.NewFieldSpec(oauthrefreshtoken.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = ortc.conflict
 	if value, ok := ortc.mutation.Signature(); ok {
 		_spec.SetField(oauthrefreshtoken.FieldSignature, field.TypeString, value)
 		_node.Signature = value
@@ -132,11 +135,160 @@ func (ortc *OAuthRefreshTokenCreate) createSpec() (*OAuthRefreshToken, *sqlgraph
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.OAuthRefreshToken.Create().
+//		SetSignature(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.OAuthRefreshTokenUpsert) {
+//			SetSignature(v+v).
+//		}).
+//		Exec(ctx)
+func (ortc *OAuthRefreshTokenCreate) OnConflict(opts ...sql.ConflictOption) *OAuthRefreshTokenUpsertOne {
+	ortc.conflict = opts
+	return &OAuthRefreshTokenUpsertOne{
+		create: ortc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ortc *OAuthRefreshTokenCreate) OnConflictColumns(columns ...string) *OAuthRefreshTokenUpsertOne {
+	ortc.conflict = append(ortc.conflict, sql.ConflictColumns(columns...))
+	return &OAuthRefreshTokenUpsertOne{
+		create: ortc,
+	}
+}
+
+type (
+	// OAuthRefreshTokenUpsertOne is the builder for "upsert"-ing
+	//  one OAuthRefreshToken node.
+	OAuthRefreshTokenUpsertOne struct {
+		create *OAuthRefreshTokenCreate
+	}
+
+	// OAuthRefreshTokenUpsert is the "OnConflict" setter.
+	OAuthRefreshTokenUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetSignature sets the "signature" field.
+func (u *OAuthRefreshTokenUpsert) SetSignature(v string) *OAuthRefreshTokenUpsert {
+	u.Set(oauthrefreshtoken.FieldSignature, v)
+	return u
+}
+
+// UpdateSignature sets the "signature" field to the value that was provided on create.
+func (u *OAuthRefreshTokenUpsert) UpdateSignature() *OAuthRefreshTokenUpsert {
+	u.SetExcluded(oauthrefreshtoken.FieldSignature)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *OAuthRefreshTokenUpsertOne) UpdateNewValues() *OAuthRefreshTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *OAuthRefreshTokenUpsertOne) Ignore() *OAuthRefreshTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *OAuthRefreshTokenUpsertOne) DoNothing() *OAuthRefreshTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the OAuthRefreshTokenCreate.OnConflict
+// documentation for more info.
+func (u *OAuthRefreshTokenUpsertOne) Update(set func(*OAuthRefreshTokenUpsert)) *OAuthRefreshTokenUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&OAuthRefreshTokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetSignature sets the "signature" field.
+func (u *OAuthRefreshTokenUpsertOne) SetSignature(v string) *OAuthRefreshTokenUpsertOne {
+	return u.Update(func(s *OAuthRefreshTokenUpsert) {
+		s.SetSignature(v)
+	})
+}
+
+// UpdateSignature sets the "signature" field to the value that was provided on create.
+func (u *OAuthRefreshTokenUpsertOne) UpdateSignature() *OAuthRefreshTokenUpsertOne {
+	return u.Update(func(s *OAuthRefreshTokenUpsert) {
+		s.UpdateSignature()
+	})
+}
+
+// Exec executes the query.
+func (u *OAuthRefreshTokenUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for OAuthRefreshTokenCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *OAuthRefreshTokenUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *OAuthRefreshTokenUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *OAuthRefreshTokenUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // OAuthRefreshTokenCreateBulk is the builder for creating many OAuthRefreshToken entities in bulk.
 type OAuthRefreshTokenCreateBulk struct {
 	config
 	err      error
 	builders []*OAuthRefreshTokenCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the OAuthRefreshToken entities in the database.
@@ -165,6 +317,7 @@ func (ortcb *OAuthRefreshTokenCreateBulk) Save(ctx context.Context) ([]*OAuthRef
 					_, err = mutators[i+1].Mutate(root, ortcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = ortcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, ortcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -215,6 +368,124 @@ func (ortcb *OAuthRefreshTokenCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (ortcb *OAuthRefreshTokenCreateBulk) ExecX(ctx context.Context) {
 	if err := ortcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.OAuthRefreshToken.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.OAuthRefreshTokenUpsert) {
+//			SetSignature(v+v).
+//		}).
+//		Exec(ctx)
+func (ortcb *OAuthRefreshTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *OAuthRefreshTokenUpsertBulk {
+	ortcb.conflict = opts
+	return &OAuthRefreshTokenUpsertBulk{
+		create: ortcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ortcb *OAuthRefreshTokenCreateBulk) OnConflictColumns(columns ...string) *OAuthRefreshTokenUpsertBulk {
+	ortcb.conflict = append(ortcb.conflict, sql.ConflictColumns(columns...))
+	return &OAuthRefreshTokenUpsertBulk{
+		create: ortcb,
+	}
+}
+
+// OAuthRefreshTokenUpsertBulk is the builder for "upsert"-ing
+// a bulk of OAuthRefreshToken nodes.
+type OAuthRefreshTokenUpsertBulk struct {
+	create *OAuthRefreshTokenCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *OAuthRefreshTokenUpsertBulk) UpdateNewValues() *OAuthRefreshTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.OAuthRefreshToken.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *OAuthRefreshTokenUpsertBulk) Ignore() *OAuthRefreshTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *OAuthRefreshTokenUpsertBulk) DoNothing() *OAuthRefreshTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the OAuthRefreshTokenCreateBulk.OnConflict
+// documentation for more info.
+func (u *OAuthRefreshTokenUpsertBulk) Update(set func(*OAuthRefreshTokenUpsert)) *OAuthRefreshTokenUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&OAuthRefreshTokenUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetSignature sets the "signature" field.
+func (u *OAuthRefreshTokenUpsertBulk) SetSignature(v string) *OAuthRefreshTokenUpsertBulk {
+	return u.Update(func(s *OAuthRefreshTokenUpsert) {
+		s.SetSignature(v)
+	})
+}
+
+// UpdateSignature sets the "signature" field to the value that was provided on create.
+func (u *OAuthRefreshTokenUpsertBulk) UpdateSignature() *OAuthRefreshTokenUpsertBulk {
+	return u.Update(func(s *OAuthRefreshTokenUpsert) {
+		s.UpdateSignature()
+	})
+}
+
+// Exec executes the query.
+func (u *OAuthRefreshTokenUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the OAuthRefreshTokenCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for OAuthRefreshTokenCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *OAuthRefreshTokenUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -7185,6 +7185,11 @@ func (ec *executionContext) unmarshalNCertWhereInput2ᚖgithubᚗcomᚋkoalatea�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋkoalateaᚋauthserverᚋserverᚋentᚐCreateUserInput(ctx context.Context, v any) (ent.CreateUserInput, error) {
+	res, err := ec.unmarshalInputCreateUserInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCursor2entgoᚗioᚋcontribᚋentgqlᚐCursor(ctx context.Context, v any) (entgql.Cursor[int], error) {
 	var res entgql.Cursor[int]
 	err := res.UnmarshalGQL(v)
@@ -7285,6 +7290,11 @@ func (ec *executionContext) unmarshalNPublicJWKSetWhereInput2ᚖgithubᚗcomᚋk
 func (ec *executionContext) unmarshalNPublicJWKWhereInput2ᚖgithubᚗcomᚋkoalateaᚋauthserverᚋserverᚋentᚐPublicJWKWhereInput(ctx context.Context, v any) (*ent.PublicJWKWhereInput, error) {
 	res, err := ec.unmarshalInputPublicJWKWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateUserInput2githubᚗcomᚋkoalateaᚋauthserverᚋserverᚋentᚐUpdateUserInput(ctx context.Context, v any) (ent.UpdateUserInput, error) {
+	res, err := ec.unmarshalInputUpdateUserInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUser2githubᚗcomᚋkoalateaᚋauthserverᚋserverᚋentᚐUser(ctx context.Context, sel ast.SelectionSet, v ent.User) graphql.Marshaler {
