@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
@@ -18,6 +19,7 @@ type OAuthSessionCreate struct {
 	config
 	mutation *OAuthSessionMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetIssuer sets the "issuer" field.
@@ -197,6 +199,7 @@ func (osc *OAuthSessionCreate) createSpec() (*OAuthSession, *sqlgraph.CreateSpec
 		_node = &OAuthSession{config: osc.config}
 		_spec = sqlgraph.NewCreateSpec(oauthsession.Table, sqlgraph.NewFieldSpec(oauthsession.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = osc.conflict
 	if value, ok := osc.mutation.Issuer(); ok {
 		_spec.SetField(oauthsession.FieldIssuer, field.TypeString, value)
 		_node.Issuer = value
@@ -252,11 +255,472 @@ func (osc *OAuthSessionCreate) createSpec() (*OAuthSession, *sqlgraph.CreateSpec
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.OAuthSession.Create().
+//		SetIssuer(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.OAuthSessionUpsert) {
+//			SetIssuer(v+v).
+//		}).
+//		Exec(ctx)
+func (osc *OAuthSessionCreate) OnConflict(opts ...sql.ConflictOption) *OAuthSessionUpsertOne {
+	osc.conflict = opts
+	return &OAuthSessionUpsertOne{
+		create: osc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (osc *OAuthSessionCreate) OnConflictColumns(columns ...string) *OAuthSessionUpsertOne {
+	osc.conflict = append(osc.conflict, sql.ConflictColumns(columns...))
+	return &OAuthSessionUpsertOne{
+		create: osc,
+	}
+}
+
+type (
+	// OAuthSessionUpsertOne is the builder for "upsert"-ing
+	//  one OAuthSession node.
+	OAuthSessionUpsertOne struct {
+		create *OAuthSessionCreate
+	}
+
+	// OAuthSessionUpsert is the "OnConflict" setter.
+	OAuthSessionUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetIssuer sets the "issuer" field.
+func (u *OAuthSessionUpsert) SetIssuer(v string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldIssuer, v)
+	return u
+}
+
+// UpdateIssuer sets the "issuer" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateIssuer() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldIssuer)
+	return u
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthSessionUpsert) SetSubject(v string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldSubject, v)
+	return u
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateSubject() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldSubject)
+	return u
+}
+
+// SetAudiences sets the "audiences" field.
+func (u *OAuthSessionUpsert) SetAudiences(v []string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldAudiences, v)
+	return u
+}
+
+// UpdateAudiences sets the "audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateAudiences() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldAudiences)
+	return u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *OAuthSessionUpsert) SetExpiresAt(v time.Time) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldExpiresAt, v)
+	return u
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateExpiresAt() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldExpiresAt)
+	return u
+}
+
+// SetIssuedAt sets the "issued_at" field.
+func (u *OAuthSessionUpsert) SetIssuedAt(v time.Time) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldIssuedAt, v)
+	return u
+}
+
+// UpdateIssuedAt sets the "issued_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateIssuedAt() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldIssuedAt)
+	return u
+}
+
+// SetRequestedAt sets the "requested_at" field.
+func (u *OAuthSessionUpsert) SetRequestedAt(v time.Time) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldRequestedAt, v)
+	return u
+}
+
+// UpdateRequestedAt sets the "requested_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateRequestedAt() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldRequestedAt)
+	return u
+}
+
+// SetAuthTime sets the "auth_time" field.
+func (u *OAuthSessionUpsert) SetAuthTime(v time.Time) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldAuthTime, v)
+	return u
+}
+
+// UpdateAuthTime sets the "auth_time" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateAuthTime() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldAuthTime)
+	return u
+}
+
+// SetRequestedScopes sets the "requested_scopes" field.
+func (u *OAuthSessionUpsert) SetRequestedScopes(v []string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldRequestedScopes, v)
+	return u
+}
+
+// UpdateRequestedScopes sets the "requested_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateRequestedScopes() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldRequestedScopes)
+	return u
+}
+
+// SetGrantedScopes sets the "granted_scopes" field.
+func (u *OAuthSessionUpsert) SetGrantedScopes(v []string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldGrantedScopes, v)
+	return u
+}
+
+// UpdateGrantedScopes sets the "granted_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateGrantedScopes() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldGrantedScopes)
+	return u
+}
+
+// SetRequestedAudiences sets the "requested_audiences" field.
+func (u *OAuthSessionUpsert) SetRequestedAudiences(v []string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldRequestedAudiences, v)
+	return u
+}
+
+// UpdateRequestedAudiences sets the "requested_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateRequestedAudiences() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldRequestedAudiences)
+	return u
+}
+
+// SetGrantedAudiences sets the "granted_audiences" field.
+func (u *OAuthSessionUpsert) SetGrantedAudiences(v []string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldGrantedAudiences, v)
+	return u
+}
+
+// UpdateGrantedAudiences sets the "granted_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateGrantedAudiences() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldGrantedAudiences)
+	return u
+}
+
+// SetRequest sets the "request" field.
+func (u *OAuthSessionUpsert) SetRequest(v string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldRequest, v)
+	return u
+}
+
+// UpdateRequest sets the "request" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateRequest() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldRequest)
+	return u
+}
+
+// SetForm sets the "form" field.
+func (u *OAuthSessionUpsert) SetForm(v string) *OAuthSessionUpsert {
+	u.Set(oauthsession.FieldForm, v)
+	return u
+}
+
+// UpdateForm sets the "form" field to the value that was provided on create.
+func (u *OAuthSessionUpsert) UpdateForm() *OAuthSessionUpsert {
+	u.SetExcluded(oauthsession.FieldForm)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *OAuthSessionUpsertOne) UpdateNewValues() *OAuthSessionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *OAuthSessionUpsertOne) Ignore() *OAuthSessionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *OAuthSessionUpsertOne) DoNothing() *OAuthSessionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the OAuthSessionCreate.OnConflict
+// documentation for more info.
+func (u *OAuthSessionUpsertOne) Update(set func(*OAuthSessionUpsert)) *OAuthSessionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&OAuthSessionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetIssuer sets the "issuer" field.
+func (u *OAuthSessionUpsertOne) SetIssuer(v string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetIssuer(v)
+	})
+}
+
+// UpdateIssuer sets the "issuer" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateIssuer() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateIssuer()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthSessionUpsertOne) SetSubject(v string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateSubject() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// SetAudiences sets the "audiences" field.
+func (u *OAuthSessionUpsertOne) SetAudiences(v []string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetAudiences(v)
+	})
+}
+
+// UpdateAudiences sets the "audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateAudiences() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateAudiences()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *OAuthSessionUpsertOne) SetExpiresAt(v time.Time) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateExpiresAt() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateExpiresAt()
+	})
+}
+
+// SetIssuedAt sets the "issued_at" field.
+func (u *OAuthSessionUpsertOne) SetIssuedAt(v time.Time) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetIssuedAt(v)
+	})
+}
+
+// UpdateIssuedAt sets the "issued_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateIssuedAt() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateIssuedAt()
+	})
+}
+
+// SetRequestedAt sets the "requested_at" field.
+func (u *OAuthSessionUpsertOne) SetRequestedAt(v time.Time) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedAt(v)
+	})
+}
+
+// UpdateRequestedAt sets the "requested_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateRequestedAt() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedAt()
+	})
+}
+
+// SetAuthTime sets the "auth_time" field.
+func (u *OAuthSessionUpsertOne) SetAuthTime(v time.Time) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetAuthTime(v)
+	})
+}
+
+// UpdateAuthTime sets the "auth_time" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateAuthTime() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateAuthTime()
+	})
+}
+
+// SetRequestedScopes sets the "requested_scopes" field.
+func (u *OAuthSessionUpsertOne) SetRequestedScopes(v []string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedScopes(v)
+	})
+}
+
+// UpdateRequestedScopes sets the "requested_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateRequestedScopes() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedScopes()
+	})
+}
+
+// SetGrantedScopes sets the "granted_scopes" field.
+func (u *OAuthSessionUpsertOne) SetGrantedScopes(v []string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetGrantedScopes(v)
+	})
+}
+
+// UpdateGrantedScopes sets the "granted_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateGrantedScopes() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateGrantedScopes()
+	})
+}
+
+// SetRequestedAudiences sets the "requested_audiences" field.
+func (u *OAuthSessionUpsertOne) SetRequestedAudiences(v []string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedAudiences(v)
+	})
+}
+
+// UpdateRequestedAudiences sets the "requested_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateRequestedAudiences() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedAudiences()
+	})
+}
+
+// SetGrantedAudiences sets the "granted_audiences" field.
+func (u *OAuthSessionUpsertOne) SetGrantedAudiences(v []string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetGrantedAudiences(v)
+	})
+}
+
+// UpdateGrantedAudiences sets the "granted_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateGrantedAudiences() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateGrantedAudiences()
+	})
+}
+
+// SetRequest sets the "request" field.
+func (u *OAuthSessionUpsertOne) SetRequest(v string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequest(v)
+	})
+}
+
+// UpdateRequest sets the "request" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateRequest() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequest()
+	})
+}
+
+// SetForm sets the "form" field.
+func (u *OAuthSessionUpsertOne) SetForm(v string) *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetForm(v)
+	})
+}
+
+// UpdateForm sets the "form" field to the value that was provided on create.
+func (u *OAuthSessionUpsertOne) UpdateForm() *OAuthSessionUpsertOne {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateForm()
+	})
+}
+
+// Exec executes the query.
+func (u *OAuthSessionUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for OAuthSessionCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *OAuthSessionUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *OAuthSessionUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *OAuthSessionUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // OAuthSessionCreateBulk is the builder for creating many OAuthSession entities in bulk.
 type OAuthSessionCreateBulk struct {
 	config
 	err      error
 	builders []*OAuthSessionCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the OAuthSession entities in the database.
@@ -285,6 +749,7 @@ func (oscb *OAuthSessionCreateBulk) Save(ctx context.Context) ([]*OAuthSession, 
 					_, err = mutators[i+1].Mutate(root, oscb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = oscb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, oscb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -335,6 +800,292 @@ func (oscb *OAuthSessionCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (oscb *OAuthSessionCreateBulk) ExecX(ctx context.Context) {
 	if err := oscb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.OAuthSession.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.OAuthSessionUpsert) {
+//			SetIssuer(v+v).
+//		}).
+//		Exec(ctx)
+func (oscb *OAuthSessionCreateBulk) OnConflict(opts ...sql.ConflictOption) *OAuthSessionUpsertBulk {
+	oscb.conflict = opts
+	return &OAuthSessionUpsertBulk{
+		create: oscb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (oscb *OAuthSessionCreateBulk) OnConflictColumns(columns ...string) *OAuthSessionUpsertBulk {
+	oscb.conflict = append(oscb.conflict, sql.ConflictColumns(columns...))
+	return &OAuthSessionUpsertBulk{
+		create: oscb,
+	}
+}
+
+// OAuthSessionUpsertBulk is the builder for "upsert"-ing
+// a bulk of OAuthSession nodes.
+type OAuthSessionUpsertBulk struct {
+	create *OAuthSessionCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *OAuthSessionUpsertBulk) UpdateNewValues() *OAuthSessionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.OAuthSession.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *OAuthSessionUpsertBulk) Ignore() *OAuthSessionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *OAuthSessionUpsertBulk) DoNothing() *OAuthSessionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the OAuthSessionCreateBulk.OnConflict
+// documentation for more info.
+func (u *OAuthSessionUpsertBulk) Update(set func(*OAuthSessionUpsert)) *OAuthSessionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&OAuthSessionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetIssuer sets the "issuer" field.
+func (u *OAuthSessionUpsertBulk) SetIssuer(v string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetIssuer(v)
+	})
+}
+
+// UpdateIssuer sets the "issuer" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateIssuer() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateIssuer()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthSessionUpsertBulk) SetSubject(v string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateSubject() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// SetAudiences sets the "audiences" field.
+func (u *OAuthSessionUpsertBulk) SetAudiences(v []string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetAudiences(v)
+	})
+}
+
+// UpdateAudiences sets the "audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateAudiences() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateAudiences()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *OAuthSessionUpsertBulk) SetExpiresAt(v time.Time) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateExpiresAt() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateExpiresAt()
+	})
+}
+
+// SetIssuedAt sets the "issued_at" field.
+func (u *OAuthSessionUpsertBulk) SetIssuedAt(v time.Time) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetIssuedAt(v)
+	})
+}
+
+// UpdateIssuedAt sets the "issued_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateIssuedAt() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateIssuedAt()
+	})
+}
+
+// SetRequestedAt sets the "requested_at" field.
+func (u *OAuthSessionUpsertBulk) SetRequestedAt(v time.Time) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedAt(v)
+	})
+}
+
+// UpdateRequestedAt sets the "requested_at" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateRequestedAt() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedAt()
+	})
+}
+
+// SetAuthTime sets the "auth_time" field.
+func (u *OAuthSessionUpsertBulk) SetAuthTime(v time.Time) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetAuthTime(v)
+	})
+}
+
+// UpdateAuthTime sets the "auth_time" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateAuthTime() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateAuthTime()
+	})
+}
+
+// SetRequestedScopes sets the "requested_scopes" field.
+func (u *OAuthSessionUpsertBulk) SetRequestedScopes(v []string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedScopes(v)
+	})
+}
+
+// UpdateRequestedScopes sets the "requested_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateRequestedScopes() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedScopes()
+	})
+}
+
+// SetGrantedScopes sets the "granted_scopes" field.
+func (u *OAuthSessionUpsertBulk) SetGrantedScopes(v []string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetGrantedScopes(v)
+	})
+}
+
+// UpdateGrantedScopes sets the "granted_scopes" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateGrantedScopes() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateGrantedScopes()
+	})
+}
+
+// SetRequestedAudiences sets the "requested_audiences" field.
+func (u *OAuthSessionUpsertBulk) SetRequestedAudiences(v []string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequestedAudiences(v)
+	})
+}
+
+// UpdateRequestedAudiences sets the "requested_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateRequestedAudiences() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequestedAudiences()
+	})
+}
+
+// SetGrantedAudiences sets the "granted_audiences" field.
+func (u *OAuthSessionUpsertBulk) SetGrantedAudiences(v []string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetGrantedAudiences(v)
+	})
+}
+
+// UpdateGrantedAudiences sets the "granted_audiences" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateGrantedAudiences() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateGrantedAudiences()
+	})
+}
+
+// SetRequest sets the "request" field.
+func (u *OAuthSessionUpsertBulk) SetRequest(v string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetRequest(v)
+	})
+}
+
+// UpdateRequest sets the "request" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateRequest() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateRequest()
+	})
+}
+
+// SetForm sets the "form" field.
+func (u *OAuthSessionUpsertBulk) SetForm(v string) *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.SetForm(v)
+	})
+}
+
+// UpdateForm sets the "form" field to the value that was provided on create.
+func (u *OAuthSessionUpsertBulk) UpdateForm() *OAuthSessionUpsertBulk {
+	return u.Update(func(s *OAuthSessionUpsert) {
+		s.UpdateForm()
+	})
+}
+
+// Exec executes the query.
+func (u *OAuthSessionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the OAuthSessionCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for OAuthSessionCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *OAuthSessionUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

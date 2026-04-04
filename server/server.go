@@ -111,7 +111,7 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 
 	// run the Metric server and the authserver
 	metricsHTTP := newMetricsServer()
-	s := &Server{MetricsHTTP: metricsHTTP, HTTP: &http.Server{Addr: "0.0.0.0:8080", Handler: router}}
+	s := &Server{graph: graph, MetricsHTTP: metricsHTTP, HTTP: &http.Server{Addr: "0.0.0.0:8080", Handler: router}}
 	return s, nil
 }
 

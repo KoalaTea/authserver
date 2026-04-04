@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/oauthsession"
@@ -18,6 +19,7 @@ type PKCECreate struct {
 	config
 	mutation *PKCEMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCode sets the "code" field.
@@ -108,6 +110,7 @@ func (pc *PKCECreate) createSpec() (*PKCE, *sqlgraph.CreateSpec) {
 		_node = &PKCE{config: pc.config}
 		_spec = sqlgraph.NewCreateSpec(pkce.Table, sqlgraph.NewFieldSpec(pkce.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = pc.conflict
 	if value, ok := pc.mutation.Code(); ok {
 		_spec.SetField(pkce.FieldCode, field.TypeString, value)
 		_node.Code = value
@@ -132,11 +135,160 @@ func (pc *PKCECreate) createSpec() (*PKCE, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PKCE.Create().
+//		SetCode(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PKCEUpsert) {
+//			SetCode(v+v).
+//		}).
+//		Exec(ctx)
+func (pc *PKCECreate) OnConflict(opts ...sql.ConflictOption) *PKCEUpsertOne {
+	pc.conflict = opts
+	return &PKCEUpsertOne{
+		create: pc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pc *PKCECreate) OnConflictColumns(columns ...string) *PKCEUpsertOne {
+	pc.conflict = append(pc.conflict, sql.ConflictColumns(columns...))
+	return &PKCEUpsertOne{
+		create: pc,
+	}
+}
+
+type (
+	// PKCEUpsertOne is the builder for "upsert"-ing
+	//  one PKCE node.
+	PKCEUpsertOne struct {
+		create *PKCECreate
+	}
+
+	// PKCEUpsert is the "OnConflict" setter.
+	PKCEUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetCode sets the "code" field.
+func (u *PKCEUpsert) SetCode(v string) *PKCEUpsert {
+	u.Set(pkce.FieldCode, v)
+	return u
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *PKCEUpsert) UpdateCode() *PKCEUpsert {
+	u.SetExcluded(pkce.FieldCode)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *PKCEUpsertOne) UpdateNewValues() *PKCEUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *PKCEUpsertOne) Ignore() *PKCEUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PKCEUpsertOne) DoNothing() *PKCEUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PKCECreate.OnConflict
+// documentation for more info.
+func (u *PKCEUpsertOne) Update(set func(*PKCEUpsert)) *PKCEUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PKCEUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetCode sets the "code" field.
+func (u *PKCEUpsertOne) SetCode(v string) *PKCEUpsertOne {
+	return u.Update(func(s *PKCEUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *PKCEUpsertOne) UpdateCode() *PKCEUpsertOne {
+	return u.Update(func(s *PKCEUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// Exec executes the query.
+func (u *PKCEUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PKCECreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PKCEUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *PKCEUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *PKCEUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // PKCECreateBulk is the builder for creating many PKCE entities in bulk.
 type PKCECreateBulk struct {
 	config
 	err      error
 	builders []*PKCECreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the PKCE entities in the database.
@@ -165,6 +317,7 @@ func (pcb *PKCECreateBulk) Save(ctx context.Context) ([]*PKCE, error) {
 					_, err = mutators[i+1].Mutate(root, pcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = pcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, pcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -215,6 +368,124 @@ func (pcb *PKCECreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (pcb *PKCECreateBulk) ExecX(ctx context.Context) {
 	if err := pcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PKCE.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PKCEUpsert) {
+//			SetCode(v+v).
+//		}).
+//		Exec(ctx)
+func (pcb *PKCECreateBulk) OnConflict(opts ...sql.ConflictOption) *PKCEUpsertBulk {
+	pcb.conflict = opts
+	return &PKCEUpsertBulk{
+		create: pcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pcb *PKCECreateBulk) OnConflictColumns(columns ...string) *PKCEUpsertBulk {
+	pcb.conflict = append(pcb.conflict, sql.ConflictColumns(columns...))
+	return &PKCEUpsertBulk{
+		create: pcb,
+	}
+}
+
+// PKCEUpsertBulk is the builder for "upsert"-ing
+// a bulk of PKCE nodes.
+type PKCEUpsertBulk struct {
+	create *PKCECreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *PKCEUpsertBulk) UpdateNewValues() *PKCEUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PKCE.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *PKCEUpsertBulk) Ignore() *PKCEUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PKCEUpsertBulk) DoNothing() *PKCEUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PKCECreateBulk.OnConflict
+// documentation for more info.
+func (u *PKCEUpsertBulk) Update(set func(*PKCEUpsert)) *PKCEUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PKCEUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetCode sets the "code" field.
+func (u *PKCEUpsertBulk) SetCode(v string) *PKCEUpsertBulk {
+	return u.Update(func(s *PKCEUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *PKCEUpsertBulk) UpdateCode() *PKCEUpsertBulk {
+	return u.Update(func(s *PKCEUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// Exec executes the query.
+func (u *PKCEUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the PKCECreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PKCECreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PKCEUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

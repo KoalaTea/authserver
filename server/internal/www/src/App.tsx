@@ -2,29 +2,39 @@
 import './App.css'
 import { ExamplePage } from './pages/example';
 import { UserList } from './pages/user-list';
+import { UserDetail } from './pages/user-detail';
 import { InactiveUserList } from './pages/inactive-user-list';
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router";
 // Import styles of packages that you've installed.
 // All packages except `@mantine/hooks` require styles imports
 import '@mantine/core/styles.css';
 
 import { MantineProvider } from '@mantine/core';
 import { AuthorizationContextProvider } from './context/AuthorizationContext';
+import { Layout } from './components/Layout';
 
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <ExamplePage />,
-  },
-  {
-    path: "/users/",
-    element: <UserList />,
-  },
-  {
-    path: "/inactive-users/",
-    element: <InactiveUserList />,
+    element: <Layout><Outlet /></Layout>,
+    children: [
+      {
+        path: "/",
+        element: <ExamplePage />,
+      },
+      {
+        path: "/users/",
+        element: <UserList />,
+      },
+      {
+        path: "/users/:id",
+        element: <UserDetail />,
+      },
+      {
+        path: "/inactive-users/",
+        element: <InactiveUserList />,
+      }
+    ]
   }
-  // ])
 ], { basename: "/www" })
 
 function App() {

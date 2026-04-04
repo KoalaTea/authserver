@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/koalatea/authserver/server/ent"
 	"github.com/koalatea/authserver/server/graphql/generated"
 )
 
@@ -29,6 +30,16 @@ func (r *mutationResolver) RevokeCert(ctx context.Context, serialNumber string) 
 		return false, err
 	}
 	return true, nil
+}
+
+// CreateUser is the resolver for the createUser field.
+func (r *mutationResolver) CreateUser(ctx context.Context, input ent.CreateUserInput) (*ent.User, error) {
+	return r.client.User.Create().SetInput(input).Save(ctx)
+}
+
+// UpdateUser is the resolver for the updateUser field.
+func (r *mutationResolver) UpdateUser(ctx context.Context, id int, input ent.UpdateUserInput) (*ent.User, error) {
+	return r.client.User.UpdateOneID(id).SetInput(input).Save(ctx)
 }
 
 // Mutation returns generated.MutationResolver implementation.

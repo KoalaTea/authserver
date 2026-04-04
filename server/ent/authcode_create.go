@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/authcode"
@@ -18,6 +19,7 @@ type AuthCodeCreate struct {
 	config
 	mutation *AuthCodeMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetCode sets the "code" field.
@@ -117,6 +119,7 @@ func (acc *AuthCodeCreate) createSpec() (*AuthCode, *sqlgraph.CreateSpec) {
 		_node = &AuthCode{config: acc.config}
 		_spec = sqlgraph.NewCreateSpec(authcode.Table, sqlgraph.NewFieldSpec(authcode.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = acc.conflict
 	if value, ok := acc.mutation.Code(); ok {
 		_spec.SetField(authcode.FieldCode, field.TypeString, value)
 		_node.Code = value
@@ -145,11 +148,186 @@ func (acc *AuthCodeCreate) createSpec() (*AuthCode, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.AuthCode.Create().
+//		SetCode(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.AuthCodeUpsert) {
+//			SetCode(v+v).
+//		}).
+//		Exec(ctx)
+func (acc *AuthCodeCreate) OnConflict(opts ...sql.ConflictOption) *AuthCodeUpsertOne {
+	acc.conflict = opts
+	return &AuthCodeUpsertOne{
+		create: acc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (acc *AuthCodeCreate) OnConflictColumns(columns ...string) *AuthCodeUpsertOne {
+	acc.conflict = append(acc.conflict, sql.ConflictColumns(columns...))
+	return &AuthCodeUpsertOne{
+		create: acc,
+	}
+}
+
+type (
+	// AuthCodeUpsertOne is the builder for "upsert"-ing
+	//  one AuthCode node.
+	AuthCodeUpsertOne struct {
+		create *AuthCodeCreate
+	}
+
+	// AuthCodeUpsert is the "OnConflict" setter.
+	AuthCodeUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetCode sets the "code" field.
+func (u *AuthCodeUpsert) SetCode(v string) *AuthCodeUpsert {
+	u.Set(authcode.FieldCode, v)
+	return u
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *AuthCodeUpsert) UpdateCode() *AuthCodeUpsert {
+	u.SetExcluded(authcode.FieldCode)
+	return u
+}
+
+// SetActive sets the "active" field.
+func (u *AuthCodeUpsert) SetActive(v bool) *AuthCodeUpsert {
+	u.Set(authcode.FieldActive, v)
+	return u
+}
+
+// UpdateActive sets the "active" field to the value that was provided on create.
+func (u *AuthCodeUpsert) UpdateActive() *AuthCodeUpsert {
+	u.SetExcluded(authcode.FieldActive)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *AuthCodeUpsertOne) UpdateNewValues() *AuthCodeUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *AuthCodeUpsertOne) Ignore() *AuthCodeUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *AuthCodeUpsertOne) DoNothing() *AuthCodeUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the AuthCodeCreate.OnConflict
+// documentation for more info.
+func (u *AuthCodeUpsertOne) Update(set func(*AuthCodeUpsert)) *AuthCodeUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&AuthCodeUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetCode sets the "code" field.
+func (u *AuthCodeUpsertOne) SetCode(v string) *AuthCodeUpsertOne {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *AuthCodeUpsertOne) UpdateCode() *AuthCodeUpsertOne {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// SetActive sets the "active" field.
+func (u *AuthCodeUpsertOne) SetActive(v bool) *AuthCodeUpsertOne {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.SetActive(v)
+	})
+}
+
+// UpdateActive sets the "active" field to the value that was provided on create.
+func (u *AuthCodeUpsertOne) UpdateActive() *AuthCodeUpsertOne {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.UpdateActive()
+	})
+}
+
+// Exec executes the query.
+func (u *AuthCodeUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for AuthCodeCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *AuthCodeUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *AuthCodeUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *AuthCodeUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // AuthCodeCreateBulk is the builder for creating many AuthCode entities in bulk.
 type AuthCodeCreateBulk struct {
 	config
 	err      error
 	builders []*AuthCodeCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the AuthCode entities in the database.
@@ -178,6 +356,7 @@ func (accb *AuthCodeCreateBulk) Save(ctx context.Context) ([]*AuthCode, error) {
 					_, err = mutators[i+1].Mutate(root, accb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = accb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, accb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -228,6 +407,138 @@ func (accb *AuthCodeCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (accb *AuthCodeCreateBulk) ExecX(ctx context.Context) {
 	if err := accb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.AuthCode.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.AuthCodeUpsert) {
+//			SetCode(v+v).
+//		}).
+//		Exec(ctx)
+func (accb *AuthCodeCreateBulk) OnConflict(opts ...sql.ConflictOption) *AuthCodeUpsertBulk {
+	accb.conflict = opts
+	return &AuthCodeUpsertBulk{
+		create: accb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (accb *AuthCodeCreateBulk) OnConflictColumns(columns ...string) *AuthCodeUpsertBulk {
+	accb.conflict = append(accb.conflict, sql.ConflictColumns(columns...))
+	return &AuthCodeUpsertBulk{
+		create: accb,
+	}
+}
+
+// AuthCodeUpsertBulk is the builder for "upsert"-ing
+// a bulk of AuthCode nodes.
+type AuthCodeUpsertBulk struct {
+	create *AuthCodeCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *AuthCodeUpsertBulk) UpdateNewValues() *AuthCodeUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.AuthCode.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *AuthCodeUpsertBulk) Ignore() *AuthCodeUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *AuthCodeUpsertBulk) DoNothing() *AuthCodeUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the AuthCodeCreateBulk.OnConflict
+// documentation for more info.
+func (u *AuthCodeUpsertBulk) Update(set func(*AuthCodeUpsert)) *AuthCodeUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&AuthCodeUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetCode sets the "code" field.
+func (u *AuthCodeUpsertBulk) SetCode(v string) *AuthCodeUpsertBulk {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.SetCode(v)
+	})
+}
+
+// UpdateCode sets the "code" field to the value that was provided on create.
+func (u *AuthCodeUpsertBulk) UpdateCode() *AuthCodeUpsertBulk {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.UpdateCode()
+	})
+}
+
+// SetActive sets the "active" field.
+func (u *AuthCodeUpsertBulk) SetActive(v bool) *AuthCodeUpsertBulk {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.SetActive(v)
+	})
+}
+
+// UpdateActive sets the "active" field to the value that was provided on create.
+func (u *AuthCodeUpsertBulk) UpdateActive() *AuthCodeUpsertBulk {
+	return u.Update(func(s *AuthCodeUpsert) {
+		s.UpdateActive()
+	})
+}
+
+// Exec executes the query.
+func (u *AuthCodeUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the AuthCodeCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for AuthCodeCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *AuthCodeUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

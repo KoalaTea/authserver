@@ -1,6 +1,37 @@
 # authserver
 
-# make new ents
+## Building and Running
+
+### Prerequisites
+- Go 1.24+
+- Node.js and npm
+
+### 1. Build the Frontend
+The web UI must be built so that the Go server can serve the static assets.
+```bash
+cd server/internal/www
+npm install
+npm run build
+```
+
+### 2. Generate Code (Optional)
+If you've modified the Ent schema or GraphQL files, regenerate the code:
+```bash
+cd server
+go generate ./...
+```
+
+### 3. Run the Server
+The server requires a configuration file at `server/nopush/config.json`. See `server/config.go` for the expected structure.
+```bash
+cd server
+go run .
+```
+The web UI will be available at `http://localhost:8080/www/`.
+
+## Development
+
+### make new ents
 ```
 go run -mod=mod entgo.io/ent/cmd/ent init <struct name>
 ```

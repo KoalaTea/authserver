@@ -4,8 +4,10 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/koalatea/authserver/server/ent/publicjwkset"
@@ -16,6 +18,7 @@ type PublicJWKSetCreate struct {
 	config
 	mutation *PublicJWKSetMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // Mutation returns the PublicJWKSetMutation object of the builder.
@@ -78,7 +81,124 @@ func (pjsc *PublicJWKSetCreate) createSpec() (*PublicJWKSet, *sqlgraph.CreateSpe
 		_node = &PublicJWKSet{config: pjsc.config}
 		_spec = sqlgraph.NewCreateSpec(publicjwkset.Table, sqlgraph.NewFieldSpec(publicjwkset.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = pjsc.conflict
 	return _node, _spec
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (pjsc *PublicJWKSetCreate) OnConflict(opts ...sql.ConflictOption) *PublicJWKSetUpsertOne {
+	pjsc.conflict = opts
+	return &PublicJWKSetUpsertOne{
+		create: pjsc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pjsc *PublicJWKSetCreate) OnConflictColumns(columns ...string) *PublicJWKSetUpsertOne {
+	pjsc.conflict = append(pjsc.conflict, sql.ConflictColumns(columns...))
+	return &PublicJWKSetUpsertOne{
+		create: pjsc,
+	}
+}
+
+type (
+	// PublicJWKSetUpsertOne is the builder for "upsert"-ing
+	//  one PublicJWKSet node.
+	PublicJWKSetUpsertOne struct {
+		create *PublicJWKSetCreate
+	}
+
+	// PublicJWKSetUpsert is the "OnConflict" setter.
+	PublicJWKSetUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *PublicJWKSetUpsertOne) UpdateNewValues() *PublicJWKSetUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *PublicJWKSetUpsertOne) Ignore() *PublicJWKSetUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PublicJWKSetUpsertOne) DoNothing() *PublicJWKSetUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PublicJWKSetCreate.OnConflict
+// documentation for more info.
+func (u *PublicJWKSetUpsertOne) Update(set func(*PublicJWKSetUpsert)) *PublicJWKSetUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PublicJWKSetUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *PublicJWKSetUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PublicJWKSetCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PublicJWKSetUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *PublicJWKSetUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *PublicJWKSetUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 // PublicJWKSetCreateBulk is the builder for creating many PublicJWKSet entities in bulk.
@@ -86,6 +206,7 @@ type PublicJWKSetCreateBulk struct {
 	config
 	err      error
 	builders []*PublicJWKSetCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the PublicJWKSet entities in the database.
@@ -114,6 +235,7 @@ func (pjscb *PublicJWKSetCreateBulk) Save(ctx context.Context) ([]*PublicJWKSet,
 					_, err = mutators[i+1].Mutate(root, pjscb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = pjscb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, pjscb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -164,6 +286,105 @@ func (pjscb *PublicJWKSetCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (pjscb *PublicJWKSetCreateBulk) ExecX(ctx context.Context) {
 	if err := pjscb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.PublicJWKSet.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (pjscb *PublicJWKSetCreateBulk) OnConflict(opts ...sql.ConflictOption) *PublicJWKSetUpsertBulk {
+	pjscb.conflict = opts
+	return &PublicJWKSetUpsertBulk{
+		create: pjscb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (pjscb *PublicJWKSetCreateBulk) OnConflictColumns(columns ...string) *PublicJWKSetUpsertBulk {
+	pjscb.conflict = append(pjscb.conflict, sql.ConflictColumns(columns...))
+	return &PublicJWKSetUpsertBulk{
+		create: pjscb,
+	}
+}
+
+// PublicJWKSetUpsertBulk is the builder for "upsert"-ing
+// a bulk of PublicJWKSet nodes.
+type PublicJWKSetUpsertBulk struct {
+	create *PublicJWKSetCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *PublicJWKSetUpsertBulk) UpdateNewValues() *PublicJWKSetUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.PublicJWKSet.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *PublicJWKSetUpsertBulk) Ignore() *PublicJWKSetUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PublicJWKSetUpsertBulk) DoNothing() *PublicJWKSetUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PublicJWKSetCreateBulk.OnConflict
+// documentation for more info.
+func (u *PublicJWKSetUpsertBulk) Update(set func(*PublicJWKSetUpsert)) *PublicJWKSetUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PublicJWKSetUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *PublicJWKSetUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the PublicJWKSetCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PublicJWKSetCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PublicJWKSetUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
