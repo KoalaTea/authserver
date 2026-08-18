@@ -11,7 +11,19 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-type FileConfig struct {
+type Config struct {
+	ConfigFile    string
+	CA            string
+	CAPrivKey     string
+	ClientID      string
+	SecretKey     string
+	ClientIDFile  string
+	SecretKeyFile string
+	PProfEnabled  bool
+	BypassAuth    bool
+}
+
+type fileConfigJSON struct {
 	Certificates struct {
 		CA        string `json:"ca"`
 		CAPrivKey string `json:"ca_priv_key"`
@@ -24,18 +36,6 @@ type FileConfig struct {
 	} `json:"oauth"`
 	PProfEnabled bool `json:"enable_pprof,omitempty"`
 	BypassAuth   bool `json:"bypass_auth,omitempty"`
-}
-
-type Config struct {
-	ConfigFile    string
-	CA            string
-	CAPrivKey     string
-	ClientID      string
-	SecretKey     string
-	ClientIDFile  string
-	SecretKeyFile string
-	PProfEnabled  bool
-	BypassAuth    bool
 }
 
 func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
@@ -51,7 +51,7 @@ func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
 		BypassAuth:    cmd.Bool("bypass-auth"),
 	}
 
-	// Step 1: If config file is specified or default config file exists, load it as base values
+	// Step 1: Fallback loading from JSON config file if flags were not set
 	configFileToLoad := cfg.ConfigFile
 	if configFileToLoad == "" {
 		if _, err := os.Stat("server/nopush/config.json"); err == nil {
@@ -60,40 +60,33 @@ func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
 	}
 
 	if configFileToLoad != "" {
-		fileBytes, err := os.ReadFile(configFileToLoad)
-		if err != nil {
-			if cfg.ConfigFile != "" {
-				return nil, fmt.Errorf("failed to read config file '%s': %w", configFileToLoad, err)
-			}
-		} else {
-			var fileCFG FileConfig
-			if err := json.Unmarshal(fileBytes, &fileCFG); err != nil {
-				return nil, fmt.Errorf("failed to parse config file '%s': %w", configFileToLoad, err)
-			}
-
-			if !cmd.IsSet("ca") && fileCFG.Certificates.CA != "" {
-				cfg.CA = fileCFG.Certificates.CA
-			}
-			if !cmd.IsSet("ca-priv-key") && fileCFG.Certificates.CAPrivKey != "" {
-				cfg.CAPrivKey = fileCFG.Certificates.CAPrivKey
-			}
-			if !cmd.IsSet("client-id") && fileCFG.OAuth.ClientID != "" {
-				cfg.ClientID = fileCFG.OAuth.ClientID
-			}
-			if !cmd.IsSet("secret-key") && fileCFG.OAuth.SecretKey != "" {
-				cfg.SecretKey = fileCFG.OAuth.SecretKey
-			}
-			if !cmd.IsSet("client-id-file") && fileCFG.OAuth.ClientIDFile != "" {
-				cfg.ClientIDFile = fileCFG.OAuth.ClientIDFile
-			}
-			if !cmd.IsSet("secret-key-file") && fileCFG.OAuth.SecretKeyFile != "" {
-				cfg.SecretKeyFile = fileCFG.OAuth.SecretKeyFile
-			}
-			if !cmd.IsSet("enable-pprof") {
-				cfg.PProfEnabled = fileCFG.PProfEnabled
-			}
-			if !cmd.IsSet("bypass-auth") {
-				cfg.BypassAuth = fileCFG.BypassAuth
+		if fileBytes, err := os.ReadFile(configFileToLoad); err == nil {
+			var fileCFG fileConfigJSON
+			if err := json.Unmarshal(fileBytes, &fileCFG); err == nil {
+				if !cmd.IsSet("ca") && fileCFG.Certificates.CA != "" {
+					cfg.CA = fileCFG.Certificates.CA
+				}
+				if !cmd.IsSet("ca-priv-key") && fileCFG.Certificates.CAPrivKey != "" {
+					cfg.CAPrivKey = fileCFG.Certificates.CAPrivKey
+				}
+				if !cmd.IsSet("client-id") && fileCFG.OAuth.ClientID != "" {
+					cfg.ClientID = fileCFG.OAuth.ClientID
+				}
+				if !cmd.IsSet("secret-key") && fileCFG.OAuth.SecretKey != "" {
+					cfg.SecretKey = fileCFG.OAuth.SecretKey
+				}
+				if !cmd.IsSet("client-id-file") && fileCFG.OAuth.ClientIDFile != "" {
+					cfg.ClientIDFile = fileCFG.OAuth.ClientIDFile
+				}
+				if !cmd.IsSet("secret-key-file") && fileCFG.OAuth.SecretKeyFile != "" {
+					cfg.SecretKeyFile = fileCFG.OAuth.SecretKeyFile
+				}
+				if !cmd.IsSet("enable-pprof") {
+					cfg.PProfEnabled = fileCFG.PProfEnabled
+				}
+				if !cmd.IsSet("bypass-auth") {
+					cfg.BypassAuth = fileCFG.BypassAuth
+				}
 			}
 		}
 	}
@@ -197,43 +190,5 @@ func buildCLIApp(actionFunc func(ctx context.Context, cmd *cli.Command) error) *
 			},
 		},
 		Action: actionFunc,
-	}
-}
-
-func configureFromFile(fileName string) func(*Config) {
-	return func(cfg *Config) {
-		fileCFG := &FileConfig{}
-		f, err := os.Open(fileName)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-
-		jsonBytes, err := io.ReadAll(f)
-		if err != nil {
-			return
-		}
-
-		_ = json.Unmarshal(jsonBytes, fileCFG)
-		cfg.PProfEnabled = fileCFG.PProfEnabled
-		cfg.BypassAuth = fileCFG.BypassAuth
-
-		if fileCFG.OAuth.ClientID != "" {
-			cfg.ClientID = fileCFG.OAuth.ClientID
-		} else if fileCFG.OAuth.ClientIDFile != "" {
-			val, err := readFileContent(fileCFG.OAuth.ClientIDFile)
-			if err == nil {
-				cfg.ClientID = val
-			}
-		}
-
-		if fileCFG.OAuth.SecretKey != "" {
-			cfg.SecretKey = fileCFG.OAuth.SecretKey
-		} else if fileCFG.OAuth.SecretKeyFile != "" {
-			val, err := readFileContent(fileCFG.OAuth.SecretKeyFile)
-			if err == nil {
-				cfg.SecretKey = val
-			}
-		}
 	}
 }
