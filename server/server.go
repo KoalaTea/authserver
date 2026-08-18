@@ -65,7 +65,7 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 	}
 
 	// Create Certificate Provider
-	certProvider, err := certificates.NewCertProvider(graph)
+	certProvider, err := certificates.NewCertProvider(graph, cfg.CA, cfg.CAPrivKey)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to initialize certProvider", "err", err)
 	}

@@ -95,15 +95,14 @@ func loadCA(caPath string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
+func getCA(signer zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, error) {
 	// Check if the file exists
-	_, err := fileExists(CAPATH)
-	if err == nil {
+	if fileExists(CAPATH) {
 		slog.Info("CA exists so loading CA", "path", CAPATH)
-		loadCA(CAPATH)
-	}
-
-	if os.IsNotExist(err) {
+		if cert, err := loadCA(CAPATH); err == nil {
+			return cert, nil
+		}
+	} else {
 		slog.Info("CA does not exist generating one now", "path", CAPATH)
 	}
 
@@ -130,10 +129,7 @@ func getCA(signer *zymkey.Signer, serialNum *serial.Serial) (*x509.Certificate, 
 		BasicConstraintsValid: true,
 	}
 
-	pubKey, ok := signer.Public().(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("zymkey signer was not an ecdsa publickey")
-	}
+	pubKey := signer.Public()
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, pubKey, signer)
 	if err != nil {
 		return nil, err
@@ -200,10 +196,7 @@ func genAuthCerts(ca *x509.Certificate, caSigner crypto.Signer, serialNum *seria
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 		}
-		pubKey, ok := caSigner.Public().(*ecdsa.PublicKey)
-		if !ok {
-			return nil, errors.New("zymkey signer was not an ecdsa publickey")
-		}
+		pubKey := caSigner.Public()
 		serverBytes, _ := x509.CreateCertificate(rand.Reader, serverTemplate, ca, pubKey, caSigner)
 		writePem(SERVERCERTPATH, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes})
 		serverCertificate, err = x509.ParseCertificate(serverBytes)

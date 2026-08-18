@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"time"
@@ -38,8 +37,75 @@ func generateRandomInt64() (int64, error) {
 	return n.Int64(), nil
 }
 
-// TODO put certs in common dir or load certs from configuration
-func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
+func loadOrReadPem(input string) ([]byte, error) {
+	if _, err := os.Stat(input); err == nil {
+		return os.ReadFile(input)
+	}
+	return []byte(input), nil
+}
+
+func parseCACert(caInput string) (*x509.Certificate, error) {
+	bytes, err := loadOrReadPem(caInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA certificate input: %w", err)
+	}
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from CA certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse x509 certificate: %w", err)
+	}
+	return cert, nil
+}
+
+func parseCAPrivKey(keyInput string) (*rsa.PrivateKey, error) {
+	bytes, err := loadOrReadPem(keyInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA private key input: %w", err)
+	}
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from CA private key")
+	}
+	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+		return key, nil
+	}
+	keyInterface, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key as PKCS1 or PKCS8: %w", err)
+	}
+	rsaKey, ok := keyInterface.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("parsed private key is not an RSA private key")
+	}
+	return rsaKey, nil
+}
+
+// NewCertProvider creates a CertProvider. If caCert and caPrivKey are provided (as file paths or PEM strings),
+// they will be used. Otherwise, a CA and RSA private key will be generated in-memory.
+func NewCertProvider(graph *ent.Client, caOpts ...string) (*CertProvider, error) {
+	var caCertInput, caPrivKeyInput string
+	if len(caOpts) > 0 {
+		caCertInput = caOpts[0]
+	}
+	if len(caOpts) > 1 {
+		caPrivKeyInput = caOpts[1]
+	}
+
+	if caCertInput != "" && caPrivKeyInput != "" {
+		ca, err := parseCACert(caCertInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load CA cert: %w", err)
+		}
+		caPrivKey, err := parseCAPrivKey(caPrivKeyInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load CA private key: %w", err)
+		}
+		return &CertProvider{ca: ca, key: caPrivKey, graph: graph}, nil
+	}
+
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -71,20 +137,11 @@ func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 		return nil, err
 	}
 
-	// PEM Encode
-	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: caBytes,
-	})
-	os.WriteFile("authserverCA.pem", caPEM.Bytes(), 0644)
-
-	caPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-	})
-	os.WriteFile("authserverCAPrivKey.pem", caPrivKeyPEM.Bytes(), 0644)
+	// Parse back generated certificate bytes to ensure full certificate structure
+	parsedCA, err := x509.ParseCertificate(caBytes)
+	if err == nil {
+		ca = parsedCA
+	}
 
 	provider := &CertProvider{ca: ca, key: caPrivKey, graph: graph}
 	return provider, nil
@@ -108,8 +165,6 @@ func pemToPublicKey(pemStr string) (*rsa.PublicKey, error) {
 }
 
 func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pemPubKey string) (string, error) {
-	// TODO return errors up here
-
 	serialNumber, err := generateRandomInt64()
 	if err != nil {
 		return "", fmt.Errorf("error generating random int64 for serialNumber: %w", err)
@@ -152,37 +207,11 @@ func (p *CertProvider) CreateCertificate(ctx context.Context, target string, pem
 	return createdCert.Pem, nil
 }
 
-// Certificate CN can really be whatever it depends on what is using it on what it needs to be but if everything understands correctly how we use it we will be fine
-// other fields may also need to be filled out correctly for the same reason it all depends on what is using it
-
-// TODO maybe options instead
-
 func NewCertProviderFromFiles(caPrivKeyLoc string, caCertLoc string) (*CertProvider, error) {
-	cf, e := ioutil.ReadFile(caCertLoc)
-	if e != nil {
-		return nil, fmt.Errorf("cfload: %w", e)
-	}
-
-	kf, e := ioutil.ReadFile(caPrivKeyLoc)
-	if e != nil {
-		fmt.Println("kfload: %w", e)
-	}
-	cpb, _ := pem.Decode(cf)
-	kpb, _ := pem.Decode(kf)
-	crt, e := x509.ParseCertificate(cpb.Bytes)
-
-	if e != nil {
-		return nil, fmt.Errorf("parsex509: %w", e)
-	}
-	key, e := x509.ParsePKCS1PrivateKey(kpb.Bytes)
-	if e != nil {
-		return nil, fmt.Errorf("parsekey: %w", e)
-	}
-	return &CertProvider{key: key, ca: crt}, nil
+	return NewCertProvider(nil, caCertLoc, caPrivKeyLoc)
 }
 
 func (p *CertProvider) RevokeCertificate(ctx context.Context, serialNumber int64) error {
-	// Should this be in the graphql stuff? Want to walk through this with kyle actually
 	cert, err := p.graph.Cert.Get(ctx, int(serialNumber))
 	if err != nil {
 		return err
