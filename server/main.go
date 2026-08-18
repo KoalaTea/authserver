@@ -6,8 +6,10 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 
 	_ "github.com/koalatea/authserver/server/ent/runtime"
+	"github.com/urfave/cli/v3"
 	"go.opentelemetry.io/otel"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -20,30 +22,36 @@ func init() {
 func main() {
 	ctx := context.Background()
 
-	// Initialize Tracing
-	// TODO Need to figure out how to configure tracing
-	exp, err := newGRPCExporter(ctx)
-	// TODO Need to figure out when to do trackes local
-	// f, err := os.Create("traces.txt")
-	// if err != nil {
-	// 	log.Fatalf("Failed to open traces.txt for tracing: %v", err)
-	// }
-	// defer f.Close()
-	// exp, err := newTXTExporter(f)
-	if err != nil {
-		log.Fatalf("Failed to initialize tracing exporter: %v", err)
-	}
-	tp := newTraceProvider(exp)
-	defer func() { _ = tp.Shutdown(ctx) }()
-	slog.InfoContext(ctx, "Starting tracing")
-	otel.SetTracerProvider(tp)
+	app := buildCLIApp(func(ctx context.Context, cmd *cli.Command) error {
+		cfg, err := loadConfigFromCLI(cmd)
+		if err != nil {
+			return err
+		}
 
-	// Run AuthServer
-	server, err := newServer(ctx, configureFromFile("server/nopush/config.json"))
-	if err != nil {
-		log.Fatalf("AuthServer failed to initialize: %v", err)
-	}
-	if err := server.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("AuthServer fatal error: %v", err)
+		// Initialize Tracing
+		exp, err := newGRPCExporter(ctx)
+		if err != nil {
+			log.Fatalf("Failed to initialize tracing exporter: %v", err)
+		}
+		tp := newTraceProvider(exp)
+		defer func() { _ = tp.Shutdown(ctx) }()
+		slog.InfoContext(ctx, "Starting tracing")
+		otel.SetTracerProvider(tp)
+
+		// Run AuthServer
+		server, err := newServer(ctx, func(c *Config) {
+			*c = *cfg
+		})
+		if err != nil {
+			log.Fatalf("AuthServer failed to initialize: %v", err)
+		}
+		if err := server.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("AuthServer fatal error: %v", err)
+		}
+		return nil
+	})
+
+	if err := app.Run(ctx, os.Args); err != nil {
+		log.Fatalf("Fatal error running CLI: %v", err)
 	}
 }
