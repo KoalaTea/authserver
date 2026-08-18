@@ -92,6 +92,16 @@ func TestConfigFromCLI(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("non existent config file error", func(t *testing.T) {
+		app := buildCLIApp(func(ctx context.Context, cmd *cli.Command) error {
+			_, err := loadConfigFromCLI(cmd)
+			return err
+		})
+		err := app.Run(context.Background(), []string{"authserver", "--config", "/non/existent/config.json"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "config file '/non/existent/config.json' not found")
+	})
+
 	t.Run("client_id_file and secret_key_file in config", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		idFile := filepath.Join(tmpDir, "client_id.txt")
