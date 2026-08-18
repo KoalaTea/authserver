@@ -7,9 +7,23 @@ import (
 	"io"
 	"os"
 
-	"github.com/urfave/cli-altsrc/v3"
 	"github.com/urfave/cli/v3"
 )
+
+type FileConfig struct {
+	Certificates struct {
+		CA        string `json:"ca"`
+		CAPrivKey string `json:"ca_priv_key"`
+	} `json:"certificates"`
+	OAuth struct {
+		ClientID      string `json:"client_id"`
+		SecretKey     string `json:"secret_key"`
+		ClientIDFile  string `json:"client_id_file"`
+		SecretKeyFile string `json:"secret_key_file"`
+	} `json:"oauth"`
+	PProfEnabled bool `json:"enable_pprof,omitempty"`
+	BypassAuth   bool `json:"bypass_auth,omitempty"`
+}
 
 type Config struct {
 	ConfigFile    string
@@ -21,59 +35,6 @@ type Config struct {
 	SecretKeyFile string
 	PProfEnabled  bool
 	BypassAuth    bool
-}
-
-type deferredAltSrcValueSource struct {
-	desc    string
-	key     string
-	filePtr *string
-}
-
-func (d *deferredAltSrcValueSource) Lookup() (string, bool) {
-	if d.filePtr == nil || *d.filePtr == "" {
-		return "", false
-	}
-	if _, err := os.Stat(*d.filePtr); err != nil {
-		return "", false
-	}
-	// Custom unmarshal into map[string]any and convert to map[any]any
-	jsonBytes, err := os.ReadFile(*d.filePtr)
-	if err != nil {
-		return "", false
-	}
-	var stringMap map[string]any
-	if err := json.Unmarshal(jsonBytes, &stringMap); err != nil {
-		return "", false
-	}
-	anyMap := convertStringMapToAnyMap(stringMap)
-	v, ok := altsrc.NestedVal(d.key, anyMap)
-	if !ok || v == nil {
-		return "", false
-	}
-	return fmt.Sprintf("%v", v), true
-}
-
-func convertStringMapToAnyMap(m map[string]any) map[any]any {
-	res := make(map[any]any, len(m))
-	for k, v := range m {
-		if subMap, ok := v.(map[string]any); ok {
-			res[k] = convertStringMapToAnyMap(subMap)
-		} else {
-			res[k] = v
-		}
-	}
-	return res
-}
-
-func (d *deferredAltSrcValueSource) String() string {
-	if d.filePtr != nil && *d.filePtr != "" {
-		return fmt.Sprintf("%s[%s:%s]", d.desc, *d.filePtr, d.key)
-	}
-	return fmt.Sprintf("%s[%s]", d.desc, d.key)
-}
-
-func (d *deferredAltSrcValueSource) GoString() string {
-	return d.String()
 }
 
 func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
@@ -89,7 +50,54 @@ func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
 		BypassAuth:    cmd.Bool("bypass-auth"),
 	}
 
-	// Resolve indirect file references if direct values were not provided
+	// Step 1: Fallback loading from JSON config file if present
+	configFileToLoad := cfg.ConfigFile
+	if configFileToLoad == "" {
+		if _, err := os.Stat("server/nopush/config.json"); err == nil {
+			configFileToLoad = "server/nopush/config.json"
+		}
+	}
+
+	if configFileToLoad != "" {
+		fileBytes, err := os.ReadFile(configFileToLoad)
+		if err != nil {
+			if cmd.IsSet("config") {
+				return nil, fmt.Errorf("config file '%s' not found: %w", configFileToLoad, err)
+			}
+		} else {
+			var fileCFG FileConfig
+			if err := json.Unmarshal(fileBytes, &fileCFG); err != nil {
+				return nil, fmt.Errorf("failed to parse config file '%s': %w", configFileToLoad, err)
+			}
+
+			if !cmd.IsSet("ca") && cfg.CA == "" && fileCFG.Certificates.CA != "" {
+				cfg.CA = fileCFG.Certificates.CA
+			}
+			if !cmd.IsSet("ca-priv-key") && cfg.CAPrivKey == "" && fileCFG.Certificates.CAPrivKey != "" {
+				cfg.CAPrivKey = fileCFG.Certificates.CAPrivKey
+			}
+			if !cmd.IsSet("client-id") && cfg.ClientID == "" && fileCFG.OAuth.ClientID != "" {
+				cfg.ClientID = fileCFG.OAuth.ClientID
+			}
+			if !cmd.IsSet("secret-key") && cfg.SecretKey == "" && fileCFG.OAuth.SecretKey != "" {
+				cfg.SecretKey = fileCFG.OAuth.SecretKey
+			}
+			if !cmd.IsSet("client-id-file") && cfg.ClientIDFile == "" && fileCFG.OAuth.ClientIDFile != "" {
+				cfg.ClientIDFile = fileCFG.OAuth.ClientIDFile
+			}
+			if !cmd.IsSet("secret-key-file") && cfg.SecretKeyFile == "" && fileCFG.OAuth.SecretKeyFile != "" {
+				cfg.SecretKeyFile = fileCFG.OAuth.SecretKeyFile
+			}
+			if !cmd.IsSet("enable-pprof") && !cfg.PProfEnabled {
+				cfg.PProfEnabled = fileCFG.PProfEnabled
+			}
+			if !cmd.IsSet("bypass-auth") && !cfg.BypassAuth {
+				cfg.BypassAuth = fileCFG.BypassAuth
+			}
+		}
+	}
+
+	// Step 2: Resolve indirect file references if direct values were not provided
 	if cfg.ClientID == "" && cfg.ClientIDFile != "" {
 		val, err := readFileContent(cfg.ClientIDFile)
 		if err != nil {
@@ -123,80 +131,56 @@ func readFileContent(filepath string) (string, error) {
 }
 
 func buildCLIApp(actionFunc func(ctx context.Context, cmd *cli.Command) error) *cli.Command {
-	var configFilePath string
-
-	jsonValSrc := func(keyPath string) cli.ValueSource {
-		return &deferredAltSrcValueSource{
-			desc:    "json config file",
-			key:     keyPath,
-			filePtr: &configFilePath,
-		}
-	}
-
 	return &cli.Command{
 		Name:  "authserver",
 		Usage: "Authentication Server",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "config",
-				Aliases:     []string{"c"},
-				Usage:       "path to JSON config file",
-				Destination: &configFilePath,
-				Sources:     cli.EnvVars("AUTH_CONFIG", "CONFIG_FILE"),
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "path to JSON config file",
+				Sources: cli.EnvVars("AUTH_CONFIG", "CONFIG_FILE"),
 			},
 			&cli.StringFlag{
 				Name:    "ca",
 				Usage:   "Certificate Authority certificate string or path",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CA"), jsonValSrc("certificates.ca")),
+				Sources: cli.EnvVars("AUTH_CA"),
 			},
 			&cli.StringFlag{
 				Name:    "ca-priv-key",
 				Usage:   "Certificate Authority private key string or path",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CA_PRIV_KEY"), jsonValSrc("certificates.ca_priv_key")),
+				Sources: cli.EnvVars("AUTH_CA_PRIV_KEY"),
 			},
 			&cli.StringFlag{
 				Name:    "client-id",
 				Usage:   "OAuth Client ID",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CLIENT_ID"), jsonValSrc("oauth.client_id")),
+				Sources: cli.EnvVars("AUTH_CLIENT_ID"),
 			},
 			&cli.StringFlag{
 				Name:    "secret-key",
 				Usage:   "OAuth Secret Key",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_SECRET_KEY"), jsonValSrc("oauth.secret_key")),
+				Sources: cli.EnvVars("AUTH_SECRET_KEY"),
 			},
 			&cli.StringFlag{
 				Name:    "client-id-file",
 				Usage:   "Path to file containing OAuth Client ID",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CLIENT_ID_FILE"), jsonValSrc("oauth.client_id_file")),
+				Sources: cli.EnvVars("AUTH_CLIENT_ID_FILE"),
 			},
 			&cli.StringFlag{
 				Name:    "secret-key-file",
 				Usage:   "Path to file containing OAuth Secret Key",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_SECRET_KEY_FILE"), jsonValSrc("oauth.secret_key_file")),
+				Sources: cli.EnvVars("AUTH_SECRET_KEY_FILE"),
 			},
 			&cli.BoolFlag{
 				Name:    "enable-pprof",
 				Usage:   "Enable performance profiling (pprof)",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_ENABLE_PPROF"), jsonValSrc("enable_pprof")),
+				Sources: cli.EnvVars("AUTH_ENABLE_PPROF"),
 			},
 			&cli.BoolFlag{
 				Name:    "bypass-auth",
 				Usage:   "Bypass authentication requirements",
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_BYPASS_AUTH"), jsonValSrc("bypass_auth")),
+				Sources: cli.EnvVars("AUTH_BYPASS_AUTH"),
 			},
-		},
-		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			if cmd.IsSet("config") {
-				if _, err := os.Stat(configFilePath); err != nil {
-					return ctx, fmt.Errorf("config file '%s' not found: %w", configFilePath, err)
-				}
-			} else if configFilePath == "" {
-				defaultPath := "server/nopush/config.json"
-				if _, err := os.Stat(defaultPath); err == nil {
-					configFilePath = defaultPath
-				}
-			}
-			return ctx, nil
 		},
 		Action: actionFunc,
 	}
