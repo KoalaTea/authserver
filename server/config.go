@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/urfave/cli-altsrc/v3"
 	"github.com/urfave/cli/v3"
 )
 
@@ -16,8 +17,8 @@ type FileConfig struct {
 		CAPrivKey string `json:"ca_priv_key"`
 	} `json:"certificates"`
 	OAuth struct {
-		ClientID     string `json:"client_id"`
-		SecretKey    string `json:"secret_key"`
+		ClientID      string `json:"client_id"`
+		SecretKey     string `json:"secret_key"`
 		ClientIDFile  string `json:"client_id_file"`
 		SecretKeyFile string `json:"secret_key_file"`
 	} `json:"oauth"`
@@ -131,55 +132,68 @@ func readFileContent(filepath string) (string, error) {
 }
 
 func buildCLIApp(actionFunc func(ctx context.Context, cmd *cli.Command) error) *cli.Command {
+	var configFilePath string
+
+	jsonUnmarshaler := func(b []byte, v any) error {
+		return json.Unmarshal(b, v)
+	}
+
+	jsonSourcer := altsrc.NewStringPtrSourcer(&configFilePath)
+
+	jsonValSrc := func(keyPath string) cli.ValueSource {
+		return altsrc.NewValueSource(jsonUnmarshaler, "json config file", keyPath, jsonSourcer)
+	}
+
 	return &cli.Command{
 		Name:  "authserver",
 		Usage: "Authentication Server",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Usage:   "path to JSON config file",
-				Sources: cli.EnvVars("AUTH_CONFIG", "CONFIG_FILE"),
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "path to JSON config file",
+				Destination: &configFilePath,
+				Sources:     cli.EnvVars("AUTH_CONFIG", "CONFIG_FILE"),
 			},
 			&cli.StringFlag{
 				Name:    "ca",
 				Usage:   "Certificate Authority certificate string or path",
-				Sources: cli.EnvVars("AUTH_CA"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CA"), jsonValSrc("certificates.ca")),
 			},
 			&cli.StringFlag{
 				Name:    "ca-priv-key",
 				Usage:   "Certificate Authority private key string or path",
-				Sources: cli.EnvVars("AUTH_CA_PRIV_KEY"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CA_PRIV_KEY"), jsonValSrc("certificates.ca_priv_key")),
 			},
 			&cli.StringFlag{
 				Name:    "client-id",
 				Usage:   "OAuth Client ID",
-				Sources: cli.EnvVars("AUTH_CLIENT_ID"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CLIENT_ID"), jsonValSrc("oauth.client_id")),
 			},
 			&cli.StringFlag{
 				Name:    "secret-key",
 				Usage:   "OAuth Secret Key",
-				Sources: cli.EnvVars("AUTH_SECRET_KEY"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_SECRET_KEY"), jsonValSrc("oauth.secret_key")),
 			},
 			&cli.StringFlag{
 				Name:    "client-id-file",
 				Usage:   "Path to file containing OAuth Client ID",
-				Sources: cli.EnvVars("AUTH_CLIENT_ID_FILE"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_CLIENT_ID_FILE"), jsonValSrc("oauth.client_id_file")),
 			},
 			&cli.StringFlag{
 				Name:    "secret-key-file",
 				Usage:   "Path to file containing OAuth Secret Key",
-				Sources: cli.EnvVars("AUTH_SECRET_KEY_FILE"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_SECRET_KEY_FILE"), jsonValSrc("oauth.secret_key_file")),
 			},
 			&cli.BoolFlag{
 				Name:    "enable-pprof",
 				Usage:   "Enable performance profiling (pprof)",
-				Sources: cli.EnvVars("AUTH_ENABLE_PPROF"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_ENABLE_PPROF"), jsonValSrc("enable_pprof")),
 			},
 			&cli.BoolFlag{
 				Name:    "bypass-auth",
 				Usage:   "Bypass authentication requirements",
-				Sources: cli.EnvVars("AUTH_BYPASS_AUTH"),
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_BYPASS_AUTH"), jsonValSrc("bypass_auth")),
 			},
 		},
 		Action: actionFunc,
