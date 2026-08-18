@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
+
+	"github.com/urfave/cli/v3"
 )
 
 type FileConfig struct {
@@ -14,6 +16,8 @@ type FileConfig struct {
 		CAPrivKey string `json:"ca_priv_key"`
 	} `json:"certificates"`
 	OAuth struct {
+		ClientID     string `json:"client_id"`
+		SecretKey    string `json:"secret_key"`
 		ClientIDFile  string `json:"client_id_file"`
 		SecretKeyFile string `json:"secret_key_file"`
 	} `json:"oauth"`
@@ -22,58 +26,200 @@ type FileConfig struct {
 }
 
 type Config struct {
-	CA           string
-	CAPrivKey    string
-	ClientID     string
-	SecretKey    string
-	PProfEnabled bool
-	BypassAuth   bool
+	ConfigFile    string
+	CA            string
+	CAPrivKey     string
+	ClientID      string
+	SecretKey     string
+	ClientIDFile  string
+	SecretKeyFile string
+	PProfEnabled  bool
+	BypassAuth    bool
+}
+
+func loadConfigFromCLI(cmd *cli.Command) (*Config, error) {
+	cfg := &Config{
+		ConfigFile:    cmd.String("config"),
+		CA:            cmd.String("ca"),
+		CAPrivKey:     cmd.String("ca-priv-key"),
+		ClientID:      cmd.String("client-id"),
+		SecretKey:     cmd.String("secret-key"),
+		ClientIDFile:  cmd.String("client-id-file"),
+		SecretKeyFile: cmd.String("secret-key-file"),
+		PProfEnabled:  cmd.Bool("enable-pprof"),
+		BypassAuth:    cmd.Bool("bypass-auth"),
+	}
+
+	// Step 1: If config file is specified or default config file exists, load it as base values
+	configFileToLoad := cfg.ConfigFile
+	if configFileToLoad == "" {
+		if _, err := os.Stat("server/nopush/config.json"); err == nil {
+			configFileToLoad = "server/nopush/config.json"
+		}
+	}
+
+	if configFileToLoad != "" {
+		fileBytes, err := os.ReadFile(configFileToLoad)
+		if err != nil {
+			if cfg.ConfigFile != "" {
+				return nil, fmt.Errorf("failed to read config file '%s': %w", configFileToLoad, err)
+			}
+		} else {
+			var fileCFG FileConfig
+			if err := json.Unmarshal(fileBytes, &fileCFG); err != nil {
+				return nil, fmt.Errorf("failed to parse config file '%s': %w", configFileToLoad, err)
+			}
+
+			if !cmd.IsSet("ca") && fileCFG.Certificates.CA != "" {
+				cfg.CA = fileCFG.Certificates.CA
+			}
+			if !cmd.IsSet("ca-priv-key") && fileCFG.Certificates.CAPrivKey != "" {
+				cfg.CAPrivKey = fileCFG.Certificates.CAPrivKey
+			}
+			if !cmd.IsSet("client-id") && fileCFG.OAuth.ClientID != "" {
+				cfg.ClientID = fileCFG.OAuth.ClientID
+			}
+			if !cmd.IsSet("secret-key") && fileCFG.OAuth.SecretKey != "" {
+				cfg.SecretKey = fileCFG.OAuth.SecretKey
+			}
+			if !cmd.IsSet("client-id-file") && fileCFG.OAuth.ClientIDFile != "" {
+				cfg.ClientIDFile = fileCFG.OAuth.ClientIDFile
+			}
+			if !cmd.IsSet("secret-key-file") && fileCFG.OAuth.SecretKeyFile != "" {
+				cfg.SecretKeyFile = fileCFG.OAuth.SecretKeyFile
+			}
+			if !cmd.IsSet("enable-pprof") {
+				cfg.PProfEnabled = fileCFG.PProfEnabled
+			}
+			if !cmd.IsSet("bypass-auth") {
+				cfg.BypassAuth = fileCFG.BypassAuth
+			}
+		}
+	}
+
+	// Step 2: Resolve indirect file references if direct values were not provided
+	if cfg.ClientID == "" && cfg.ClientIDFile != "" {
+		val, err := readFileContent(cfg.ClientIDFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read client_id_file '%s': %w", cfg.ClientIDFile, err)
+		}
+		cfg.ClientID = val
+	}
+
+	if cfg.SecretKey == "" && cfg.SecretKeyFile != "" {
+		val, err := readFileContent(cfg.SecretKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read secret_key_file '%s': %w", cfg.SecretKeyFile, err)
+		}
+		cfg.SecretKey = val
+	}
+
+	return cfg, nil
+}
+
+func readFileContent(filepath string) (string, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	bytes, err := io.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func buildCLIApp(actionFunc func(ctx context.Context, cmd *cli.Command) error) *cli.Command {
+	return &cli.Command{
+		Name:  "authserver",
+		Usage: "Authentication Server",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "path to JSON config file",
+				Sources: cli.EnvVars("AUTH_CONFIG", "CONFIG_FILE"),
+			},
+			&cli.StringFlag{
+				Name:    "ca",
+				Usage:   "Certificate Authority certificate string or path",
+				Sources: cli.EnvVars("AUTH_CA"),
+			},
+			&cli.StringFlag{
+				Name:    "ca-priv-key",
+				Usage:   "Certificate Authority private key string or path",
+				Sources: cli.EnvVars("AUTH_CA_PRIV_KEY"),
+			},
+			&cli.StringFlag{
+				Name:    "client-id",
+				Usage:   "OAuth Client ID",
+				Sources: cli.EnvVars("AUTH_CLIENT_ID"),
+			},
+			&cli.StringFlag{
+				Name:    "secret-key",
+				Usage:   "OAuth Secret Key",
+				Sources: cli.EnvVars("AUTH_SECRET_KEY"),
+			},
+			&cli.StringFlag{
+				Name:    "client-id-file",
+				Usage:   "Path to file containing OAuth Client ID",
+				Sources: cli.EnvVars("AUTH_CLIENT_ID_FILE"),
+			},
+			&cli.StringFlag{
+				Name:    "secret-key-file",
+				Usage:   "Path to file containing OAuth Secret Key",
+				Sources: cli.EnvVars("AUTH_SECRET_KEY_FILE"),
+			},
+			&cli.BoolFlag{
+				Name:    "enable-pprof",
+				Usage:   "Enable performance profiling (pprof)",
+				Sources: cli.EnvVars("AUTH_ENABLE_PPROF"),
+			},
+			&cli.BoolFlag{
+				Name:    "bypass-auth",
+				Usage:   "Bypass authentication requirements",
+				Sources: cli.EnvVars("AUTH_BYPASS_AUTH"),
+			},
+		},
+		Action: actionFunc,
+	}
 }
 
 func configureFromFile(fileName string) func(*Config) {
 	return func(cfg *Config) {
+		fileCFG := &FileConfig{}
 		f, err := os.Open(fileName)
 		if err != nil {
-			log.Fatalf("Failed to open config file '%s': %v", fileName, err)
+			return
 		}
 		defer f.Close()
 
-		jsonBytes, err := ioutil.ReadAll(f)
+		jsonBytes, err := io.ReadAll(f)
 		if err != nil {
-			log.Fatalf("Failed to read config file '%s': %v", fileName, err)
+			return
 		}
 
-		fileCFG := &FileConfig{}
-		err = json.Unmarshal(jsonBytes, fileCFG)
-		if err != nil {
-			log.Fatalf("Failed to parse config file '%s': %v", fileName, err)
-		}
-
+		_ = json.Unmarshal(jsonBytes, fileCFG)
 		cfg.PProfEnabled = fileCFG.PProfEnabled
 		cfg.BypassAuth = fileCFG.BypassAuth
 
-		f, err = os.Open(fileCFG.OAuth.ClientIDFile)
-		if err != nil {
-			log.Fatalf("Failed to open configured client_id_file '%s': %v", fileCFG.OAuth.ClientIDFile, err)
+		if fileCFG.OAuth.ClientID != "" {
+			cfg.ClientID = fileCFG.OAuth.ClientID
+		} else if fileCFG.OAuth.ClientIDFile != "" {
+			val, err := readFileContent(fileCFG.OAuth.ClientIDFile)
+			if err == nil {
+				cfg.ClientID = val
+			}
 		}
-		defer f.Close()
-		clientIDBytes, err := io.ReadAll(f)
-		if err != nil {
-			log.Fatalf("Failed to read configured client_id_file '%s': %v", fileCFG.OAuth.ClientIDFile, err)
-		}
-		clientID := string(clientIDBytes)
-		cfg.ClientID = clientID
 
-		f, err = os.Open(fileCFG.OAuth.SecretKeyFile)
-		if err != nil {
-			log.Fatalf("Failed to open configured secret_key_file '%s': %v", fileCFG.OAuth.SecretKeyFile, err)
+		if fileCFG.OAuth.SecretKey != "" {
+			cfg.SecretKey = fileCFG.OAuth.SecretKey
+		} else if fileCFG.OAuth.SecretKeyFile != "" {
+			val, err := readFileContent(fileCFG.OAuth.SecretKeyFile)
+			if err == nil {
+				cfg.SecretKey = val
+			}
 		}
-		defer f.Close()
-		secretKeyBytes, err := io.ReadAll(f)
-		if err != nil {
-			log.Fatalf("Failed to read configured secret_key_file '%s': %v", fileCFG.OAuth.SecretKeyFile, err)
-		}
-		secretKey := string(secretKeyBytes)
-		cfg.SecretKey = secretKey
 	}
 }

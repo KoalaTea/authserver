@@ -106,8 +106,11 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 		registerProfiler(routes)
 	}
 
-	// TODO use cfg.Bypassauth in some way
-	router := internalHttp.NewServer(routes, internalHttp.WithAuthenticationBypass(graph))
+	authOpt := internalHttp.WithAuthentication(graph)
+	if cfg.BypassAuth {
+		authOpt = internalHttp.WithAuthenticationBypass(graph)
+	}
+	router := internalHttp.NewServer(routes, authOpt)
 
 	// run the Metric server and the authserver
 	metricsHTTP := newMetricsServer()
