@@ -27,7 +27,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Here for the path trim for static files, package.json for hostname, app.tsx for basename, and vite.config.js
 	// and server.go for the http handler path
 	// Serve the requested file
-	path := fmt.Sprintf("dist/%s", strings.TrimPrefix(r.URL.Path, "/www/"))
+	path := fmt.Sprintf("dist/%s", strings.TrimPrefix(r.URL.Path, "/"))
 	content, err := Content.ReadFile(path)
 	if err == nil {
 		if strings.HasSuffix(path, ".css") {

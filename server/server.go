@@ -90,7 +90,7 @@ func newServer(ctx context.Context, options ...func(*Config)) (*Server, error) {
 			AllowUnauthenticated: true,
 		},
 		// trailing slash is required to work with react
-		"/www/": internalHttp.Endpoint{
+		"/": internalHttp.Endpoint{
 			Handler: www.NewHandler(httpLogger),
 		},
 	}
