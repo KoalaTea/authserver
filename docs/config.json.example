@@ -1,0 +1,11 @@
+{
+    "certificates": {
+        "ca": "server/nopush/authserverCA.pem",
+        "ca_priv_key": "server/nopush/authserverCAPrivKey.pem"
+    },
+    "oauth": {
+        "client_id_file": "server/nopush/oauthclient",
+        "secret_key_file": "server/nopush/oauthsecret"
+    },
+    "bypass_auth": true
+}
