@@ -25,7 +25,7 @@ const router = createBrowserRouter([
     element: <InactiveUserList />,
   }
   // ])
-], { basename: "/www" })
+])
 
 function App() {
 

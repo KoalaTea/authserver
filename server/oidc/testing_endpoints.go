@@ -24,12 +24,12 @@ import (
 
 func (o *OIDCProvider) RegisterTestHandlers() internalHttp.RouteMap {
 	routes := internalHttp.RouteMap{
-		"/": internalHttp.Endpoint{
+		"/testing": internalHttp.Endpoint{
 			Handler:              http.HandlerFunc(o.HomeHandler(clientConf)),
 			AllowUnauthenticated: true,
 			AllowUnactivated:     true,
 		},
-		"/callback": internalHttp.Endpoint{
+		"/testing/callback": internalHttp.Endpoint{
 			Handler:              http.HandlerFunc(o.CallbackHandler(clientConf)),
 			AllowUnauthenticated: true,
 			AllowUnactivated:     true,
@@ -220,7 +220,7 @@ func (o *OIDCProvider) CallbackHandler(c oauth2.Config) func(rw http.ResponseWri
 var clientConf = oauth2.Config{
 	ClientID:     "my-client",
 	ClientSecret: "foobar",
-	RedirectURL:  "http://localhost:8080/callback",
+	RedirectURL:  "http://localhost:8080/testing/callback",
 	Scopes:       []string{"photos", "openid", "offline"},
 	Endpoint: oauth2.Endpoint{
 		TokenURL: "http://localhost:8080/oidc/token",
@@ -278,12 +278,6 @@ func generateCodeChallenge(codeVerifier string) string {
 
 func (o *OIDCProvider) HomeHandler(c oauth2.Config) func(rw http.ResponseWriter, req *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/" {
-			// The "/" pattern matches everything, so we need to check that
-			// we're at the root here.
-			return
-		}
-
 		// rotate PKCE secrets
 		pkceCodeVerifier = generateCodeVerifier(64)
 		pkceCodeChallenge = generateCodeChallenge(pkceCodeVerifier)

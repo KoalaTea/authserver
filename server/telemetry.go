@@ -33,7 +33,7 @@ func newTXTExporter(w io.Writer) (sdktrace.SpanExporter, error) {
 func newGRPCExporter(ctx context.Context) (*otlptrace.Exporter, error) {
 	// Create the OTLP gRPC exporter pointing to Tempo
 	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint("192.168.1.45:4317"),
+		otlptracegrpc.WithEndpoint("192.168.10.45:4317"),
 		// otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())), // Tempo usually doesn't require TLS by default
 		otlptracegrpc.WithInsecure(),
 	)
