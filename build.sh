@@ -1,1 +1,1 @@
-go build -v -o ./build/server ./server && ./build/server
+cd server/internal/www && npm run build && cd ../../.. && go build -v -o ./build/server ./server && ./build/server --bypass-auth
