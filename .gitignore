@@ -26,3 +26,5 @@ nopush
 result
 # as per vite recommendations
 *.local
+# local logs and traces
+.authserver

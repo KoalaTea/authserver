@@ -17,7 +17,7 @@ import (
 func TestRevocationCrl(t *testing.T) {
 	ctx := context.Background()
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	provider, err := NewCertProvider(graph)
+	provider, err := NewCertProvider(graph, t.TempDir())
 	if err != nil {
 		t.Fatalf("Failed to create cert provider: %v", err)
 	}
