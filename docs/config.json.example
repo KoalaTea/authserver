@@ -7,5 +7,11 @@
         "client_id_file": "server/nopush/oauthclient",
         "secret_key_file": "server/nopush/oauthsecret"
     },
+    "logging": {
+        "file": ".authserver/logs.txt"
+    },
+    "tracing": {
+        "file": ".authserver/traces.txt"
+    },
     "bypass_auth": true
 }
