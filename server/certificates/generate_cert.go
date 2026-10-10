@@ -10,8 +10,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/koalatea/authserver/server/ent"
@@ -38,8 +40,10 @@ func generateRandomInt64() (int64, error) {
 	return n.Int64(), nil
 }
 
-// TODO put certs in common dir or load certs from configuration
-func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
+// NewCertProvider generates a new CA and writes its certificate and private key to outDir.
+// Failing to write the files is logged but does not prevent the provider from being created.
+// TODO load certs from configuration
+func NewCertProvider(graph *ent.Client, outDir string) (*CertProvider, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
@@ -77,17 +81,29 @@ func NewCertProvider(graph *ent.Client) (*CertProvider, error) {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
-	os.WriteFile("authserverCA.pem", caPEM.Bytes(), 0644)
 
 	caPrivKeyPEM := new(bytes.Buffer)
 	pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	})
-	os.WriteFile("authserverCAPrivKey.pem", caPrivKeyPEM.Bytes(), 0644)
+
+	if err := writeCAFiles(outDir, caPEM.Bytes(), caPrivKeyPEM.Bytes()); err != nil {
+		slog.Warn("failed to write CA files", "dir", outDir, "err", err)
+	}
 
 	provider := &CertProvider{ca: ca, key: caPrivKey, graph: graph}
 	return provider, nil
+}
+
+func writeCAFiles(outDir string, caPEM []byte, caPrivKeyPEM []byte) error {
+	if err := os.MkdirAll(outDir, 0700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "authserverCA.pem"), caPEM, 0644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(outDir, "authserverCAPrivKey.pem"), caPrivKeyPEM, 0600)
 }
 
 // Convert a PEM encoded public key string to rsa.PublicKey

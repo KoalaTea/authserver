@@ -18,6 +18,7 @@ require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli-altsrc/v3 v3.1.0
+	github.com/urfave/cli-validation v0.0.0-20230629031421-92802a7fd6e9
 	github.com/urfave/cli/v3 v3.11.0
 	github.com/vektah/gqlparser/v2 v2.5.31
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0

@@ -1,1 +1,1 @@
-cd server/internal/www && npm run build && cd ../../.. && go build -v -o ./build/server ./server && ./build/server --bypass-auth
+cd server/internal/www && npm run build && cd ../../.. && go build -v -o ./build/server ./server && ./build/server --config ./server/nopush/config.json

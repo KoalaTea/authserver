@@ -34,7 +34,7 @@ func TestRequestCertMutation(t *testing.T) {
 	ctx := context.Background()
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer graph.Close()
-	c, _ := certificates.NewCertProvider(graph)
+	c, _ := certificates.NewCertProvider(graph, t.TempDir())
 	routes := authServerHttp.RouteMap{}
 	routes.Handle("/graphql", handler.NewDefaultServer(graphql.NewSchema(graph, c)))
 	router := authServerHttp.NewServer(routes, authServerHttp.WithAuthenticationBypass(graph))
@@ -125,7 +125,7 @@ func TestRevokeCertMutation(t *testing.T) {
 	ctx := context.Background()
 	graph := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer graph.Close()
-	c, _ := certificates.NewCertProvider(graph)
+	c, _ := certificates.NewCertProvider(graph, t.TempDir())
 	routes := authServerHttp.RouteMap{}
 	routes.Handle("/graphql", handler.NewDefaultServer(graphql.NewSchema(graph, c)))
 	router := authServerHttp.NewServer(routes, authServerHttp.WithAuthenticationBypass(graph))
