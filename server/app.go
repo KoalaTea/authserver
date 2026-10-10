@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,8 +13,6 @@ import (
 	jsonaltsrc "github.com/urfave/cli-altsrc/v3/json"
 	validation "github.com/urfave/cli-validation"
 	cli "github.com/urfave/cli/v3"
-	"go.opentelemetry.io/otel"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func init() {
@@ -24,6 +21,8 @@ func init() {
 
 func newApp(ctx context.Context) (app *cli.Command) {
 	var configFilePath string
+	// shutdownTracing is set in Before when tracing is enabled and called in After to flush traces
+	var shutdownTracing func(context.Context) error
 
 	jsonSourcer := altsrc.NewStringPtrSourcer(&configFilePath)
 
@@ -91,7 +90,7 @@ func newApp(ctx context.Context) (app *cli.Command) {
 				Usage:     "Log level (debug, info, warn, error)",
 				Value:     "info",
 				Validator: validation.Enum("debug", "info", "warn", "error"),
-				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_LOG_LEVEL"), jsonValSrc("logging.level")),
+				Sources:   cli.NewValueSourceChain(cli.EnvVar("AUTH_LOG_LEVEL"), jsonValSrc("logging.level")),
 			},
 			&cli.StringFlag{
 				Name:    "log-file",
@@ -103,8 +102,14 @@ func newApp(ctx context.Context) (app *cli.Command) {
 				Usage:   "File to write traces to",
 				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_TRACE_FILE"), jsonValSrc("tracing.file")),
 			},
+			&cli.StringFlag{
+				Name:    "trace-grpc-endpoint",
+				Usage:   "OpenTelemetry collector gRPC endpoint (host:port) to send traces to",
+				Sources: cli.NewValueSourceChain(cli.EnvVar("AUTH_TRACE_GRPC_ENDPOINT"), jsonValSrc("tracing.grpc_endpoint")),
+			},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+			// Figure out the right config options
 			if cmd.IsSet("config") {
 				if _, err := os.Stat(configFilePath); err != nil {
 					return ctx, fmt.Errorf("config file '%s' not found: %w", configFilePath, err)
@@ -115,6 +120,8 @@ func newApp(ctx context.Context) (app *cli.Command) {
 					configFilePath = defaultPath
 				}
 			}
+
+			// Set up logging based configuration
 			logFile, err := openOptionalOutputFile(cmd, "log-file")
 			if err != nil {
 				return ctx, err
@@ -125,7 +132,32 @@ func newApp(ctx context.Context) (app *cli.Command) {
 			if err := setLogLevel(cmd.String("log-level")); err != nil {
 				return ctx, err
 			}
+			slog.DebugContext(ctx, "Debug logging enabled", "log_file", cmd.String("log-file"), "log_level", cmd.String("log-level"))
+
+			// Set up tracing based on configuration
+			traceFile, err := openOptionalOutputFile(cmd, "trace-file")
+			if err != nil {
+				return ctx, err
+			}
+			grpcEndpoint := cmd.String("trace-grpc-endpoint")
+			shutdownTracing, err = setupTracing(ctx, traceFile, grpcEndpoint)
+			if err != nil {
+				if traceFile != nil {
+					traceFile.Close()
+				}
+				return ctx, err
+			}
+			if shutdownTracing != nil {
+				slog.InfoContext(ctx, "Tracing enabled", "trace_file", cmd.String("trace-file"), "trace_grpc_endpoint", grpcEndpoint)
+			}
 			return ctx, nil
+		},
+		// After is deferred before Before runs, so it runs even if Before or Action fail
+		After: func(ctx context.Context, cmd *cli.Command) error {
+			if shutdownTracing != nil {
+				return shutdownTracing(ctx)
+			}
+			return nil
 		},
 	}
 	return app
@@ -144,41 +176,14 @@ func openOptionalOutputFile(cmd *cli.Command, flagName string) (*os.File, error)
 	return f, nil
 }
 
+// runServer returns errors rather than exiting so the After cleanup (e.g. flushing traces) still runs
 func runServer(ctx context.Context, cmd *cli.Command) error {
-	// Initialize Tracing
-	exp, err := newGRPCExporter(ctx)
-	if err != nil {
-		log.Fatalf("Failed to initialize tracing exporter: %v", err)
-	}
-	exporters := []sdktrace.SpanExporter{exp}
-
-	// Also write traces to the trace file
-	traceFile, err := openOptionalOutputFile(cmd, "trace-file")
-	if err != nil {
-		return err
-	}
-	if traceFile != nil {
-		defer traceFile.Close()
-		txtExp, err := newTXTExporter(traceFile)
-		if err != nil {
-			log.Fatalf("Failed to initialize trace file exporter: %v", err)
-		}
-		exporters = append(exporters, txtExp)
-	}
-
-	tp := newTraceProvider(exporters...)
-	defer func() { _ = tp.Shutdown(ctx) }()
-	slog.InfoContext(ctx, "Starting tracing")
-	otel.SetTracerProvider(tp)
-
-	// Run AuthServer
 	server, err := newServer(ctx, ConfigureFromCLI(cmd))
 	if err != nil {
-		log.Fatalf("AuthServer failed to initialize: %v", err)
+		return fmt.Errorf("AuthServer failed to initialize: %w", err)
 	}
 	if err := server.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("AuthServer fatal error: %v", err)
+		return fmt.Errorf("AuthServer fatal error: %w", err)
 	}
-
 	return nil
 }

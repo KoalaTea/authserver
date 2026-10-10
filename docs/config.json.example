@@ -4,14 +4,19 @@
         "ca_priv_key": "server/nopush/authserverCAPrivKey.pem"
     },
     "oauth": {
+        "client_id": "your-client-id.apps.googleusercontent.com",
+        "secret_key": "your-client-secret",
         "client_id_file": "server/nopush/oauthclient",
         "secret_key_file": "server/nopush/oauthsecret"
     },
     "logging": {
+        "level": "info",
         "file": ".authserver/logs.txt"
     },
     "tracing": {
-        "file": ".authserver/traces.txt"
+        "file": ".authserver/traces.txt",
+        "grpc_endpoint": "localhost:4317"
     },
-    "bypass_auth": true
+    "enable_pprof": false,
+    "bypass_auth": false
 }

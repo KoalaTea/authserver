@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -44,10 +45,45 @@ func newTXTExporter(w io.Writer) (sdktrace.SpanExporter, error) {
 	)
 }
 
-func newGRPCExporter(ctx context.Context) (*otlptrace.Exporter, error) {
-	// Create the OTLP gRPC exporter pointing to Tempo
+// setupTracing sets the global tracer provider to export spans to traceFile and/or grpcEndpoint, skipping
+// whichever is nil/empty. If neither is provided tracing is left disabled and shutdown is nil.
+// The returned shutdown func flushes any buffered spans and closes traceFile.
+func setupTracing(ctx context.Context, traceFile *os.File, grpcEndpoint string) (shutdown func(context.Context) error, err error) {
+	var exporters []sdktrace.SpanExporter
+	if traceFile != nil {
+		exp, err := newTXTExporter(traceFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize trace file exporter: %w", err)
+		}
+		exporters = append(exporters, exp)
+	}
+	if grpcEndpoint != "" {
+		exp, err := newGRPCExporter(ctx, grpcEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize trace grpc exporter: %w", err)
+		}
+		exporters = append(exporters, exp)
+	}
+	if len(exporters) == 0 {
+		return nil, nil
+	}
+
+	tp := newTraceProvider(exporters...)
+	otel.SetTracerProvider(tp)
+
+	return func(ctx context.Context) error {
+		err := tp.Shutdown(ctx)
+		if traceFile != nil {
+			err = errors.Join(err, traceFile.Close())
+		}
+		return err
+	}, nil
+}
+
+// newGRPCExporter creates an OTLP gRPC exporter (e.g. Tempo) sending to endpoint as host:port
+func newGRPCExporter(ctx context.Context, endpoint string) (*otlptrace.Exporter, error) {
 	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint("192.168.10.45:4317"),
+		otlptracegrpc.WithEndpoint(endpoint),
 		// otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())), // Tempo usually doesn't require TLS by default
 		otlptracegrpc.WithInsecure(),
 	)
